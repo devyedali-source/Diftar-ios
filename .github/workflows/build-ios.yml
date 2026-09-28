@@ -58,6 +58,27 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee ../ci/xcode.log
 
+      - name: Run app in iOS Simulator and take screenshots
+        if: success()
+        continue-on-error: true
+        run: |
+          set -x
+          mkdir -p ci/shots
+          APP=$(find iosApp/build -name "DaftarAlMoallim.app" -type d | head -1)
+          echo "APP=$APP"
+          DEVICE=$(xcrun simctl list devices available | grep -E "iPhone 1[5-7]( Pro)? \(" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
+          echo "DEVICE=$DEVICE"
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b || true
+          xcrun simctl install "$DEVICE" "$APP"
+          xcrun simctl launch --stdout=$PWD/ci/app-stdout.log --stderr=$PWD/ci/app-stderr.log "$DEVICE" com.elyedali.schoolmanager
+          sleep 25
+          xcrun simctl io "$DEVICE" screenshot ci/shots/01-launch.png
+          sleep 10
+          xcrun simctl io "$DEVICE" screenshot ci/shots/02-after35s.png
+          xcrun simctl spawn "$DEVICE" launchctl list | grep -i daftar > ci/app-running.txt || echo "NOT RUNNING" > ci/app-running.txt
+          find ~/Library/Logs/DiagnosticReports -name "*DaftarAlMoallim*" -newer iosApp/project.yml -exec cp {} ci/ \; 2>/dev/null || true
+
       # تقرير البناء يُحفظ في فرع ci-results لقراءته دون الحاجة إلى صفحة Actions
       - name: Publish build report
         if: always()
