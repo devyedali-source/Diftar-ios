@@ -39,7 +39,9 @@ private fun arabicBold(): Typeface? {
 
 private fun latinBold(): Typeface? {
     cachedLatin?.let { return it }
-    val tf = FontMgr.default.matchFamilyStyle(null, FontStyle.BOLD)
+    val tf = FontMgr.default.matchFamilyStyle("Helvetica Neue", FontStyle.BOLD)
+        ?: FontMgr.default.matchFamilyStyle("Helvetica", FontStyle.BOLD)
+        ?: arabicBold()
     cachedLatin = tf
     return tf
 }
