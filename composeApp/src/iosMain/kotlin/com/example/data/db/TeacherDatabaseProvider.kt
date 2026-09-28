@@ -34,3 +34,5 @@ object TeacherDatabaseProvider {
         }
     }
 }
+
+actual fun openTeacherDatabase(userId: String?): TeacherDatabase = TeacherDatabaseProvider.getDatabase(userId)

@@ -13,7 +13,16 @@ struct ComposeView: UIViewControllerRepresentable {
 struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
-            ComposeView().ignoresSafeArea(.all)
+            ComposeView()
+                .ignoresSafeArea(.keyboard)
+                .onOpenURL { url in
+                    MainViewControllerKt.handleDeepLink(url: url.absoluteString)
+                }
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    if let url = activity.webpageURL {
+                        MainViewControllerKt.handleDeepLink(url: url.absoluteString)
+                    }
+                }
         }
     }
 }

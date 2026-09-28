@@ -3,6 +3,7 @@ package com.example.data.models
 import androidx.room.Entity
 import androidx.room.Index
 
+@kotlinx.serialization.Serializable
 @Entity(
     tableName = "student_manual_term_averages",
     primaryKeys = ["studentId", "termId"],

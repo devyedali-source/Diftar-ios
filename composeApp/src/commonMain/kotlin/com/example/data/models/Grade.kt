@@ -3,6 +3,7 @@ package com.example.data.models
 import androidx.room.Entity
 import androidx.room.Index
 
+@kotlinx.serialization.Serializable
 @Entity(
     tableName = "grades",
     primaryKeys = ["studentId", "subjectId", "termId"],

@@ -13,6 +13,17 @@ targets:
       path: iosApp/Info.plist
       properties:
         CFBundleDisplayName: "دفتر المعلم"
+        NSFaceIDUsageDescription: "يستعمل التطبيق بصمة الوجه لحماية بيانات الطلاب ودرجاتهم"
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: activation
+            CFBundleURLSchemes:
+              - daftarmeallim
+        LSApplicationQueriesSchemes:
+          - whatsapp
+          - tg
+          - fb
+          - mailto
         CFBundleShortVersionString: "0.0.0.26"
         CFBundleVersion: "1"
         CFBundleDevelopmentRegion: ar

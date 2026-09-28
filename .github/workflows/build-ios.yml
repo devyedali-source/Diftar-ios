@@ -27,6 +27,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Compile shared code
+        run: |
+          set -o pipefail
+          mkdir -p ci
+          ./gradlew :composeApp:compileKotlinIosSimulatorArm64 --stacktrace 2>&1 | tee ci/compile.log
+
       - name: Run shared-code tests on iOS Simulator
         run: |
           set -o pipefail
@@ -57,6 +63,9 @@ jobs:
         if: always()
         run: |
           mkdir -p ci
+          grep -hE '^(e|w): ' ci/*.log | grep -E '^e: ' > ci/errors.txt || true
+          grep -hE '^w: ' ci/*.log | head -300 > ci/warnings.txt || true
+          grep -hE 'error:' ci/xcode.log > ci/xcode-errors.txt 2>/dev/null || true
           cp -r composeApp/build/test-results ci/test-results 2>/dev/null || true
           for f in ci/*.log; do [ -f "$f" ] && tail -c 60000 "$f" > "$f.tail" && mv "$f.tail" "$f"; done
           echo "commit=${GITHUB_SHA} status=${{ job.status }} run=${GITHUB_RUN_ID}" > ci/summary.txt

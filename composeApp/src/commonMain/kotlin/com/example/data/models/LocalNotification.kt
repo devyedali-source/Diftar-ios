@@ -3,6 +3,7 @@ package com.example.data.models
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+@kotlinx.serialization.Serializable
 @Entity(tableName = "local_notifications")
 data class LocalNotification(
     @PrimaryKey(autoGenerate = true)

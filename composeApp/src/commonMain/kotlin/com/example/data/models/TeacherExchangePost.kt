@@ -3,6 +3,7 @@ package com.example.data.models
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+@kotlinx.serialization.Serializable
 @Entity(tableName = "teacher_exchange_posts")
 data class TeacherExchangePost(
     @PrimaryKey val id: String = "",

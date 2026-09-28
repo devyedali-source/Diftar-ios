@@ -3,6 +3,7 @@ package com.example.data.models
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+@kotlinx.serialization.Serializable
 @Entity(tableName = "class_sections")
 data class ClassSection(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

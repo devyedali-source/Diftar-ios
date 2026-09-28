@@ -2,6 +2,7 @@ package com.example.data.models
 
 import androidx.room.Entity
 
+@kotlinx.serialization.Serializable
 @Entity(
     tableName = "class_subject_customizations",
     primaryKeys = ["classId", "subjectId"]

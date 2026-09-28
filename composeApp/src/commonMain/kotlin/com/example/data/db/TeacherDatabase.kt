@@ -32,7 +32,14 @@ import com.example.data.models.TeacherExchangePost
 @ConstructedBy(TeacherDatabaseConstructor::class)
 abstract class TeacherDatabase : RoomDatabase() {
     abstract fun teacherDao(): TeacherDao
+
+    companion object {
+        /** نفس توقيع أندرويد: قاعدة بيانات مستقلة لكل مستخدم */
+        fun getDatabase(context: android.content.Context, userId: String? = null): TeacherDatabase = openTeacherDatabase(userId)
+    }
 }
+
+expect fun openTeacherDatabase(userId: String?): TeacherDatabase
 
 @Suppress("NO_ACTUAL_FOR_EXPECT", "KotlinNoActualForExpect")
 expect object TeacherDatabaseConstructor : RoomDatabaseConstructor<TeacherDatabase> {
