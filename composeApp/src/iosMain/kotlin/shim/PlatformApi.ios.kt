@@ -36,7 +36,6 @@ import platform.Foundation.NSData
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateComponents
 import platform.Foundation.NSDateFormatter
-import platform.Foundation.NSDictionary
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSHTTPURLResponse
@@ -266,11 +265,12 @@ actual object PlatformApi {
 
     private val googleConfig: Map<String, String> by lazy {
         val path = NSBundle.mainBundle.pathForResource("GoogleService-Info", ofType = "plist") ?: return@lazy emptyMap()
-        val dict = NSDictionary(contentsOfFile = path)
+        val data = NSData.dataWithContentsOfFile(path) ?: return@lazy emptyMap()
+        val parsed = platform.Foundation.NSPropertyListSerialization.propertyListWithData(data, options = 0u, format = null, error = null)
+        val map = parsed as? Map<*, *> ?: return@lazy emptyMap()
         val out = HashMap<String, String>()
-        for (key in dict.allKeys) {
+        for ((key, v) in map) {
             val ks = key as? String ?: continue
-            val v = dict.objectForKey(ks)
             if (v is String) out[ks] = v
         }
         out

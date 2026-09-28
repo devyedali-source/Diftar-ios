@@ -4,6 +4,7 @@ import com.example.compat.*
 import kotlinx.coroutines.IO
 import android.content.Context
 import android.app.Activity
+import com.example.ui.theme.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

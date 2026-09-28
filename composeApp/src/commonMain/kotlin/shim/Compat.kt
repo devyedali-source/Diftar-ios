@@ -247,7 +247,12 @@ object FirebaseConfig {
 val Throwable.localizedMessage: String? get() = message
 
 /** obj.javaClass.simpleName كما في جافا */
-val <T : Any> T.javaClass: KClass<out T> get() = this::class
+val Any.javaClass: JavaClassInfo get() = JavaClassInfo(this::class)
+
+class JavaClassInfo(val kClass: KClass<*>) {
+    val simpleName: String get() = kClass.simpleName ?: ""
+    val name: String get() = kClass.qualifiedName ?: simpleName
+}
 
 fun <K, V> MutableMap<K, V>.putIfAbsent(key: K, value: V): V? {
     val existing = get(key)

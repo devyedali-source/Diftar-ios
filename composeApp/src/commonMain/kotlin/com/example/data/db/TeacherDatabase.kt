@@ -33,6 +33,21 @@ import com.example.data.models.TeacherExchangePost
 abstract class TeacherDatabase : RoomDatabase() {
     abstract fun teacherDao(): TeacherDao
 
+    /** بديل clearAllTables (غير متوفر في Room على الآيفون) */
+    fun clearAllTables() {
+        val dao = teacherDao()
+        kotlinx.coroutines.runBlocking {
+            dao.deleteAllGrades()
+            dao.deleteAllManualTermAverages()
+            dao.deleteAllStudents()
+            dao.deleteAllCustomizations()
+            dao.deleteAllSubjects()
+            dao.deleteAllClassSections()
+            dao.deleteAllLocalNotifications()
+            dao.deleteAllSyncedExchangePosts()
+        }
+    }
+
     companion object {
         /** نفس توقيع أندرويد: قاعدة بيانات مستقلة لكل مستخدم */
         fun getDatabase(context: android.content.Context, userId: String? = null): TeacherDatabase = openTeacherDatabase(userId)
@@ -54,17 +69,3 @@ fun teacherDatabaseName(userId: String?): String =
         "teacher_database_guest"
     }
 
-/** بديل clearAllTables (غير متوفر في Room على الآيفون) */
-fun TeacherDatabase.clearAllTables() {
-    val dao = teacherDao()
-    kotlinx.coroutines.runBlocking {
-        dao.deleteAllGrades()
-        dao.deleteAllManualTermAverages()
-        dao.deleteAllStudents()
-        dao.deleteAllCustomizations()
-        dao.deleteAllSubjects()
-        dao.deleteAllClassSections()
-        dao.deleteAllLocalNotifications()
-        dao.deleteAllSyncedExchangePosts()
-    }
-}
