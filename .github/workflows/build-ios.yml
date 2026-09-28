@@ -100,6 +100,15 @@ jobs:
           ls -la "$C/Documents" || true
           cp "$C"/Documents/ci_* ci/ 2>/dev/null || true
           for f in ci/*.pdf; do [ -f "$f" ] && sips -s format png "$f" --out "ci/shots/$(basename "$f" .pdf)-p1.png" || true; done
+          xcrun simctl terminate "$DEVICE" com.elyedali.schoolmanager || true
+          unset SIMCTL_CHILD_DAFTAR_CI_E2E
+          for TAB in 0 1 2 4 5; do
+            xcrun simctl spawn "$DEVICE" defaults write com.elyedali.schoolmanager "last_place_prefs::inside_tab_1" "i:$TAB" || true
+            xcrun simctl launch "$DEVICE" com.elyedali.schoolmanager
+            sleep 18
+            xcrun simctl io "$DEVICE" screenshot ci/shots/10-tab-$TAB.png
+            xcrun simctl terminate "$DEVICE" com.elyedali.schoolmanager || true
+          done
           xcrun simctl spawn "$DEVICE" launchctl list | grep -i daftar > ci/app-running.txt || echo "NOT RUNNING" > ci/app-running.txt
           find ~/Library/Logs/DiagnosticReports -name "*DaftarAlMoallim*" -newer iosApp/project.yml -exec cp {} ci/ \; 2>/dev/null || true
 
