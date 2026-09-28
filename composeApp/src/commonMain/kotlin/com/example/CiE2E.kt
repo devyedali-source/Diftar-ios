@@ -65,7 +65,7 @@ object CiE2E {
                 suspend fun step(name: String, wait: Long = 9000) {
                     delay(wait)
                     PlatformApi.writeFile("$dir/ci_step.txt", name.encodeToByteArray())
-                    delay(3000)
+                    delay(15000)
                 }
                 CiNav.classId = cls.id
                 for (t in listOf(0, 1, 2, 4, 5)) { CiNav.insideTab = t; step("class-tab-$t") }
