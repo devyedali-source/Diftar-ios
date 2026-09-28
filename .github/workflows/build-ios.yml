@@ -90,28 +90,23 @@ jobs:
           xcrun simctl terminate "$DEVICE" com.elyedali.schoolmanager || true
           export SIMCTL_CHILD_DAFTAR_CI_E2E=1
           xcrun simctl launch --stdout=$PWD/ci/app-stdout3.log --stderr=$PWD/ci/app-stderr3.log "$DEVICE" com.elyedali.schoolmanager
-          for i in $(seq 1 30); do
-            C=$(xcrun simctl get_app_container "$DEVICE" com.elyedali.schoolmanager data)
-            if [ -f "$C/Documents/ci_done.txt" ] || [ -f "$C/Documents/ci_error.txt" ]; then break; fi
-            sleep 5
+          C=$(xcrun simctl get_app_container "$DEVICE" com.elyedali.schoolmanager data)
+          LAST=""
+          for i in $(seq 1 600); do
+            S=$(cat "$C/Documents/ci_step.txt" 2>/dev/null || echo "")
+            if [ -n "$S" ] && [ "$S" != "$LAST" ]; then
+              LAST="$S"
+              [ "$S" = "done" ] && break
+              sleep 1
+              xcrun simctl io "$DEVICE" screenshot "ci/shots/step-$S.png"
+            fi
+            if [ -f "$C/Documents/ci_error.txt" ]; then break; fi
+            sleep 1
           done
           xcrun simctl io "$DEVICE" screenshot ci/shots/04-e2e.png
-          C=$(xcrun simctl get_app_container "$DEVICE" com.elyedali.schoolmanager data)
           ls -la "$C/Documents" || true
           cp "$C"/Documents/ci_* ci/ 2>/dev/null || true
           for f in ci/*.pdf; do [ -f "$f" ] && sips -s format png "$f" --out "ci/shots/$(basename "$f" .pdf)-p1.png" || true; done
-          xcrun simctl terminate "$DEVICE" com.elyedali.schoolmanager || true
-          unset SIMCTL_CHILD_DAFTAR_CI_E2E
-          CID=$(cat ci/ci_class_id.txt 2>/dev/null || echo 1)
-          echo "CLASS ID=$CID"
-          for TAB in 0 1 2 4 5; do
-            xcrun simctl spawn "$DEVICE" defaults write com.elyedali.schoolmanager "last_place_prefs::inside_tab_$CID" "i:$TAB" || true
-            xcrun simctl spawn "$DEVICE" defaults read com.elyedali.schoolmanager | grep -i inside_tab || true
-            xcrun simctl launch "$DEVICE" com.elyedali.schoolmanager
-            sleep 18
-            xcrun simctl io "$DEVICE" screenshot ci/shots/10-tab-$TAB.png
-            xcrun simctl terminate "$DEVICE" com.elyedali.schoolmanager || true
-          done
           xcrun simctl spawn "$DEVICE" launchctl list | grep -i daftar > ci/app-running.txt || echo "NOT RUNNING" > ci/app-running.txt
           find ~/Library/Logs/DiagnosticReports -name "*DaftarAlMoallim*" -newer iosApp/project.yml -exec cp {} ci/ \; 2>/dev/null || true
 

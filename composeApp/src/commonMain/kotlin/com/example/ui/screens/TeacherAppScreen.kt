@@ -641,6 +641,7 @@ fun InnerTeacherAppScreenContent(
                         ?.takeIf { it in listOf(0, 2, 3, 4, 5) } ?: 0
                 )
             } // 0: Portal, 2: Teacher Exchange, 3: About, 4: Legislation, 5: Course
+            LaunchedEffect(com.example.CiNav.outerTab) { com.example.CiNav.outerTab?.let { currentOuterTab = it } }
             LaunchedEffect(currentOuterTab) {
                 com.example.data.state.LastPlaceStore.putInt(context, "outer_tab", currentOuterTab)
             }
@@ -1933,6 +1934,7 @@ fun InnerTeacherAppScreenContent(
                                 ?.takeIf { it in listOf(0, 1, 2, 4, 5) } ?: 0
                         )
                     } // 0: Students, 1: Grades, 2: Reports, 4: Annual Planning, 5: Timetable
+                    LaunchedEffect(com.example.CiNav.insideTab) { com.example.CiNav.insideTab?.let { insideTab = it } }
                     LaunchedEffect(activeClass.id, insideTab) {
                         com.example.data.state.LastPlaceStore.putInt(context, "inside_tab_${activeClass.id}", insideTab)
                     }

@@ -100,6 +100,7 @@ fun App() {
                     onRetry = { AppState.showBiometricPrompt() }
                 )
             }
+            CiNav.Overlay()
             PrintProgress.Overlay()
             ToastHost.Overlay()
         }

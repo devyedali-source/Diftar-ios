@@ -60,6 +60,20 @@ object CiE2E {
                 render("ledger", ledger, true, 0.75)
                 render("ledger_zoom1", ledger, true, 1.0)
                 PlatformApi.setPdfZoom(0.75)
+
+                // جولة على الشاشات: كل خطوة تُكتب في ci_step.txt فيلتقط سير العمل صورة لها
+                suspend fun step(name: String, wait: Long = 9000) {
+                    delay(wait)
+                    PlatformApi.writeFile("$dir/ci_step.txt", name.encodeToByteArray())
+                    delay(3000)
+                }
+                CiNav.classId = cls.id
+                for (t in listOf(0, 1, 2, 4, 5)) { CiNav.insideTab = t; step("class-tab-$t") }
+                vm.selectClass(null)
+                for (t in listOf(0, 2, 3, 4, 5)) { CiNav.outerTab = t; step("outer-tab-$t") }
+                for (o in listOf("lesson", "stamp", "concours", "exams")) { CiNav.overlay = o; step("screen-$o", 12000) }
+                CiNav.overlay = null
+                PlatformApi.writeFile("$dir/ci_step.txt", "done".encodeToByteArray())
                 PlatformApi.writeFile("$dir/ci_done.txt", "done".encodeToByteArray())
             } catch (e: Throwable) {
                 PlatformApi.log("CI", "E2E error: ${e.stackTraceToString()}")
