@@ -24,8 +24,9 @@ targets:
           - tg
           - fb
           - mailto
-        CFBundleShortVersionString: "0.0.0.26"
-        CFBundleVersion: "26"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UIRequiresFullScreen: true
         CFBundleDevelopmentRegion: ar
         CADisableMinimumFrameDurationOnPhone: true
         UILaunchScreen: {}
@@ -33,9 +34,19 @@ targets:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     settings:
       base:
         PRODUCT_NAME: DaftarAlMoallim
+        MARKETING_VERSION: "0.0.0.26"
+        CURRENT_PROJECT_VERSION: "26"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
         PRODUCT_BUNDLE_IDENTIFIER: com.elyedali.schoolmanager
         SWIFT_VERSION: "5.0"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
@@ -46,6 +57,7 @@ targets:
           - "$(inherited)"
           - "-framework"
           - "ComposeApp"
+    scheme: {}
     preBuildScripts:
       - name: Compile Kotlin Framework
         basedOnDependencyAnalysis: false

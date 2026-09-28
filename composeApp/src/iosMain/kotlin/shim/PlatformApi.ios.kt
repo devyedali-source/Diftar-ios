@@ -85,6 +85,7 @@ import platform.UIKit.UIWindow
 import platform.UIKit.valueWithCGRect
 import platform.UIKit.popoverPresentationController
 import platform.UIKit.viewPrintFormatter
+import platform.UIKit.drawInRect
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -138,6 +139,32 @@ private val retained = mutableListOf<Any>()
 private class OAuthAnchor : NSObject(), ASWebAuthenticationPresentationContextProvidingProtocol {
     override fun presentationAnchorForWebAuthenticationSession(session: ASWebAuthenticationSession): ASPresentationAnchor =
         keyWindow() ?: UIWindow()
+}
+
+/** تذييل الصفحات (اسم المدرسة، عنوان الملف، رقم الصفحة) كما تفعل قواعد @page في أندرويد */
+private class FooterPageRenderer(
+    private val right: String?,
+    private val center: String?,
+    private val showPageCount: Boolean
+) : UIPrintPageRenderer() {
+    @OptIn(ExperimentalForeignApi::class)
+    override fun drawFooterForPageAtIndex(pageIndex: platform.darwin.NSInteger, inRect: kotlinx.cinterop.CValue<platform.CoreGraphics.CGRect>) {
+        val font = platform.UIKit.UIFont.systemFontOfSize(8.0)
+        fun draw(text: String, align: platform.UIKit.NSTextAlignment) {
+            val style = platform.UIKit.NSMutableParagraphStyle()
+            style.setAlignment(align)
+            val attrs = mapOf<Any?, Any?>(
+                platform.UIKit.NSFontAttributeName to font,
+                platform.UIKit.NSParagraphStyleAttributeName to style,
+                platform.UIKit.NSForegroundColorAttributeName to platform.UIKit.UIColor.blackColor
+            )
+            val r = inRect.useContents { CGRectMake(origin.x, origin.y + (size.height - 11.0) / 2.0, size.width, 12.0) }
+            platform.Foundation.NSString.create(string = text).drawInRect(r, withAttributes = attrs)
+        }
+        right?.let { draw(it, platform.UIKit.NSTextAlignmentRight) }
+        center?.let { draw(it, platform.UIKit.NSTextAlignmentCenter) }
+        if (showPageCount) draw("صفحة ${pageIndex + 1} من ${numberOfPages()}", platform.UIKit.NSTextAlignmentLeft)
+    }
 }
 
 actual object PlatformApi {
@@ -500,11 +527,7 @@ actual object PlatformApi {
                 info.orientation = if (landscape) UIPrintInfoOrientation.UIPrintInfoOrientationLandscape else UIPrintInfoOrientation.UIPrintInfoOrientationPortrait
                 val pc = UIPrintInteractionController.sharedPrintController
                 pc.printInfo = info
-                val formatter = web.viewPrintFormatter()
-                val (mvMm, mhMm) = pageMarginsMm(html)
-                val k = 72.0 / 25.4
-                formatter.perPageContentInsets = platform.UIKit.UIEdgeInsetsMake(mvMm * k, mhMm * k, mvMm * k, mhMm * k)
-                pc.printFormatter = formatter
+                pc.printPageRenderer = makeRenderer(web, landscape, html)
                 onDone(true, null)
                 pc.presentAnimated(true) { _, _, _ -> releaseWeb(web) }
             } catch (e: Throwable) {
@@ -514,18 +537,37 @@ actual object PlatformApi {
         }
     }
 
-    /** يرسم HTML في صفحات A4 ويحفظها ملف PDF */
-    private fun writePdf(web: WKWebView, landscape: Boolean, path: String, marginsMm: Pair<Double, Double>) {
+    private fun footerTexts(html: String): Triple<String?, String?, Boolean> {
+        fun box(name: String) = Regex("@$name\\s*\\{\\s*content\\s*:\\s*\"([^\"]*)\"").find(html)?.groupValues?.get(1)
+        val count = Regex("@bottom-left\\s*\\{[^}]*counter\\(page").containsMatchIn(html)
+        return Triple(box("bottom-right"), box("bottom-center"), count)
+    }
+
+    /** يجهّز مُخرِج الصفحات: A4، هوامش @page، وتذييل الصفحات إن وُجد */
+    private fun makeRenderer(web: WKWebView, landscape: Boolean, html: String): UIPrintPageRenderer {
         val (w, h) = a4(landscape)
-        val mmToPt = 72.0 / 25.4
-        val mv = marginsMm.first * mmToPt
-        val mh = marginsMm.second * mmToPt
-        val renderer = UIPrintPageRenderer()
+        val (mvMm, mhMm) = pageMarginsMm(html)
+        val k = 72.0 / 25.4
+        val mv = mvMm * k
+        val mh = mhMm * k
+        val (right, center, count) = footerTexts(html)
+        val hasFooter = right != null || center != null || count
+        val renderer = if (hasFooter) FooterPageRenderer(right, center, count) else UIPrintPageRenderer()
         renderer.addPrintFormatter(web.viewPrintFormatter(), startingAtPageAtIndex = 0)
         val paper = CGRectMake(0.0, 0.0, w, h)
-        val printable = CGRectMake(mh, mv, w - 2 * mh, h - 2 * mv)
+        val footerH = if (hasFooter) maxOf(mv, 12.0) else 0.0
+        val printable = CGRectMake(mh, mv, w - 2 * mh, h - 2 * mv + footerH)
         renderer.setValue(NSValue.valueWithCGRect(paper), forKey = "paperRect")
         renderer.setValue(NSValue.valueWithCGRect(printable), forKey = "printableRect")
+        if (hasFooter) renderer.footerHeight = footerH
+        return renderer
+    }
+
+    /** يرسم HTML في صفحات A4 ويحفظها ملف PDF */
+    private fun writePdf(web: WKWebView, landscape: Boolean, path: String, html: String) {
+        val (w, h) = a4(landscape)
+        val renderer = makeRenderer(web, landscape, html)
+        val paper = CGRectMake(0.0, 0.0, w, h)
         val data = NSMutableData()
         UIGraphicsBeginPDFContextToData(data, paper, null)
         val pages = renderer.numberOfPages().toInt()
@@ -542,7 +584,7 @@ actual object PlatformApi {
     actual fun renderHtmlToPdfFile(html: String, landscape: Boolean, path: String, onDone: (Boolean, String?) -> Unit) {
         loadHtml(html, landscape) { web ->
             try {
-                writePdf(web, landscape, path, pageMarginsMm(html))
+                writePdf(web, landscape, path, html)
                 releaseWeb(web)
                 onDone(true, null)
             } catch (e: Throwable) {
