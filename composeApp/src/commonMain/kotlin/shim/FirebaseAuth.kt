@@ -133,7 +133,7 @@ class FirebaseAuth private constructor() {
             expiresAtMs = (PlatformApi.prefGet(store, "expiresAt") as? Number)?.toLong() ?: 0L
         }
         if (currentUser == null && PlatformApi.ciFlag("DAFTAR_CI_DEMO")) {
-            currentUser = FirebaseUser("ci-demo-user", "demo@example.com", "معلم تجريبي", null)
+            currentUser = FirebaseUser("ci-demo-user", if (PlatformApi.ciFlag("DAFTAR_CI_E2E")) "elyedalimoctar@gmail.com" else "demo@example.com", "معلم تجريبي", null)
         }
     }
 

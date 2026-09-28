@@ -14,7 +14,7 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             ComposeView()
-                .ignoresSafeArea(.keyboard)
+                .ignoresSafeArea(.all)
                 .onOpenURL { url in
                     MainViewControllerKt.handleDeepLink(url: url.absoluteString)
                 }

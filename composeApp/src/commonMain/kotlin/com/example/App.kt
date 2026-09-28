@@ -88,6 +88,7 @@ fun App() {
                 val viewModel = remember {
                     AppState.viewModel ?: TeacherViewModel(AppApplication).also { AppState.viewModel = it }
                 }
+                LaunchedEffect(viewModel) { CiE2E.maybeRun(viewModel) }
                 TeacherAppScreen(
                     viewModel = viewModel,
                     deepLinkUri = DeepLinkBridge.pending,

@@ -477,36 +477,46 @@ actual object PlatformApi {
         }
     }
 
-    actual fun shareHtmlAsPdf(html: String, fileName: String, landscape: Boolean, onDone: (Boolean, String?) -> Unit) {
+    /** يرسم HTML في صفحات A4 ويحفظها ملف PDF */
+    private fun writePdf(web: WKWebView, landscape: Boolean, path: String) {
+        val (w, h) = a4(landscape)
+        val renderer = UIPrintPageRenderer()
+        renderer.addPrintFormatter(web.viewPrintFormatter(), startingAtPageAtIndex = 0)
+        val paper = CGRectMake(0.0, 0.0, w, h)
+        renderer.setValue(NSValue.valueWithCGRect(paper), forKey = "paperRect")
+        renderer.setValue(NSValue.valueWithCGRect(paper), forKey = "printableRect")
+        val data = NSMutableData()
+        UIGraphicsBeginPDFContextToData(data, paper, null)
+        val pages = renderer.numberOfPages().toInt()
+        renderer.prepareForDrawingPages(platform.Foundation.NSMakeRange(0u, pages.convert()))
+        for (i in 0 until pages) {
+            UIGraphicsBeginPDFPage()
+            renderer.drawPageAtIndex(i.convert(), inRect = UIGraphicsGetPDFContextBounds())
+        }
+        UIGraphicsEndPDFContext()
+        makeDirs(path.substringBeforeLast('/'))
+        data.writeToFile(path, atomically = true)
+    }
+
+    actual fun renderHtmlToPdfFile(html: String, landscape: Boolean, path: String, onDone: (Boolean, String?) -> Unit) {
         loadHtml(html, landscape) { web ->
             try {
-                val (w, h) = a4(landscape)
-                val renderer = UIPrintPageRenderer()
-                renderer.addPrintFormatter(web.viewPrintFormatter(), startingAtPageAtIndex = 0)
-                val paper = CGRectMake(0.0, 0.0, w, h)
-                renderer.setValue(NSValue.valueWithCGRect(paper), forKey = "paperRect")
-                renderer.setValue(NSValue.valueWithCGRect(paper), forKey = "printableRect")
-                val data = NSMutableData()
-                UIGraphicsBeginPDFContextToData(data, paper, null)
-                val pages = renderer.numberOfPages().toInt()
-                renderer.prepareForDrawingPages(platform.Foundation.NSMakeRange(0u, pages.convert()))
-                for (i in 0 until pages) {
-                    UIGraphicsBeginPDFPage()
-                    renderer.drawPageAtIndex(i.convert(), inRect = UIGraphicsGetPDFContextBounds())
-                }
-                UIGraphicsEndPDFContext()
-                val dirPath = cacheDir() + "/generated_pdfs"
-                makeDirs(dirPath)
-                val safeName = if (fileName.endsWith(".pdf", true)) fileName else "$fileName.pdf"
-                val path = "$dirPath/$safeName"
-                data.writeToFile(path, atomically = true)
+                writePdf(web, landscape, path)
                 releaseWeb(web)
                 onDone(true, null)
-                shareFile(path, "application/pdf")
             } catch (e: Throwable) {
                 releaseWeb(web)
                 onDone(false, e.message)
             }
+        }
+    }
+
+    actual fun shareHtmlAsPdf(html: String, fileName: String, landscape: Boolean, onDone: (Boolean, String?) -> Unit) {
+        val safeName = if (fileName.endsWith(".pdf", true)) fileName else "$fileName.pdf"
+        val path = cacheDir() + "/generated_pdfs/" + safeName
+        renderHtmlToPdfFile(html, landscape, path) { ok, err ->
+            onDone(ok, err)
+            if (ok) shareFile(path, "application/pdf")
         }
     }
 

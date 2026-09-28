@@ -67,6 +67,7 @@ expect object PlatformApi {
 
     // الطباعة وPDF
     fun printHtml(html: String, jobName: String, landscape: Boolean, onDone: (Boolean, String?) -> Unit)
+    fun renderHtmlToPdfFile(html: String, landscape: Boolean, path: String, onDone: (Boolean, String?) -> Unit)
     fun shareHtmlAsPdf(html: String, fileName: String, landscape: Boolean, onDone: (Boolean, String?) -> Unit)
 
     // الإشعارات المحلية

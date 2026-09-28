@@ -25,7 +25,7 @@ targets:
           - fb
           - mailto
         CFBundleShortVersionString: "0.0.0.26"
-        CFBundleVersion: "1"
+        CFBundleVersion: "26"
         CFBundleDevelopmentRegion: ar
         CADisableMinimumFrameDurationOnPhone: true
         UILaunchScreen: {}
