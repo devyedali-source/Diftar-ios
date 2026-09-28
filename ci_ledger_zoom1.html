@@ -1,0 +1,1493 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="format-detection" content="telephone=no, date=no, address=no, email=no"><title>لائحة النتائج للقسم</title>        <style>
+            @page {
+                size: landscape;
+                margin: 6mm 8mm; /* Uniform per-page margin; eliminates margin creep */
+                @bottom-right { content: "مدرسة النجاح الابتدائية"; font-family: 'Cairo', sans-serif; font-size: 8pt; }
+@bottom-center { content: "دفتر كشف الدرجات التفصيلي"; font-family: 'Cairo', sans-serif; font-size: 8pt; }
+@bottom-left { content: "صفحة " counter(page) " من " counter(pages); font-family: 'Cairo', sans-serif; font-size: 8pt; }
+            }
+            @media print {
+                @page {
+                    size: landscape;
+                    margin: 6mm 8mm;
+                }
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                font-family: 'Cairo', 'Noto Sans Arabic', 'Arial', sans-serif;
+                direction: rtl;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                background-color: #ffffff;
+                color: #000000;
+                font-size: 11px;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .a4-page {
+                position: relative;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                page-break-before: always;
+                break-before: page;
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .a4-page:first-child {
+                page-break-before: auto !important;
+                break-before: auto !important;
+            }
+            .a4-page:last-child {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            /* Side-by-side layout for Landscape Report Cards */
+            .cards-page-layout {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: flex-start; /* Strict Top Alignment (MainAxisAlignment.start) */
+                width: 100%;
+                height: 195mm;
+                max-height: 195mm;
+                gap: 4mm;
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                background-color: #ffffff;
+                overflow: hidden;
+                page-break-before: always;
+                break-before: page;
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .cards-page-layout:first-child {
+                page-break-before: auto !important;
+                break-before: auto !important;
+            }
+            .cards-page-layout:last-child {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            .cut-line-vertical {
+                height: 195mm;
+                align-self: stretch;
+                border-left: 1.5px dashed #000000;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0;
+            }
+            .cut-line-vertical-text {
+                writing-mode: vertical-rl;
+                transform: rotate(180deg);
+                background: #ffffff;
+                padding: 8px 0;
+                font-size: 8.5px;
+                font-weight: bold;
+                color: #000000;
+            }
+            .report-card-container {
+                width: calc(50% - 6mm);
+                height: 195mm;
+                max-height: 195mm;
+                border: 2px solid #000000;
+                padding: 6px;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: stretch;
+                gap: 4px;
+                background-color: #ffffff;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
+            .header-section {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                width: 100%;
+                margin-bottom: 4px;
+            }
+            .header-column {
+                flex: 1;
+                font-size: 8px;
+                line-height: 1.4;
+            }
+            .header-column.right {
+                text-align: right;
+                font-weight: bold;
+            }
+            .header-column.center {
+                text-align: center;
+                flex: 0.8;
+            }
+            .header-column.left {
+                text-align: left;
+                font-weight: bold;
+            }
+            .header-title-main {
+                font-size: 11.5px;
+                font-weight: 800;
+                margin-top: 2px;
+                color: #000000;
+                text-transform: uppercase;
+            }
+            .header-subtitle {
+                font-size: 9.5px;
+                font-weight: bold;
+                margin-top: 1px;
+                color: #000000;
+            }
+            .student-info-grid {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 2px 0;
+                font-size: 10.5px;
+                font-weight: bold;
+                border-bottom: 1.5px solid #000000;
+                border-top: 1.5px solid #000000;
+            }
+            .student-info-grid td {
+                padding: 2px 6px;
+                height: 22px;
+                border: none;
+            }
+            .content-split {
+                display: flex;
+                width: 100%;
+                margin-top: 2px;
+                gap: 6px;
+                align-items: stretch;
+                overflow: hidden;
+            }
+            .grades-section {
+                flex: 0.76;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .remarks-section {
+                flex: 0.24;
+                border: 1.5px solid #000000;
+                display: flex;
+                flex-direction: column;
+                text-align: center;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+            .remarks-header {
+                font-weight: bold;
+                background-color: #ffffff;
+                border-bottom: 1.5px solid #000000;
+                padding: 4px;
+                font-size: 10px;
+                height: 22px;
+                box-sizing: border-box;
+            }
+            .remarks-body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-grow: 1;
+                font-size: 12px;
+                font-weight: 800;
+                padding: 6px;
+                color: #000000;
+            }
+            .grades-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10px;
+                border: 1.5px solid #000000;
+            }
+            .grades-table th {
+                background-color: #ffffff;
+                border: 1px solid #000000;
+                padding: 2px;
+                height: 20px;
+                font-weight: bold;
+                text-align: center;
+                font-size: 9.5px;
+                color: #000000;
+            }
+            .grades-table td {
+                border: 1px solid #000000;
+                padding: 2px;
+                height: 18px;
+                text-align: center;
+                color: #000000;
+            }
+            .row-bg-accent {
+                background-color: #ffffff;
+            }
+            .row-bg-highlight {
+                background-color: #ffffff;
+                font-weight: bold;
+            }
+            .row-bg-total {
+                background-color: #ffffff;
+                font-weight: bold;
+            }
+            
+            .footer-signature-block {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding: 4px 6px 0 6px;
+                font-size: 10.5px;
+                font-weight: bold;
+                margin-top: 8px;
+                color: #000000;
+            }
+            .footer-signature-item {
+                text-align: center;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-start;
+                min-width: 0;
+            }
+            .footer-signature-title {
+                margin-bottom: 3px;
+                font-weight: 800;
+                font-size: 10.5px;
+                color: #000000;
+            }
+            .footer-signature-line {
+                width: 75%;
+                margin: 0 auto 4px auto;
+                border-bottom: 1px dotted #000000;
+            }
+            .footer-stamp-slot {
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+            }
+            
+            /* Standalone List/Table styled sheets */
+            .sheet-card {
+                width: 100%;
+                padding: 12px;
+                border: 2px solid #000000;
+                background-color: #ffffff;
+                margin-bottom: 10px;
+                box-sizing: border-box;
+            }
+            .sheet-title {
+                text-align: center;
+                font-size: 15px;
+                font-weight: 900;
+                margin: 4px 0 8px 0;
+                text-decoration: underline;
+                color: #000000;
+            }
+            .sheet-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10.5px;
+                border: 1.5px solid #000000;
+            }
+            .sheet-table th {
+                background-color: #ffffff;
+                border: 1.5px solid #000000;
+                padding: 5px;
+                font-weight: bold;
+                text-align: center;
+                color: #000000;
+            }
+            .sheet-table td {
+                border: 1.1px solid #000000;
+                padding: 5px;
+                text-align: center;
+                color: #000000;
+            }
+            .sheet-footer-signals {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 25px;
+                padding: 0 40px;
+                font-size: 11px;
+                font-weight: bold;
+                color: #000000;
+            }
+            
+            .print-footer {
+                display: none;
+            }
+            
+            /* Print style settings for lists (Excluding Report Cards) */
+            @media print {
+                .a4-page {
+                    position: relative;
+                }
+                .sheet-table thead {
+                    display: table-header-group !important;
+                }
+                .sheet-table tr {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                .sheet-card {
+                    border: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    background-color: transparent !important;
+                    display: block !important;
+                }
+                .print-footer {
+                    display: none !important;
+                }
+                .print-footer .page-number::after {
+                    content: "";
+                }
+            }
+            
+            /* Hymns and Cleaning Groups */
+            .groups-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                width: 100%;
+                margin-top: 10px;
+            }
+            .group-box {
+                flex: 1;
+                min-width: 18%;
+                border: 1.5px solid #000000;
+                border-radius: 4px;
+                background-color: #ffffff;
+                display: flex;
+                flex-direction: column;
+            }
+            .group-box-title {
+                background-color: #ffffff;
+                border-bottom: 1.5px solid #000000;
+                font-weight: bold;
+                text-align: center;
+                padding: 6px;
+                font-size: 11px;
+                color: #000000;
+            }
+            .group-box-content {
+                padding: 0;
+                margin: 0;
+                list-style: none;
+                flex-grow: 1;
+            }
+            .group-box-content li {
+                padding: 5px 8px;
+                border-bottom: 1px solid #000000;
+                font-size: 9.5px;
+                display: flex;
+                justify-content: space-between;
+                color: #000000;
+            }
+            .group-box-content li:last-child {
+                border-bottom: none;
+            }
+            .group-item-number {
+                font-weight: bold;
+                color: #000000;
+            }
+        </style></head><body><div class="sheet-card">
+        <div class="header-section">
+            <div class="header-column right" style="font-size: 9px;">
+                الجمهورية الإسلامية الموريتانية<br>
+                وزارة التربية وإصلاح النظام التعليمي<br>
+                الإدارة الجهوية للتربية: نواكشوط الغربية<br>
+                مفتشية مقاطعة: تفرغ زينة<br>
+                مدرسة: مدرسة النجاح الابتدائية
+            </div>
+            <div class="header-column center" style="flex: 1;">
+                <img src="data:image/jpeg;base64,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" style="width: 76px; height: 76px; display: block; margin: 0 auto; object-fit: contain;" alt="شعار موريتانيا" />
+                <div class="header-title-main" style="font-size: 13px; margin-top: 4px;">
+                    لائحة النتائج التفصيلية - الفصل الأول
+                </div>
+            </div>
+            <div class="header-column left" style="font-size: 9px;">
+                شرف - إخاء - عدالة<br>
+                السنة الدراسية: 2026-2027<br>
+                القسم: 5AP أ<br>
+                العدد الكلي للطلاب: 85 طالباً
+            </div>
+        </div>
+        
+        <div class="sheet-title" style="font-size: 13.5px; margin-top: 4px; margin-bottom: 8px;">جدول كشف رصد الدرجات التفصيلي والنتائج العامة</div>
+        
+        <div style="margin-top: 5px; margin-bottom: 12px; display: flex; justify-content: space-around; border: 1.5px solid #000000; padding: 10px 15px; background-color: #ffffff; border-radius: 4px; font-weight: bold; font-size: 11px;">
+            <div>👥 عدد الطلاب الكلي: <span style="font-weight: 800; font-size: 12.5px; color: #000000;">85</span></div>
+            <div>✅ عدد الناجحين: <span style="font-weight: 800; font-size: 12.5px; color: #000000;">54</span></div>
+            <div>❌ عدد الراسبين: <span style="font-weight: 800; font-size: 12.5px; color: #000000;">31</span></div>
+            <div>📈 نسبة النجاح العامة: <span style="font-weight: 800; font-size: 12.5px; color: #000000;">63.53%</span></div>
+        </div>
+        
+        <table class="sheet-table">
+            <thead>
+                <tr>
+                    <th style="width: 4%;">رقم</th>
+                    <th style="width: 20%; text-align: right; padding-right: 8px;">الاسم الكامل للطلبة</th>
+                    <th style="width: 8%;">الرقم المدرسي</th>
+                    <th style="width: 10%;">الرقم الوطني</th>
+        <th style="font-size: 9.5px;" title="التربية الإسلامية - Education Islamique">التربية الإسلامية - Education Islamique<br><span style="font-size: 8px; font-weight: normal; color: #555;">(30)</span></th><th style="font-size: 9.5px;" title="اللغة العربية - Langue arabe">اللغة العربية - Langue arabe<br><span style="font-size: 8px; font-weight: normal; color: #555;">(50)</span></th><th style="font-size: 9.5px;" title="الرياضيات - Mathématiques">الرياضيات - Mathématiques<br><span style="font-size: 8px; font-weight: normal; color: #555;">(40)</span></th><th style="font-size: 9.5px;" title="التربية المدنية - Education Civique">التربية المدنية - Education Civique<br><span style="font-size: 8px; font-weight: normal; color: #555;">(10)</span></th><th style="font-size: 9.5px;" title="التربية الفنية - Education Technique">التربية الفنية - Education Technique<br><span style="font-size: 8px; font-weight: normal; color: #555;">(10)</span></th><th style="font-size: 9.5px;" title="الفرنسية - Français">الفرنسية - Français<br><span style="font-size: 8px; font-weight: normal; color: #555;">(30)</span></th><th style="font-size: 9.5px;" title="التاريخ والجغرافيا - Histoire Géographie">التاريخ والجغرافيا - Histoire Géographie<br><span style="font-size: 8px; font-weight: normal; color: #555;">(10)</span></th><th style="font-size: 9.5px;" title="العلوم الطبيعية - Sciences Naturelles">العلوم الطبيعية - Sciences Naturelles<br><span style="font-size: 8px; font-weight: normal; color: #555;">(10)</span></th><th style="font-size: 9.5px;" title="الرياضة البدنية - Education Sportive">الرياضة البدنية - Education Sportive<br><span style="font-size: 8px; font-weight: normal; color: #555;">(10)</span></th>
+                    <th style="width: 10%; background-color: #ffffff; color: #000000; font-size: 9.5px;">مجموع النقاط<br><span style="font-size: 8px; font-weight: normal; color: #555;">(200)</span></th>
+                    <th style="width: 8%; background-color: #ffffff; color: #000000;">المعدل / 20</th>
+                    <th style="width: 6%;">الرتبة</th>
+                    <th style="width: 10%;">الملاحظة</th>
+                </tr>
+            </thead>
+            <tbody>
+        
+                <tr class="">
+                    <td>1</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">23 - المختار ولد السالك</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25007</span></td>
+                    <td style="font-size: 10px;">2170301007</td>
+            <td>27</td><td>46</td><td>37</td><td>9</td><td>9.5</td><td>28.5</td><td>9.5</td><td>9.5</td><td>9.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 185.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">18.55</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 1</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ممتاز</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>2</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">40 - ابراهيم ولد السالك</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25015</span></td>
+                    <td style="font-size: 10px;">2170301015</td>
+            <td>29.5</td><td>44.5</td><td>36</td><td>9</td><td>9</td><td>27.5</td><td>9</td><td>9.5</td><td>9.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 183.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">18.35</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 2</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ممتاز</td>
+                </tr>
+            
+                <tr class="">
+                    <td>3</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">38 - مريم بنت أعبيدي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25014</span></td>
+                    <td style="font-size: 10px;">2170301014</td>
+            <td>27</td><td>46</td><td>32.5</td><td>8</td><td>8</td><td>25.5</td><td>8.5</td><td>8.5</td><td>8.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 172.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">17.25</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 3</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ممتاز</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>4</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">22 - ميمونة بنت أعبيدي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25006</span></td>
+                    <td style="font-size: 10px;">2170301006</td>
+            <td>24.5</td><td>42</td><td>34</td><td>8.5</td><td>8.5</td><td>26</td><td>8.5</td><td>9</td><td>9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 170</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">17</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 4</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ممتاز</td>
+                </tr>
+            
+                <tr class="">
+                    <td>5</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">36 - العربي ولد بلال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25013</span></td>
+                    <td style="font-size: 10px;">2170301013</td>
+            <td>24.5</td><td>42</td><td>34</td><td>7.5</td><td>7.5</td><td>23</td><td>7.5</td><td>7.5</td><td>8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 161.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">16.15</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 5</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد جداً</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>6</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">19 - الأمين ولد بلال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25005</span></td>
+                    <td style="font-size: 10px;">2170301005</td>
+            <td>22.5</td><td>38</td><td>30.5</td><td>7.5</td><td>7.5</td><td>24</td><td>8</td><td>8</td><td>8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 154</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">15.4</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 6</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد جداً</td>
+                </tr>
+            
+                <tr class="">
+                    <td>7</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">33 - فاطمة بنت أحمد</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25012</span></td>
+                    <td style="font-size: 10px;">2170301012</td>
+            <td>22.5</td><td>38</td><td>30.5</td><td>7.5</td><td>6.5</td><td>20.5</td><td>7</td><td>7</td><td>7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 146.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">14.65</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 7</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد جداً</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>8</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">37 - هند بنت الشيخ</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1024</span></td>
+                    <td style="font-size: 10px;">2025000124</td>
+            <td>28.9</td><td>43.6</td><td>31.2</td><td>4</td><td>5.8</td><td>14.6</td><td>0.9</td><td>9.8</td><td>3.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 142</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">14.2</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 8</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد جداً</td>
+                </tr>
+            
+                <tr class="">
+                    <td>9</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">18 - خديجة بنت أحمد</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25004</span></td>
+                    <td style="font-size: 10px;">2170301004</td>
+            <td>23</td><td>34</td><td>27.5</td><td>7</td><td>7</td><td>21.5</td><td>7</td><td>7</td><td>7.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 141.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">14.15</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 9</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد جداً</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>10</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">24 - الحسن ولد سيدي محمد</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1017</span></td>
+                    <td style="font-size: 10px;">2025000117</td>
+            <td>24.2</td><td>31.1</td><td>21.7</td><td>7.7</td><td>9.5</td><td>24.6</td><td>4.4</td><td>9.8</td><td>6.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 139.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.94</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 10</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>11</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">51 - خديجة بنت سيداتي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1036</span></td>
+                    <td style="font-size: 10px;">2025000136</td>
+            <td>3.4</td><td>46.7</td><td>37.7</td><td>9.6</td><td>7.7</td><td>21.5</td><td>7.4</td><td>1.5</td><td>2.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 137.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.77</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 11</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>12</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">74 - عثمان ولد صو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1059</span></td>
+                    <td style="font-size: 10px;">2025000159</td>
+            <td>22.2</td><td>41.1</td><td>34.3</td><td>0.4</td><td>7.4</td><td>11.5</td><td>9</td><td>4.5</td><td>6.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 136.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.69</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 12</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>13</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">59 - حنان بنت فال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1044</span></td>
+                    <td style="font-size: 10px;">2025000144</td>
+            <td>26.9</td><td>25.4</td><td>22.6</td><td>8</td><td>6.1</td><td>27.7</td><td>1.5</td><td>7.6</td><td>9.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 135.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.54</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 13</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>14</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">70 - إدريس ولد سيديا</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1055</span></td>
+                    <td style="font-size: 10px;">2025000155</td>
+            <td>21.4</td><td>38.2</td><td>24.1</td><td>5.4</td><td>9.9</td><td>19.5</td><td>0.3</td><td>6.4</td><td>9.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 135</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.5</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 14</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>15</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">75 - جويرية بنت المرابط</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1060</span></td>
+                    <td style="font-size: 10px;">2025000160</td>
+            <td>16.9</td><td>49.2</td><td>35.4</td><td>9.9</td><td>0.8</td><td>10.1</td><td>6.6</td><td>3.7</td><td>0.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 133.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.33</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 15</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>16</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">79 - أسماء بنت سيداتي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1064</span></td>
+                    <td style="font-size: 10px;">2025000164</td>
+            <td>25.7</td><td>42.1</td><td>27.1</td><td>2.8</td><td>1.7</td><td>16.4</td><td>6.8</td><td>7.9</td><td>2.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 132.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.28</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 16</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>17</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">32 - الحسن ولد السالك</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25011</span></td>
+                    <td style="font-size: 10px;">2170301011</td>
+            <td>20</td><td>34</td><td>27.5</td><td>7</td><td>7</td><td>18</td><td>6</td><td>6</td><td>6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 131.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.15</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 17</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>18</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">4 - إيمان بنت المرابط</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1004</span></td>
+                    <td style="font-size: 10px;">2025000104</td>
+            <td>20.8</td><td>32</td><td>32.4</td><td>2.3</td><td>5.7</td><td>26.6</td><td>2.2</td><td>0.3</td><td>9.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 131.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.14</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 18</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>19</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">16 - السالك ولد السالك</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25003</span></td>
+                    <td style="font-size: 10px;">2170301003</td>
+            <td>21</td><td>35.5</td><td>24</td><td>6</td><td>6</td><td>19</td><td>6.5</td><td>6.5</td><td>6.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 131</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.1</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 19</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>20</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">9 - موسى ولد بكار</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1009</span></td>
+                    <td style="font-size: 10px;">2025000109</td>
+            <td>19.4</td><td>33</td><td>28.3</td><td>5.3</td><td>4</td><td>24.4</td><td>1.1</td><td>9</td><td>6.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 130.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">13.06</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 20</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>21</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">11 - الأمين ولد بلال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1011</span></td>
+                    <td style="font-size: 10px;">2025000111</td>
+            <td>21.8</td><td>28.8</td><td>20.1</td><td>4.9</td><td>3.3</td><td>26.3</td><td>5.7</td><td>9.4</td><td>6.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 126.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">12.69</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 21</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>22</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">1 - المختار ولد محمذن</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1001</span></td>
+                    <td style="font-size: 10px;">2025000101</td>
+            <td>26</td><td>27.9</td><td>35.4</td><td>4.8</td><td>3.2</td><td>10.6</td><td>8.5</td><td>5.4</td><td>5.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 126.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">12.69</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 21</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>23</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">27 - إدريس ولد الحسن</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1019</span></td>
+                    <td style="font-size: 10px;">2025000119</td>
+            <td>7.6</td><td>29.4</td><td>38.6</td><td>9.5</td><td>1</td><td>26.6</td><td>6</td><td>3.2</td><td>1.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 123.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">12.38</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 23</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>24</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">47 - رقية بنت المرابط</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1032</span></td>
+                    <td style="font-size: 10px;">2025000132</td>
+            <td>9.4</td><td>49.6</td><td>18.7</td><td>0.5</td><td>9.4</td><td>25.7</td><td>3.2</td><td>3.5</td><td>2.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 122.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">12.26</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 24</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="">
+                    <td>25</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">25 - مريم بنت المختار</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1018</span></td>
+                    <td style="font-size: 10px;">2025000118</td>
+            <td>4</td><td>38.4</td><td>39.8</td><td>2.1</td><td>0.4</td><td>10.7</td><td>8.1</td><td>9.2</td><td>9.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 122</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">12.2</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 25</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">جيد</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>26</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">14 - مريم بنت أعبيدي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25002</span></td>
+                    <td style="font-size: 10px;">2170301002</td>
+            <td>18.5</td><td>31.5</td><td>25.5</td><td>5</td><td>5.5</td><td>16.5</td><td>5.5</td><td>5.5</td><td>5.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 119</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">11.9</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 26</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>27</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">29 - سلمى بنت أعبيدي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25010</span></td>
+                    <td style="font-size: 10px;">2170301010</td>
+            <td>17.5</td><td>30</td><td>24</td><td>6</td><td>6</td><td>19</td><td>5</td><td>5.5</td><td>5.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 118.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">11.85</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 27</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>28</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">39 - ياسر ولد محمدن</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1025</span></td>
+                    <td style="font-size: 10px;">2025000125</td>
+            <td>28.2</td><td>28.2</td><td>23.9</td><td>5</td><td>8.7</td><td>18.5</td><td>0.6</td><td>0.6</td><td>4.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 118.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">11.81</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 28</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>29</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">52 - المختار ولد بكار</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1037</span></td>
+                    <td style="font-size: 10px;">2025000137</td>
+            <td>19.1</td><td>47.2</td><td>14.3</td><td>8.7</td><td>1.8</td><td>9.3</td><td>5</td><td>3.5</td><td>8.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 117.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">11.74</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 29</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>30</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">63 - لبنى بنت الطالب</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1048</span></td>
+                    <td style="font-size: 10px;">2025000148</td>
+            <td>1.1</td><td>47.6</td><td>32.8</td><td>5.4</td><td>6.9</td><td>12.6</td><td>3.6</td><td>6</td><td>0.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 116.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">11.68</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 30</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>31</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">34 - نجلاء بنت أعبيدي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1022</span></td>
+                    <td style="font-size: 10px;">2025000122</td>
+            <td>29.9</td><td>39.2</td><td>21.2</td><td>0.9</td><td>1.5</td><td>12.8</td><td>3.1</td><td>3.5</td><td>4.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 116.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">11.66</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 31</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>32</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">42 - الطيب ولد سيديا</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1027</span></td>
+                    <td style="font-size: 10px;">2025000127</td>
+            <td>13.5</td><td>29.2</td><td>21.2</td><td>2</td><td>3.9</td><td>27.5</td><td>8.1</td><td>2.9</td><td>5.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 113.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">11.39</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 32</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>33</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">65 - سالمة بنت أعبيدي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1050</span></td>
+                    <td style="font-size: 10px;">2025000150</td>
+            <td>17.1</td><td>38.8</td><td>19.4</td><td>1.7</td><td>2</td><td>10.6</td><td>1.7</td><td>8.9</td><td>9.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 109.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.99</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 33</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>34</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">78 - الطيب ولد مسعود</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1063</span></td>
+                    <td style="font-size: 10px;">2025000163</td>
+            <td>20.7</td><td>42.2</td><td>5.9</td><td>1.8</td><td>1.9</td><td>17.5</td><td>8.9</td><td>6.9</td><td>3.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 109.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.96</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 34</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>35</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">50 - حمزة ولد مسعود</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1035</span></td>
+                    <td style="font-size: 10px;">2025000135</td>
+            <td>28.6</td><td>37</td><td>5.8</td><td>4.5</td><td>8</td><td>16.3</td><td>0.1</td><td>4.1</td><td>5.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 109.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.95</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 35</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>36</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">45 - هدى بنت لمرابط</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1030</span></td>
+                    <td style="font-size: 10px;">2025000130</td>
+            <td>29.4</td><td>20.1</td><td>13.9</td><td>7.1</td><td>8.1</td><td>16.1</td><td>5.1</td><td>5.3</td><td>4.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 109.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.92</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 36</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>37</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">82 - محمد ولد بلال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1067</span></td>
+                    <td style="font-size: 10px;">2025000167</td>
+            <td>26.3</td><td>26.2</td><td>26.7</td><td>2.9</td><td>6.3</td><td>11.1</td><td>0.8</td><td>7.8</td><td>0.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 108.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.87</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 37</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>38</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">85 - منى بنت جدو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1070</span></td>
+                    <td style="font-size: 10px;">2025000170</td>
+            <td>12.2</td><td>27.4</td><td>28.7</td><td>1.7</td><td>6.1</td><td>9.7</td><td>10</td><td>6.4</td><td>6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 108.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.82</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 38</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>39</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">80 - داوود ولد بكار</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1065</span></td>
+                    <td style="font-size: 10px;">2025000165</td>
+            <td>28.9</td><td>17.5</td><td>21.6</td><td>9.7</td><td>6</td><td>13.8</td><td>6.3</td><td>2.5</td><td>0.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 106.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.67</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 39</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>40</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">53 - سودة بنت بداه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1038</span></td>
+                    <td style="font-size: 10px;">2025000138</td>
+            <td>3.2</td><td>29.5</td><td>11.6</td><td>5.9</td><td>6.5</td><td>27.1</td><td>6.5</td><td>9.6</td><td>4.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 104.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.45</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 40</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>41</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">56 - زياد ولد بابه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1041</span></td>
+                    <td style="font-size: 10px;">2025000141</td>
+            <td>2</td><td>34.4</td><td>20.5</td><td>2.2</td><td>8.5</td><td>17.8</td><td>5.9</td><td>8.3</td><td>4.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 104.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.42</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 41</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>42</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">12 - محمد ولد بلال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25001</span></td>
+                    <td style="font-size: 10px;">2170301001</td>
+            <td>16</td><td>27.5</td><td>22</td><td>5.5</td><td>4.5</td><td>14</td><td>4.5</td><td>5</td><td>5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 104</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.4</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 42</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="">
+                    <td>43</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">28 - الطيب ولد بلال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25009</span></td>
+                    <td style="font-size: 10px;">2170301009</td>
+            <td>15</td><td>26</td><td>21</td><td>5</td><td>5.5</td><td>16.5</td><td>5.5</td><td>4.5</td><td>4.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 103.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">10.35</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 43</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">مقبول</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>44</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">21 - فدوى بنت فال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1016</span></td>
+                    <td style="font-size: 10px;">2025000116</td>
+            <td>9.3</td><td>26.1</td><td>7.8</td><td>6.9</td><td>7.9</td><td>28.3</td><td>1.1</td><td>4.9</td><td>4.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 96.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.65</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 44</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="">
+                    <td>45</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">3 - يوسف ولد صو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1003</span></td>
+                    <td style="font-size: 10px;">2025000103</td>
+            <td>1.3</td><td>22</td><td>19.3</td><td>4.7</td><td>8.2</td><td>28.9</td><td>6.8</td><td>3.9</td><td>0.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 95.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.53</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 45</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>46</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">84 - ابراهيم ولد بابه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1069</span></td>
+                    <td style="font-size: 10px;">2025000169</td>
+            <td>16.4</td><td>8.2</td><td>14.1</td><td>2.4</td><td>6.3</td><td>29.5</td><td>6.7</td><td>9.8</td><td>1.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 95.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.51</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 46</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="">
+                    <td>47</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">66 - خالد ولد بابا</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1051</span></td>
+                    <td style="font-size: 10px;">2025000151</td>
+            <td>12.9</td><td>13.6</td><td>18</td><td>0.9</td><td>8.1</td><td>25.4</td><td>4</td><td>2.8</td><td>8.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 94.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.45</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 47</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>48</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">46 - محمد ولد صو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1031</span></td>
+                    <td style="font-size: 10px;">2025000131</td>
+            <td>22.3</td><td>15</td><td>18.8</td><td>7.1</td><td>3.2</td><td>16.6</td><td>1.2</td><td>7.5</td><td>1.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 93.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.33</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 48</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="">
+                    <td>49</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">54 - يوسف ولد بلال</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1039</span></td>
+                    <td style="font-size: 10px;">2025000139</td>
+            <td>17</td><td>19.3</td><td>9</td><td>8.1</td><td>4.6</td><td>26.2</td><td>0.6</td><td>0.2</td><td>7.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 92.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.22</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 49</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>50</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">64 - إسماعيل ولد الداه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1049</span></td>
+                    <td style="font-size: 10px;">2025000149</td>
+            <td>19.5</td><td>12.4</td><td>30.2</td><td>3.5</td><td>5.1</td><td>9.8</td><td>6.5</td><td>0.3</td><td>4.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 92</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.2</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 50</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="">
+                    <td>51</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">57 - صفية بنت جدو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1042</span></td>
+                    <td style="font-size: 10px;">2025000142</td>
+            <td>18.4</td><td>27.9</td><td>5.8</td><td>1.5</td><td>1.4</td><td>22.7</td><td>7</td><td>5.9</td><td>1.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 91.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.17</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 51</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>52</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">8 - منى بنت سيداتي</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1008</span></td>
+                    <td style="font-size: 10px;">2025000108</td>
+            <td>16.7</td><td>0.8</td><td>36.5</td><td>7.8</td><td>8.4</td><td>8.8</td><td>5.6</td><td>1.2</td><td>5.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 91.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.16</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 52</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="">
+                    <td>53</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">31 - السالك ولد الداه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1021</span></td>
+                    <td style="font-size: 10px;">2025000121</td>
+            <td>0.8</td><td>38</td><td>10.4</td><td>7.9</td><td>0.8</td><td>21.6</td><td>3.3</td><td>1.7</td><td>6.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 91.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.13</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 53</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>54</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">44 - داوود ولد محمذن</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1029</span></td>
+                    <td style="font-size: 10px;">2025000129</td>
+            <td>27.9</td><td>27.4</td><td>6.9</td><td>0.1</td><td>8.1</td><td>9.2</td><td>7.4</td><td>1.6</td><td>2.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 90.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">9.09</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 54</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">ناجح</td>
+                </tr>
+            
+                <tr class="">
+                    <td>55</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">55 - عيشة بنت أحمدو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1040</span></td>
+                    <td style="font-size: 10px;">2025000140</td>
+            <td>15.7</td><td>18.8</td><td>4.7</td><td>5.2</td><td>5.1</td><td>24.2</td><td>3.4</td><td>4.8</td><td>8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 89.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.99</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 55</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>56</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">48 - ابراهيم ولد السالك</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1033</span></td>
+                    <td style="font-size: 10px;">2025000133</td>
+            <td>0.4</td><td>27.1</td><td>3.8</td><td>2</td><td>9.6</td><td>26.3</td><td>6.7</td><td>5.8</td><td>7.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 89.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.94</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 56</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>57</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">60 - موسى ولد سيدي محمد</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1045</span></td>
+                    <td style="font-size: 10px;">2025000145</td>
+            <td>25.6</td><td>31.2</td><td>12.6</td><td>7.2</td><td>0.3</td><td>4.6</td><td>3.6</td><td>0.9</td><td>3.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 89.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.93</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 57</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>58</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">72 - السالك ولد محمذن</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1057</span></td>
+                    <td style="font-size: 10px;">2025000157</td>
+            <td>20.6</td><td>25.8</td><td>3.4</td><td>0.3</td><td>4.6</td><td>21</td><td>3.5</td><td>9.9</td><td>0.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 89.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.92</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 58</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>59</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">26 - آمنة بنت أحمد</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">25008</span></td>
+                    <td style="font-size: 10px;">2170301008</td>
+            <td>12.5</td><td>22</td><td>18</td><td>4.5</td><td>4.5</td><td>14</td><td>4.5</td><td>5</td><td>4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 89</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.9</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 59</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>60</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">17 - توتو بنت جدو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1014</span></td>
+                    <td style="font-size: 10px;">2025000114</td>
+            <td>24</td><td>9</td><td>28.7</td><td>0.5</td><td>5.8</td><td>10.5</td><td>7.3</td><td>0.8</td><td>2.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 89</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.9</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 59</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>61</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">69 - ميمونة بنت أعل</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1054</span></td>
+                    <td style="font-size: 10px;">2025000154</td>
+            <td>10.7</td><td>14.4</td><td>23.5</td><td>2.5</td><td>3.4</td><td>27.3</td><td>0.1</td><td>1.9</td><td>4.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 88.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.86</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 61</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>62</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">2 - أسماء بنت لمرابط</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1002</span></td>
+                    <td style="font-size: 10px;">2025000102</td>
+            <td>20.9</td><td>11.4</td><td>26.2</td><td>8.9</td><td>5.7</td><td>1.1</td><td>1.6</td><td>5.5</td><td>6.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 88</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.8</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 62</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>63</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">15 - إسماعيل ولد بابه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1013</span></td>
+                    <td style="font-size: 10px;">2025000113</td>
+            <td>23.3</td><td>8</td><td>20.2</td><td>4.8</td><td>0.3</td><td>23.5</td><td>0.4</td><td>0.7</td><td>5.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 86.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.64</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 63</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>64</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">68 - الحسن ولد محمدن</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1053</span></td>
+                    <td style="font-size: 10px;">2025000153</td>
+            <td>27.1</td><td>1.2</td><td>19.1</td><td>1</td><td>1.8</td><td>17.5</td><td>5.6</td><td>9.1</td><td>2.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 85.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.52</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 64</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>65</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">13 - سعاد بنت أحمدو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1012</span></td>
+                    <td style="font-size: 10px;">2025000112</td>
+            <td>9.6</td><td>7.6</td><td>9.5</td><td>10</td><td>0.1</td><td>24.1</td><td>10</td><td>5.5</td><td>5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 81.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.14</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 65</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>66</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">67 - وفاء بنت الشيخ</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1052</span></td>
+                    <td style="font-size: 10px;">2025000152</td>
+            <td>11</td><td>22.8</td><td>5.9</td><td>1.2</td><td>5.7</td><td>24.3</td><td>6.4</td><td>1.5</td><td>2.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 81.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.13</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 66</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>67</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">49 - نجاة بنت محمد الأمين</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1034</span></td>
+                    <td style="font-size: 10px;">2025000134</td>
+            <td>11.7</td><td>39.4</td><td>3.5</td><td>3</td><td>1.3</td><td>8.2</td><td>5.2</td><td>8.7</td><td>0.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 81.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.11</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 67</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>68</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">41 - رجاء بنت أعل</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1026</span></td>
+                    <td style="font-size: 10px;">2025000126</td>
+            <td>2.8</td><td>26.8</td><td>29.5</td><td>3.9</td><td>1.8</td><td>3.8</td><td>6.7</td><td>4.2</td><td>1.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 80.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.09</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 68</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>69</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">5 - زياد ولد السالك</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1005</span></td>
+                    <td style="font-size: 10px;">2025000105</td>
+            <td>19.6</td><td>1.9</td><td>31</td><td>6.3</td><td>3.5</td><td>5.2</td><td>5.2</td><td>4.2</td><td>3.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 80.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.03</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 69</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>70</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">35 - عثمان ولد بابا</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1023</span></td>
+                    <td style="font-size: 10px;">2025000123</td>
+            <td>1.4</td><td>10.7</td><td>22.1</td><td>0.6</td><td>4.5</td><td>24</td><td>6.3</td><td>9.4</td><td>1.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 80.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8.03</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 70</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>71</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">83 - لالة بنت أحمدو</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1068</span></td>
+                    <td style="font-size: 10px;">2025000168</td>
+            <td>1.9</td><td>33.4</td><td>9.4</td><td>6.8</td><td>6.4</td><td>5.4</td><td>8.4</td><td>2.5</td><td>5.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 80</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">8</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 71</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>72</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">71 - سميرة بنت أحمد</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1056</span></td>
+                    <td style="font-size: 10px;">2025000156</td>
+            <td>27.8</td><td>9</td><td>10.4</td><td>5.5</td><td>3.5</td><td>10.5</td><td>3.8</td><td>1.7</td><td>6.3</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 78.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">7.85</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 72</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>73</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">43 - سلمى بنت أحمد</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1028</span></td>
+                    <td style="font-size: 10px;">2025000128</td>
+            <td>21.1</td><td>0.4</td><td>17.6</td><td>2.2</td><td>4.3</td><td>11.3</td><td>7.4</td><td>4.5</td><td>9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 77.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">7.78</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 73</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>74</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">77 - فاطمة بنت محمد الأمين</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1062</span></td>
+                    <td style="font-size: 10px;">2025000162</td>
+            <td>1.8</td><td>5.8</td><td>24.8</td><td>9.3</td><td>7.6</td><td>8.1</td><td>6.3</td><td>3.6</td><td>9.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 77.1</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">7.71</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 74</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>75</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">73 - زينب بنت لمرابط</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1058</span></td>
+                    <td style="font-size: 10px;">2025000158</td>
+            <td>13.8</td><td>28.2</td><td>5.9</td><td>3.2</td><td>8.1</td><td>6.8</td><td>3.4</td><td>3.9</td><td>0.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 73.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">7.38</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 75</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>76</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">10 - آمنة بنت بداه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1010</span></td>
+                    <td style="font-size: 10px;">2025000110</td>
+            <td>10.3</td><td>5</td><td>15.1</td><td>7.6</td><td>9.2</td><td>19.7</td><td>2.3</td><td>1.8</td><td>2.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 73.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">7.36</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 76</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>77</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">62 - الأمين ولد الحسن</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1047</span></td>
+                    <td style="font-size: 10px;">2025000147</td>
+            <td>18.2</td><td>12.8</td><td>22.4</td><td>3.7</td><td>0.5</td><td>9</td><td>2.4</td><td>1.5</td><td>1.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 71.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">7.17</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 77</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>78</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">7 - العربي ولد مسعود</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1007</span></td>
+                    <td style="font-size: 10px;">2025000107</td>
+            <td>12.8</td><td>9.2</td><td>19.7</td><td>1.7</td><td>8.2</td><td>3.7</td><td>3.4</td><td>6.4</td><td>2.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 67.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">6.78</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 78</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>79</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">76 - ياسر ولد السالك</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1061</span></td>
+                    <td style="font-size: 10px;">2025000161</td>
+            <td>12.9</td><td>3.6</td><td>10.9</td><td>4</td><td>5.1</td><td>16.8</td><td>5.7</td><td>6.1</td><td>2.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 67.8</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">6.78</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 78</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>80</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">30 - حفصة بنت الطالب</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1020</span></td>
+                    <td style="font-size: 10px;">2025000120</td>
+            <td>27.2</td><td>13</td><td>1.5</td><td>2.5</td><td>0.4</td><td>5</td><td>5.9</td><td>2.9</td><td>7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 65.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">6.54</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 80</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>81</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">6 - لالة بنت محمد الأمين</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1006</span></td>
+                    <td style="font-size: 10px;">2025000106</td>
+            <td>27.4</td><td>3</td><td>9.7</td><td>0.7</td><td>8.7</td><td>10.3</td><td>0.6</td><td>1.1</td><td>2.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 63.9</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">6.39</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 81</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>82</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">20 - خالد ولد المصطفى</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1015</span></td>
+                    <td style="font-size: 10px;">2025000115</td>
+            <td>7.9</td><td>4</td><td>1.7</td><td>5.9</td><td>2.6</td><td>29.6</td><td>8.3</td><td>1</td><td>1.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 62.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">6.25</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 82</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>83</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">58 - العربي ولد المصطفى</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1043</span></td>
+                    <td style="font-size: 10px;">2025000143</td>
+            <td>19.8</td><td>5.6</td><td>4.5</td><td>1.5</td><td>9.5</td><td>2.6</td><td>9.1</td><td>5.8</td><td>3.6</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 62</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">6.2</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 83</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="row-bg-accent">
+                    <td>84</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">81 - إيمان بنت بداه</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1066</span></td>
+                    <td style="font-size: 10px;">2025000166</td>
+            <td>3.7</td><td>3.8</td><td>13.2</td><td>3.5</td><td>3.6</td><td>12.5</td><td>9.6</td><td>5.2</td><td>4.4</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 59.5</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">5.95</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 84</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+                <tr class="">
+                    <td>85</td>
+                    <td style="text-align: right; font-weight: bold; padding-right: 6px; font-size: 11px;">61 - أم كلثوم بنت المختار</td>
+                    <td style="font-size: 10px;"><span style="display: inline-block; min-width: 45px; text-align: center; ">1046</span></td>
+                    <td style="font-size: 10px;">2025000146</td>
+            <td>1.5</td><td>31.4</td><td>5</td><td>6.8</td><td>2</td><td>0.4</td><td>3.5</td><td>1.9</td><td>4.7</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11px; direction: ltr;">200 / 57.2</td>
+                    <td style="background-color: #ffffff; color: #000000; font-weight: bold; font-size: 11.5px;">5.72</td>
+                    <td style="font-weight: bold; direction: ltr;">85 / 85</td>
+                    <td style="font-weight: bold; font-size: 9.5px;">راسب</td>
+                </tr>
+            
+            </tbody>
+        </table>
+        
+        <div class="sheet-footer-signals" style="margin-top: 15px; margin-bottom: 5px; page-break-inside: avoid; break-inside: avoid;">
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع معلم القسم</div>
+                <div style="width: 80%; border-bottom: 1px dotted #000000; margin: 3px auto 4px auto;"></div>
+                <div style="height: 60px; display: flex; align-items: center; justify-content: center;">
+                    
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع مدير المدرسة</div>
+                <div style="width: 80%; border-bottom: 1px dotted #000000; margin: 3px auto 4px auto;"></div>
+                <div style="height: 60px; display: flex; align-items: center; justify-content: center;">
+                    
+                </div>
+            </div>
+        </div>
+        </div></body></html>

@@ -1,0 +1,86 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :composeApp:kmpPartiallyResolvedDependenciesChecker
+> Task :composeApp:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :composeApp:convertXmlValueResourcesForAppleMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForAppleMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForAppleMain NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForAppleMain NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForCommonMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForCommonMain
+> Task :composeApp:prepareComposeResourcesTaskForCommonMain
+> Task :composeApp:generateResourceAccessorsForCommonMain
+> Task :composeApp:convertXmlValueResourcesForIosMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForIosMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForIosMain NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForIosMain NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForIosSimulatorArm64Main NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForIosSimulatorArm64Main NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForIosSimulatorArm64Main NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForIosSimulatorArm64Main NO-SOURCE
+> Task :composeApp:convertXmlValueResourcesForNativeMain NO-SOURCE
+> Task :composeApp:copyNonXmlValueResourcesForNativeMain NO-SOURCE
+> Task :composeApp:prepareComposeResourcesTaskForNativeMain NO-SOURCE
+> Task :composeApp:generateResourceAccessorsForNativeMain NO-SOURCE
+> Task :composeApp:generateActualResourceCollectorsForIosSimulatorArm64Main
+> Task :composeApp:generateComposeResClass
+> Task :composeApp:generateExpectResourceCollectorsForCommonMain
+
+> Task :composeApp:kspKotlinIosSimulatorArm64
+Kotlin/Native bundle directory /Users/runner/.konan/kotlin-native-prebuilt-macos-aarch64-2.2.20 is not empty. Native bundle files will be overwritten.
+Downloading native dependencies (LLVM, sysroot etc). This is a one-time action performed only on the first run of the compiler.
+Downloading dependency https://download.jetbrains.com/kotlin/native/resources/llvm/19-aarch64-macos/llvm-19-aarch64-macos-essentials-79.tar.gz to /Users/runner/.konan/dependencies/cache/llvm-19-aarch64-macos-essentials-79.tar.gz
+Done.
+Extracting dependency: /Users/runner/.konan/dependencies/cache/llvm-19-aarch64-macos-essentials-79.tar.gz into /Users/runner/.konan/dependencies
+Downloading dependency https://download.jetbrains.com/kotlin/native/libffi-3.3-1-macos-arm64.tar.gz to /Users/runner/.konan/dependencies/cache/libffi-3.3-1-macos-arm64.tar.gz
+Done.
+Extracting dependency: /Users/runner/.konan/dependencies/cache/libffi-3.3-1-macos-arm64.tar.gz into /Users/runner/.konan/dependencies
+
+> Task :composeApp:compileKotlinIosSimulatorArm64
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/HtmlReportHelper.kt:54:17 Check for instance is always 'false'.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/TeacherViewModel.kt:2379:25 Condition is always 'true'.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/TeacherViewModel.kt:2450:25 Condition is always 'true'.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/TeacherViewModel.kt:4140:25 Condition is always 'false'.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/TeacherViewModel.kt:4251:25 Condition is always 'false'.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/AnnualPlanningSubview.kt:1064:81 'val Icons.Filled.MenuBook: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.MenuBook.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/AnnualPlanningSubview.kt:1168:69 'val Icons.Filled.MenuBook: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.MenuBook.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/AnnualPlanningSubview.kt:2053:43 'val Icons.Filled.MenuBook: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.MenuBook.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/ClassTimetableSubview.kt:773:35 'val Icons.Filled.MenuBook: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.MenuBook.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/SchoolLegislationScreen.kt:303:65 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:1019:61 'val Icons.Filled.Assignment: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Assignment.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:1507:81 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:1608:68 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:2031:61 'val Icons.Filled.ListAlt: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ListAlt.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:4534:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:5720:40 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:7024:40 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:7166:61 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:8511:69 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:9696:65 'val Icons.Filled.Assignment: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Assignment.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:11537:57 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:12016:61 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:12066:61 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:12116:61 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:12166:61 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherAppScreen.kt:12219:61 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:523:38 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:565:42 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:940:38 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:980:42 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:1749:34 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:1789:38 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:1844:34 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:2169:53 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:2270:61 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/com/example/ui/screens/TeacherExchangeScreen.kt:2304:61 'fun Modifier.menuAnchor(): Modifier' is deprecated. Use overload that takes MenuAnchorType and enabled parameters.
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:30:72 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:34:30 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:41:26 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:46:63 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:56:35 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:64:30 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:92:30 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///Users/runner/work/Diftar-ios/Diftar-ios/composeApp/src/commonMain/kotlin/shim/GmsTasks.kt:98:45 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+gradle/actions: Writing build results to /Users/runner/work/_temp/.gradle-actions/build-results/__run_2-1790636796893.json
+
+BUILD SUCCESSFUL in 1m 27s
+9 actionable tasks: 9 executed
