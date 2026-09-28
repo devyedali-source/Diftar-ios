@@ -166,6 +166,8 @@ class JSONObject() {
     fun toString(indent: Int): String = toString()
 
     companion object {
+        @OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+        @kotlin.native.HiddenFromObjC
         val NULL: Any = object {
             override fun toString() = "null"
             override fun equals(other: Any?) = other == null || other === this

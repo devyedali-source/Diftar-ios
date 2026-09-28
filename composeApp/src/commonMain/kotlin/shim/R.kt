@@ -64,6 +64,8 @@ object R {
 }
 
 object BuildConfig {
+    @OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+    @kotlin.native.HiddenFromObjC
     const val DEBUG = false
     const val APPLICATION_ID = "com.elyedali.schoolmanager"
     const val BUILD_TYPE = "release"
