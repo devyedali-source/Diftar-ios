@@ -5,10 +5,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +27,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Run shared-code tests on iOS Simulator
+        run: |
+          set -o pipefail
+          mkdir -p ci
+          ./gradlew :composeApp:iosSimulatorArm64Test --stacktrace 2>&1 | tee ci/tests.log
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -34,10 +43,28 @@ jobs:
       - name: Build app for iOS Simulator
         working-directory: iosApp
         run: |
+          set -o pipefail
           xcodebuild -project iosApp.xcodeproj \
             -target iosApp \
             -configuration Debug \
             -sdk iphonesimulator \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build 2>&1 | tee ../ci/xcode.log
+
+      # تقرير البناء يُحفظ في فرع ci-results لقراءته دون الحاجة إلى صفحة Actions
+      - name: Publish build report
+        if: always()
+        run: |
+          mkdir -p ci
+          cp -r composeApp/build/test-results ci/test-results 2>/dev/null || true
+          for f in ci/*.log; do [ -f "$f" ] && tail -c 60000 "$f" > "$f.tail" && mv "$f.tail" "$f"; done
+          echo "commit=${GITHUB_SHA} status=${{ job.status }} run=${GITHUB_RUN_ID}" > ci/summary.txt
+          cd ci
+          git init -q
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git checkout -q -b ci-results
+          git add -A
+          git commit -q -m "report ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" ci-results
