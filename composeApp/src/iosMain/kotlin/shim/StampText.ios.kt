@@ -48,32 +48,30 @@ private fun latinBold(): Typeface? {
 
 private fun isArabic(c: Char) = c.code in 0x0600..0x06FF || c.code in 0x0750..0x077F || c.code in 0xFB50..0xFDFF || c.code in 0xFE70..0xFEFF
 
-/** يقسم النص إلى مقاطع عربية وغير عربية بترتيب العرض (من اليسار إلى اليمين) */
-private fun visualSegments(text: String): List<Pair<String, Boolean>> {
-    val segs = mutableListOf<Pair<String, Boolean>>()
+/** يقسم النص إلى مقاطع (عربي / غير عربي / فراغ) بترتيب العرض من اليسار إلى اليمين */
+private fun visualSegments(text: String): List<Pair<String, Boolean?>> {
+    val segs = mutableListOf<Pair<String, Boolean?>>()
     val sb = StringBuilder()
     var cur: Boolean? = null
+    fun flush() { if (sb.isNotEmpty()) { segs.add(sb.toString() to cur); sb.clear() } }
     for (ch in text) {
-        val a = if (ch == ' ') (cur ?: false) else isArabic(ch)
-        if (cur != null && a != cur) { segs.add(sb.toString() to cur); sb.clear() }
+        if (ch == ' ') { flush(); segs.add(" " to null); cur = null; continue }
+        val a = isArabic(ch)
+        if (cur != null && a != cur) flush()
         cur = a; sb.append(ch)
     }
-    if (sb.isNotEmpty() && cur != null) segs.add(sb.toString() to cur)
+    flush()
     return segs.reversed() // فقرة عربية: المقطع الأول يظهر في أقصى اليمين
 }
 
-/**
- * يرسم سطرًا مُشكَّلًا على قوس دائري.
- * [startDeg] زاوية بداية القوس (0 = يمين، باتجاه عقارب الساعة)، [sweepDeg] طول القوس (سالب = عكس الاتجاه).
- * مثل Path.addArc + drawTextOnPath في أندرويد.
- */
 private class Glyphs(val glyphs: ShortArray, val xs: FloatArray, val widths: FloatArray, val font: Font)
 
 private fun shapeLine(text: String, size: Float): Pair<List<Glyphs>, Float> {
     val out = mutableListOf<Glyphs>()
     var x = 0f
-    for ((seg, arabic) in visualSegments(text)) {
-        val font = Font(if (arabic) arabicBold() else latinBold(), size)
+    for ((seg, kind) in visualSegments(text)) {
+        if (kind == null) { x += TextLine.make(" ", Font(arabicBold(), size)).width; continue }
+        val font = Font(if (kind) arabicBold() else latinBold(), size)
         val line = TextLine.make(seg, font)
         val g = line.glyphs
         if (g.isEmpty()) { x += line.width; continue }
