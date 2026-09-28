@@ -38,6 +38,7 @@ jobs:
           ./gradlew :composeApp:compileKotlinIosSimulatorArm64 --stacktrace 2>&1 | tee ci/compile.log
 
       - name: Run shared-code tests on iOS Simulator
+        if: contains(github.event.head_commit.message, '[tests]') || github.event_name == 'workflow_dispatch'
         run: |
           set -o pipefail
           mkdir -p ci

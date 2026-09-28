@@ -14,24 +14,12 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Download Android system fonts (Roboto + Noto Naskh Arabic UI)
+      - name: Download Noto Sans Arabic (font used by Android WebView for the reports)
         run: |
           set -x
-          mkdir -p work out
-          cd work
-          brew install --cask font-noto-naskh-arabic-ui || true
-          brew install --cask font-roboto || true
-          ls ~/Library/Fonts || true
-          cp ~/Library/Fonts/NotoNaskhArabicUI-*.ttf ../out/ 2>/dev/null || true
-          cp ~/Library/Fonts/Roboto-Regular.ttf ~/Library/Fonts/Roboto-Medium.ttf ~/Library/Fonts/Roboto-Bold.ttf ../out/ 2>/dev/null || true
-          cp ~/Library/Fonts/Roboto*.ttf ../out/ 2>/dev/null || true
-          if ! ls ../out/NotoNaskhArabicUI* >/dev/null 2>&1; then
-            curl -fsSL -o ../out/NotoNaskhArabic-VF.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf" || true
-          fi
-          if ! ls ../out/Roboto* >/dev/null 2>&1; then
-            curl -fsSL -o ../out/Roboto-VF.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf" || true
-          fi
-          ls -la ../out
+          mkdir -p out
+          curl -fsSL -o out/NotoSansArabic-VF.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notosansarabic/NotoSansArabic%5Bwdth%2Cwght%5D.ttf"
+          ls -la out
       - name: Commit fonts
         run: |
           mkdir -p fonts-download
@@ -43,3 +31,5 @@ jobs:
           git commit -m "fonts: download Android system fonts [skip ci]" || echo "nothing"
           git pull --rebase origin main || true
           git push origin HEAD:main
+
+# v2
