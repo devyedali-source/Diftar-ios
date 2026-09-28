@@ -1,0 +1,45 @@
+name: Fetch fonts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ '.github/workflows/fetch-fonts.yml' ]
+
+permissions:
+  contents: write
+
+jobs:
+  fonts:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Android system fonts (Roboto + Noto Naskh Arabic UI)
+        run: |
+          set -x
+          mkdir -p work out
+          cd work
+          brew install --cask font-noto-naskh-arabic-ui || true
+          brew install --cask font-roboto || true
+          ls ~/Library/Fonts || true
+          cp ~/Library/Fonts/NotoNaskhArabicUI-*.ttf ../out/ 2>/dev/null || true
+          cp ~/Library/Fonts/Roboto-Regular.ttf ~/Library/Fonts/Roboto-Medium.ttf ~/Library/Fonts/Roboto-Bold.ttf ../out/ 2>/dev/null || true
+          cp ~/Library/Fonts/Roboto*.ttf ../out/ 2>/dev/null || true
+          if ! ls ../out/NotoNaskhArabicUI* >/dev/null 2>&1; then
+            curl -fsSL -o ../out/NotoNaskhArabic-VF.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic%5Bwght%5D.ttf" || true
+          fi
+          if ! ls ../out/Roboto* >/dev/null 2>&1; then
+            curl -fsSL -o ../out/Roboto-VF.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf" || true
+          fi
+          ls -la ../out
+      - name: Commit fonts
+        run: |
+          mkdir -p fonts-download
+          cp out/* fonts-download/ || true
+          ls -la fonts-download
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add fonts-download
+          git commit -m "fonts: download Android system fonts [skip ci]" || echo "nothing"
+          git pull --rebase origin main || true
+          git push origin HEAD:main
