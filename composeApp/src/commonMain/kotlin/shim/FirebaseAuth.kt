@@ -132,6 +132,9 @@ class FirebaseAuth private constructor() {
             refreshToken = PlatformApi.prefGet(store, "refreshToken") as? String
             expiresAtMs = (PlatformApi.prefGet(store, "expiresAt") as? Number)?.toLong() ?: 0L
         }
+        if (currentUser == null && PlatformApi.ciFlag("DAFTAR_CI_DEMO")) {
+            currentUser = FirebaseUser("ci-demo-user", "demo@example.com", "معلم تجريبي", null)
+        }
     }
 
     fun addAuthStateListener(listener: AuthStateListener) {

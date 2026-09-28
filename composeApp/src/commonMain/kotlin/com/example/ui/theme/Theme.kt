@@ -59,5 +59,8 @@ fun MyApplicationTheme(
       else -> LightColorScheme
     }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  val family = rememberAppFontFamily()
+  AppFonts.family = family
+  val typography = androidx.compose.runtime.remember(family) { Typography.withFamily(family) }
+  MaterialTheme(colorScheme = colorScheme, typography = typography, content = content)
 }

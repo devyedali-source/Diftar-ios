@@ -83,4 +83,7 @@ expect object PlatformApi {
     fun sleepMillis(millis: Long)
 
     fun log(tag: String, message: String)
+
+    /** مفاتيح اختبار آلي تعمل على المحاكي فقط */
+    fun ciFlag(name: String): Boolean
 }

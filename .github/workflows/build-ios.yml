@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: build-ios
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: macos-15
@@ -71,11 +75,17 @@ jobs:
           xcrun simctl boot "$DEVICE" || true
           xcrun simctl bootstatus "$DEVICE" -b || true
           xcrun simctl install "$DEVICE" "$APP"
+          export SIMCTL_CHILD_DAFTAR_SKIP_LOCK=1
           xcrun simctl launch --stdout=$PWD/ci/app-stdout.log --stderr=$PWD/ci/app-stderr.log "$DEVICE" com.elyedali.schoolmanager
           sleep 25
-          xcrun simctl io "$DEVICE" screenshot ci/shots/01-launch.png
-          sleep 10
-          xcrun simctl io "$DEVICE" screenshot ci/shots/02-after35s.png
+          xcrun simctl io "$DEVICE" screenshot ci/shots/01-login.png
+          xcrun simctl terminate "$DEVICE" com.elyedali.schoolmanager || true
+          export SIMCTL_CHILD_DAFTAR_CI_DEMO=1
+          xcrun simctl launch --stdout=$PWD/ci/app-stdout2.log --stderr=$PWD/ci/app-stderr2.log "$DEVICE" com.elyedali.schoolmanager
+          sleep 20
+          xcrun simctl io "$DEVICE" screenshot ci/shots/02-main.png
+          sleep 20
+          xcrun simctl io "$DEVICE" screenshot ci/shots/03-main-later.png
           xcrun simctl spawn "$DEVICE" launchctl list | grep -i daftar > ci/app-running.txt || echo "NOT RUNNING" > ci/app-running.txt
           find ~/Library/Logs/DiagnosticReports -name "*DaftarAlMoallim*" -newer iosApp/project.yml -exec cp {} ci/ \; 2>/dev/null || true
 

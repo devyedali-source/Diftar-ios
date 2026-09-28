@@ -565,4 +565,9 @@ actual object PlatformApi {
     actual fun sleepMillis(millis: Long) { NSThread.sleepForTimeInterval(millis / 1000.0) }
 
     actual fun log(tag: String, message: String) { println("[$tag] $message") }
+
+    actual fun ciFlag(name: String): Boolean {
+        val env = platform.Foundation.NSProcessInfo.processInfo.environment
+        return env["SIMULATOR_DEVICE_NAME"] != null && env[name] == "1"
+    }
 }

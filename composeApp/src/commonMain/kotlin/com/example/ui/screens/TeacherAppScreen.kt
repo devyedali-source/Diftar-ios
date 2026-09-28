@@ -4869,7 +4869,7 @@ fun GradesEntryTab(
                                                 }
                                             ),
                                             shape = RoundedCornerShape(8.dp),
-                                            textStyle = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
+                                            textStyle = TextStyle(fontFamily = com.example.ui.theme.AppFonts.family, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
                                             modifier = Modifier
                                                 .width(85.dp)
                                                 .height(48.dp)
@@ -5278,7 +5278,7 @@ fun GradesEntryTab(
                                                 }
                                             ),
                                             shape = RoundedCornerShape(8.dp),
-                                            textStyle = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
+                                            textStyle = TextStyle(fontFamily = com.example.ui.theme.AppFonts.family, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
                                             modifier = Modifier
                                                 .width(85.dp)
                                                 .height(48.dp)
