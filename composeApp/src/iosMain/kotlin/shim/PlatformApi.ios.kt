@@ -431,6 +431,39 @@ actual object PlatformApi {
     private fun a4(landscape: Boolean): Pair<Double, Double> =
         if (landscape) 841.89 to 595.28 else 595.28 to 841.89
 
+    /** إعدادات تحويل HTML إلى PDF (قابلة للضبط في الاختبار الآلي) */
+    private var pdfZoom: Double = 0.75
+    actual fun setPdfZoom(zoom: Double) { pdfZoom = zoom }
+
+    private var reportFontCss: String? = null
+
+    /** خطّ Noto Sans Arabic (الخطّ الذي تستعمله كشوف أندرويد) مضمَّن في الصفحة */
+    private fun fontCss(): String {
+        reportFontCss?.let { return it }
+        val bytes = readBundledFile("fonts/NotoSansArabic.ttf")
+        val css = if (bytes == null) "" else {
+            @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+            val b64 = kotlin.io.encoding.Base64.Default.encode(bytes)
+            "@font-face{font-family:'Noto Sans Arabic';src:url(data:font/ttf;base64,$b64) format('truetype');font-weight:100 900;font-stretch:62.5% 100%;}"
+        }
+        reportFontCss = css
+        return css
+    }
+
+    /** هوامش الصفحة من قاعدة @page (بالمليمتر): أعلى/أسفل، يمين/يسار */
+    private fun pageMarginsMm(html: String): Pair<Double, Double> {
+        val m = Regex("@page\\s*\\{[^}]*?margin\\s*:\\s*([0-9.]+)mm(?:\\s+([0-9.]+)mm)?").find(html) ?: return 0.0 to 0.0
+        val v = m.groupValues[1].toDoubleOrNull() ?: 0.0
+        val h = m.groupValues.getOrNull(2)?.toDoubleOrNull() ?: v
+        return v to h
+    }
+
+    private fun prepareHtml(html: String): String {
+        val extra = "<style>" + fontCss() + "html{zoom:" + pdfZoom + ";}</style>"
+        val idx = html.indexOf("</head>", ignoreCase = true)
+        return if (idx >= 0) html.substring(0, idx) + extra + html.substring(idx) else extra + html
+    }
+
     /** يحمّل HTML في WKWebView خفيّ ثم يستدعي [ready] بعد اكتمال التحميل */
     private fun loadHtml(html: String, landscape: Boolean, ready: (WKWebView) -> Unit) {
         runOnMain {
@@ -439,11 +472,11 @@ actual object PlatformApi {
             web.alpha = 0.01
             keyWindow()?.addSubview(web)
             retained.add(web)
-            web.loadHTMLString(html, baseURL = NSURL.URLWithString("https://localhost/"))
+            web.loadHTMLString(prepareHtml(html), baseURL = NSURL.URLWithString("https://localhost/"))
             var waited = 0L
             fun check() {
                 if (!web.loading || waited > 20_000) {
-                    runOnMainDelayed(700) { ready(web) }
+                    runOnMainDelayed(900) { ready(web) }
                 } else {
                     waited += 150
                     runOnMainDelayed(150) { check() }
@@ -467,7 +500,11 @@ actual object PlatformApi {
                 info.orientation = if (landscape) UIPrintInfoOrientation.UIPrintInfoOrientationLandscape else UIPrintInfoOrientation.UIPrintInfoOrientationPortrait
                 val pc = UIPrintInteractionController.sharedPrintController
                 pc.printInfo = info
-                pc.printFormatter = web.viewPrintFormatter()
+                val formatter = web.viewPrintFormatter()
+                val (mvMm, mhMm) = pageMarginsMm(html)
+                val k = 72.0 / 25.4
+                formatter.perPageContentInsets = platform.UIKit.UIEdgeInsetsMake(mvMm * k, mhMm * k, mvMm * k, mhMm * k)
+                pc.printFormatter = formatter
                 onDone(true, null)
                 pc.presentAnimated(true) { _, _, _ -> releaseWeb(web) }
             } catch (e: Throwable) {
@@ -478,13 +515,17 @@ actual object PlatformApi {
     }
 
     /** يرسم HTML في صفحات A4 ويحفظها ملف PDF */
-    private fun writePdf(web: WKWebView, landscape: Boolean, path: String) {
+    private fun writePdf(web: WKWebView, landscape: Boolean, path: String, marginsMm: Pair<Double, Double>) {
         val (w, h) = a4(landscape)
+        val mmToPt = 72.0 / 25.4
+        val mv = marginsMm.first * mmToPt
+        val mh = marginsMm.second * mmToPt
         val renderer = UIPrintPageRenderer()
         renderer.addPrintFormatter(web.viewPrintFormatter(), startingAtPageAtIndex = 0)
         val paper = CGRectMake(0.0, 0.0, w, h)
+        val printable = CGRectMake(mh, mv, w - 2 * mh, h - 2 * mv)
         renderer.setValue(NSValue.valueWithCGRect(paper), forKey = "paperRect")
-        renderer.setValue(NSValue.valueWithCGRect(paper), forKey = "printableRect")
+        renderer.setValue(NSValue.valueWithCGRect(printable), forKey = "printableRect")
         val data = NSMutableData()
         UIGraphicsBeginPDFContextToData(data, paper, null)
         val pages = renderer.numberOfPages().toInt()
@@ -501,7 +542,7 @@ actual object PlatformApi {
     actual fun renderHtmlToPdfFile(html: String, landscape: Boolean, path: String, onDone: (Boolean, String?) -> Unit) {
         loadHtml(html, landscape) { web ->
             try {
-                writePdf(web, landscape, path)
+                writePdf(web, landscape, path, pageMarginsMm(html))
                 releaseWeb(web)
                 onDone(true, null)
             } catch (e: Throwable) {

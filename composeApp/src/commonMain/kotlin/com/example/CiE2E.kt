@@ -8,6 +8,7 @@ import com.example.ui.TeacherViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -31,20 +32,33 @@ object CiE2E {
                 vm.selectClass(cls.id)
                 delay(2000)
                 vm.fillActiveClassWithDemoStudents({ PlatformApi.log("CI", "demo ok") }, { PlatformApi.log("CI", "demo fail $it") })
+                delay(10000)
+                vm.generateDemoDataForClassSection(cls.id, cls.level)
                 delay(12000)
                 vm.selectTerm(1)
-                delay(4000)
+                val perf = kotlinx.coroutines.withTimeoutOrNull(30000) {
+                    vm.currentClassPerformance.first { list -> list.isNotEmpty() && list.any { it.averageScore > 0.0 } }
+                } ?: vm.currentClassPerformance.value
                 val subjects = vm.buildClassSubjects(cls.id, cls.level, vm.subjects.value, vm.customizations.value).sortedByOfficialOrder()
-                val perf = vm.currentClassPerformance.value
                 PlatformApi.log("CI", "students=${vm.students.value.size} subjects=${subjects.size} perf=${perf.size}")
                 val dir = PlatformApi.filesDir()
+                suspend fun render(name: String, html: String, landscape: Boolean, zoom: Double) {
+                    PlatformApi.writeFile("$dir/ci_$name.html", html.encodeToByteArray())
+                    PlatformApi.setPdfZoom(zoom)
+                    val done = kotlinx.coroutines.CompletableDeferred<Unit>()
+                    PlatformApi.renderHtmlToPdfFile(html, landscape, "$dir/ci_$name.pdf") { ok, err ->
+                        PlatformApi.log("CI", "$name pdf $ok $err"); done.complete(Unit)
+                    }
+                    kotlinx.coroutines.withTimeoutOrNull(60000) { done.await() }
+                }
                 val cards = HtmlReportHelper.generateReportCardsHtml(AppApplication, cls.name, perf, subjects, 1, cls, vm)
-                PlatformApi.writeFile("$dir/ci_report_cards.html", cards.encodeToByteArray())
-                PlatformApi.renderHtmlToPdfFile(cards, true, "$dir/ci_report_cards.pdf") { ok, err -> PlatformApi.log("CI", "cards pdf $ok $err") }
-                delay(8000)
+                render("cards", cards, true, 0.75)
+                val cardsPortrait = HtmlReportHelper.generateReportCardsHtml(AppApplication, cls.name, perf, subjects, 1, cls, vm, onePerPortraitPage = true)
+                render("cards_portrait", cardsPortrait, false, 0.75)
                 val ledger = HtmlReportHelper.generateDetailedTermLedgerHtml(AppApplication, cls.name, perf, subjects, 1, cls, vm)
-                PlatformApi.renderHtmlToPdfFile(ledger, true, "$dir/ci_ledger.pdf") { ok, err -> PlatformApi.log("CI", "ledger pdf $ok $err") }
-                delay(8000)
+                render("ledger", ledger, true, 0.75)
+                render("ledger_zoom1", ledger, true, 1.0)
+                PlatformApi.setPdfZoom(0.75)
                 PlatformApi.writeFile("$dir/ci_done.txt", "done".encodeToByteArray())
             } catch (e: Throwable) {
                 PlatformApi.log("CI", "E2E error: ${e.stackTraceToString()}")
