@@ -16,8 +16,8 @@ class FirebaseTooManyRequestsException(message: String?) : FirebaseException(mes
 /** طابع زمني Firestore */
 class Timestamp(val seconds: Long, val nanoseconds: Int) : Comparable<Timestamp> {
     constructor(date: java.util.Date) : this(
-        kotlin.math.floorDiv(date.time, 1000L),
-        (kotlin.math.floorMod(date.time, 1000L) * 1_000_000L).toInt()
+        date.time.floorDiv(1000L),
+        (date.time.mod(1000L) * 1_000_000L).toInt()
     )
 
     fun toDate(): java.util.Date = java.util.Date(seconds * 1000L + nanoseconds / 1_000_000)
@@ -31,8 +31,8 @@ class Timestamp(val seconds: Long, val nanoseconds: Int) : Comparable<Timestamp>
 
     /** بصيغة RFC3339 بالتوقيت العالمي */
     fun toRfc3339(): String {
-        val days = kotlin.math.floorDiv(seconds, 86400L)
-        val secOfDay = kotlin.math.floorMod(seconds, 86400L)
+        val days = seconds.floorDiv(86400L)
+        val secOfDay = seconds.mod(86400L)
         val d = java.time.LocalDate.ofEpochDay(days)
         val h = secOfDay / 3600; val m = (secOfDay % 3600) / 60; val s = secOfDay % 60
         val ms = nanoseconds / 1_000_000

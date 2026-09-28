@@ -106,7 +106,8 @@ class DocumentSnapshot internal constructor(
     val id: String get() = reference.id
     val metadata: SnapshotMetadata = SnapshotMetadata()
     fun exists(): Boolean = fields != null
-    val data: Map<String, Any?>? get() = fields
+    @Suppress("UNCHECKED_CAST")
+    val data: Map<String, Any>? get() = fields as Map<String, Any>?
 
     fun get(field: String): Any? {
         var cur: Any? = fields ?: return null
@@ -229,6 +230,7 @@ open class Query internal constructor(
 class CollectionReference internal constructor(db: FirebaseFirestore, val path: String) :
     Query(db, if (path.contains('/')) path.substringBeforeLast('/') else "", path.substringAfterLast('/'), false) {
     val id: String get() = path.substringAfterLast('/')
+    val parent: DocumentReference? get() = if (path.contains('/')) DocumentReference(db, path.substringBeforeLast('/')) else null
     fun document(): DocumentReference = DocumentReference(db, "$path/${FirebaseFirestore.autoId()}")
     fun document(id: String): DocumentReference = DocumentReference(db, "$path/$id")
     fun add(data: Any): Task<DocumentReference> = backgroundTask {
@@ -275,7 +277,21 @@ internal fun toMap(data: Any): Map<String, Any?> = when (data) {
 // العميل (Firestore REST API)
 // ---------------------------------------------------------------------------
 
+class FirebaseFirestoreSettings private constructor() {
+    class Builder {
+        fun setPersistenceEnabled(enabled: Boolean) = this
+        fun setCacheSizeBytes(bytes: Long) = this
+        fun setLocalCacheSettings(settings: Any?) = this
+        fun build() = FirebaseFirestoreSettings()
+    }
+    companion object {
+        const val CACHE_SIZE_UNLIMITED = -1L
+    }
+}
+
 class FirebaseFirestore private constructor() {
+
+    var firestoreSettings: FirebaseFirestoreSettings? = null
 
     private val projectId get() = FirebaseConfig.projectId
     private val dbRoot get() = "projects/$projectId/databases/(default)/documents"

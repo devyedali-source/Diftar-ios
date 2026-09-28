@@ -129,13 +129,16 @@ fun <T> backgroundTask(work: () -> T): Task<T> {
 }
 
 object Tasks {
-    suspend fun <T> await(task: Task<T>): T = task.awaitResult()
+    /** انتظار مانع كما في أندرويد (يُستدعى من خيط خلفي) */
+    fun <T> await(task: Task<T>): T = kotlinx.coroutines.runBlocking { task.awaitResult() }
 
-    suspend fun <T> await(task: Task<T>, timeout: Long, unit: java.util.concurrent.TimeUnit): T =
-        try {
-            withTimeout(unit.toMillis(timeout)) { task.awaitResult() }
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            throw java.util.concurrent.TimeoutException("Timed out waiting for Task")
+    fun <T> await(task: Task<T>, timeout: Long, unit: java.util.concurrent.TimeUnit): T =
+        kotlinx.coroutines.runBlocking {
+            try {
+                withTimeout(unit.toMillis(timeout)) { task.awaitResult() }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                throw java.util.concurrent.TimeoutException("Timed out waiting for Task")
+            }
         }
 
     fun <T> forResult(value: T): Task<T> = Task<T>().also { it.complete(value) }

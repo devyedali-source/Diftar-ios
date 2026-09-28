@@ -53,3 +53,18 @@ fun teacherDatabaseName(userId: String?): String =
     } else {
         "teacher_database_guest"
     }
+
+/** بديل clearAllTables (غير متوفر في Room على الآيفون) */
+fun TeacherDatabase.clearAllTables() {
+    val dao = teacherDao()
+    kotlinx.coroutines.runBlocking {
+        dao.deleteAllGrades()
+        dao.deleteAllManualTermAverages()
+        dao.deleteAllStudents()
+        dao.deleteAllCustomizations()
+        dao.deleteAllSubjects()
+        dao.deleteAllClassSections()
+        dao.deleteAllLocalNotifications()
+        dao.deleteAllSyncedExchangePosts()
+    }
+}

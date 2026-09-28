@@ -20,7 +20,10 @@ import kotlinx.serialization.json.put
 
 open class FirebaseAuthException(val errorCode: String, message: String?) : FirebaseException(message)
 class FirebaseAuthInvalidUserException(code: String, message: String?) : FirebaseAuthException(code, message)
-class FirebaseAuthInvalidCredentialsException(code: String, message: String?) : FirebaseAuthException(code, message)
+open class FirebaseAuthInvalidCredentialsException(code: String, message: String?) : FirebaseAuthException(code, message)
+class FirebaseAuthWeakPasswordException(code: String, message: String?) : FirebaseAuthInvalidCredentialsException(code, message) {
+    val reason: String? get() = message
+}
 class FirebaseAuthUserCollisionException(code: String, message: String?) : FirebaseAuthException(code, message)
 class FirebaseAuthRecentLoginRequiredException(code: String, message: String?) : FirebaseAuthException(code, message)
 

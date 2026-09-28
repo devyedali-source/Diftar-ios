@@ -84,6 +84,8 @@ import platform.UIKit.UIPrintPageRenderer
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import platform.UIKit.valueWithCGRect
+import platform.UIKit.popoverPresentationController
+import platform.UIKit.viewPrintFormatter
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
 import platform.UserNotifications.UNAuthorizationOptionSound
@@ -264,7 +266,7 @@ actual object PlatformApi {
 
     private val googleConfig: Map<String, String> by lazy {
         val path = NSBundle.mainBundle.pathForResource("GoogleService-Info", ofType = "plist") ?: return@lazy emptyMap()
-        val dict = NSDictionary.dictionaryWithContentsOfFile(path) ?: return@lazy emptyMap()
+        val dict = NSDictionary(contentsOfFile = path)
         val out = HashMap<String, String>()
         for (key in dict.allKeys) {
             val ks = key as? String ?: continue

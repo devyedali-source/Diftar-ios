@@ -3,7 +3,6 @@ package com.example.ui.screens
 import com.example.compat.*
 import kotlinx.coroutines.IO
 
-import com.example.ui.utils.PdfGenerator
 import com.example.ui.utils.AppLocalization
 import com.example.ui.TeacherInfo
 import com.example.ui.components.OfficialStampSettingsSection
@@ -776,22 +775,7 @@ fun InnerTeacherAppScreenContent(
                     }
                     if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
                         viewModel.performAutoDriveBackup(300000L)
-                        try {
-                            val work = androidx.work.PeriodicWorkRequestBuilder<com.example.data.backup.DriveBackupWorker>(6, java.util.concurrent.TimeUnit.HOURS)
-                                .setConstraints(
-                                    androidx.work.Constraints.Builder()
-                                        .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-                                        .build()
-                                )
-                                .build()
-                            androidx.work.WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                                "drive_auto_backup",
-                                androidx.work.ExistingPeriodicWorkPolicy.KEEP,
-                                work
-                            )
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+                        // على الآيفون: لا يوجد WorkManager؛ النسخ الاحتياطي يتمّ عند مغادرة التطبيق (السطر أعلاه)
                     }
                 }
                 appLifecycleOwner.lifecycle.addObserver(appObserver)

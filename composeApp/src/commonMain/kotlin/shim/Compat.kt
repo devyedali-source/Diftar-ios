@@ -242,3 +242,18 @@ object FirebaseConfig {
     /** ترويسات تسمح بمفتاح API مقيَّد بمعرّف تطبيق الآيفون */
     fun apiHeaders(): Map<String, String> = mapOf("X-Ios-Bundle-Identifier" to PlatformApi.bundleId())
 }
+
+/** Throwable.localizedMessage كما في جافا */
+val Throwable.localizedMessage: String? get() = message
+
+/** obj.javaClass.simpleName كما في جافا */
+val <T : Any> T.javaClass: KClass<out T> get() = this::class
+
+fun <K, V> MutableMap<K, V>.putIfAbsent(key: K, value: V): V? {
+    val existing = get(key)
+    if (existing == null) put(key, value)
+    return existing
+}
+
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
+annotation class Synchronized
