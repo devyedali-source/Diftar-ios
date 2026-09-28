@@ -30,6 +30,7 @@ object CiE2E {
                 delay(4000)
                 val cls = vm.classSections.value.firstOrNull() ?: run { PlatformApi.log("CI", "no class"); return@launch }
                 vm.selectClass(cls.id)
+                PlatformApi.writeFile(PlatformApi.filesDir() + "/ci_class_id.txt", cls.id.toString().encodeToByteArray())
                 delay(2000)
                 vm.fillActiveClassWithDemoStudents({ PlatformApi.log("CI", "demo ok") }, { PlatformApi.log("CI", "demo fail $it") })
                 delay(10000)

@@ -102,8 +102,11 @@ jobs:
           for f in ci/*.pdf; do [ -f "$f" ] && sips -s format png "$f" --out "ci/shots/$(basename "$f" .pdf)-p1.png" || true; done
           xcrun simctl terminate "$DEVICE" com.elyedali.schoolmanager || true
           unset SIMCTL_CHILD_DAFTAR_CI_E2E
+          CID=$(cat ci/ci_class_id.txt 2>/dev/null || echo 1)
+          echo "CLASS ID=$CID"
           for TAB in 0 1 2 4 5; do
-            xcrun simctl spawn "$DEVICE" defaults write com.elyedali.schoolmanager "last_place_prefs::inside_tab_1" "i:$TAB" || true
+            xcrun simctl spawn "$DEVICE" defaults write com.elyedali.schoolmanager "last_place_prefs::inside_tab_$CID" "i:$TAB" || true
+            xcrun simctl spawn "$DEVICE" defaults read com.elyedali.schoolmanager | grep -i inside_tab || true
             xcrun simctl launch "$DEVICE" com.elyedali.schoolmanager
             sleep 18
             xcrun simctl io "$DEVICE" screenshot ci/shots/10-tab-$TAB.png
