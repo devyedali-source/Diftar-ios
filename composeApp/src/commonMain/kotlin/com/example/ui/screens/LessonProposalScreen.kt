@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import org.jetbrains.compose.resources.decodeToImageBitmap
 import com.example.compat.*
 import kotlinx.coroutines.IO
 import com.example.ui.utils.uiT
@@ -1661,7 +1662,7 @@ private fun BookPageImage(book: String, page: Int) {
             value = withContext(Dispatchers.IO) {
                 try {
                     com.example.data.BookPack.open(context, book, page)?.use { input ->
-                        org.jetbrains.compose.resources.decodeToImageBitmap(input.readBytes())
+                        input.readBytes().decodeToImageBitmap()
                     }
                 } catch (e: Exception) {
                     null
