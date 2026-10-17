@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -67,21 +69,15 @@ private fun ExamBackLink(text: String, onClick: () -> Unit) {
 fun CourseSubjectExamsScreen(subjectName: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val placeKeyOpen = "course_exam_open_" + subjectName
-    val placeKeySim = "course_exam_sim_" + subjectName
     val examsUnlockedAtStart = remember(subjectName) { CourseProgressStore.areSubjectExamsUnlocked(context, subjectName) }
     var openedExamId by remember(subjectName) {
         mutableStateOf<String?>(
             if (examsUnlockedAtStart) com.example.data.state.LastPlaceStore.getString(context, placeKeyOpen) else null
         )
     }
-    var inSimulator by remember(subjectName) {
-        mutableStateOf(examsUnlockedAtStart && com.example.data.state.LastPlaceStore.getBoolean(context, placeKeySim))
-    }
+    androidx.activity.compose.BackHandler(enabled = openedExamId != null) { openedExamId = null }
     LaunchedEffect(openedExamId) {
         com.example.data.state.LastPlaceStore.putString(context, placeKeyOpen, openedExamId)
-    }
-    LaunchedEffect(inSimulator) {
-        com.example.data.state.LastPlaceStore.putBoolean(context, placeKeySim, inSimulator)
     }
     var showLockMessage by remember(subjectName) { mutableStateOf(false) }
 
@@ -99,14 +95,6 @@ fun CourseSubjectExamsScreen(subjectName: String, onBack: () -> Unit) {
         return
     }
 
-    if (inSimulator) {
-        CourseSimulatorScreen(
-            subjectName = subjectName,
-            onBack = { inSimulator = false }
-        )
-        return
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -115,10 +103,10 @@ fun CourseSubjectExamsScreen(subjectName: String, onBack: () -> Unit) {
     ) {
         ExamBackLink(text = "رجوع إلى الدروس", onClick = onBack)
         Spacer(modifier = Modifier.height(10.dp))
-        Text(text = "امتحانات المادة", fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Text(text = uiT("امتحانات المادة"), fontSize = 18.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "$subjectName · ${exams.size} امتحانًا",
+            text = uiTf("{0} · {1} امتحانًا", subjectName, exams.size),
             fontSize = 13.sp,
             color = ExamMutedColor
         )
@@ -132,31 +120,31 @@ fun CourseSubjectExamsScreen(subjectName: String, onBack: () -> Unit) {
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(
-                        text = "🔒 لم تبلغ المستوى المطلوب بعد",
+                        text = uiT("🔒 لم تبلغ المستوى المطلوب بعد"),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Black,
                         color = ExamWarnColor
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "أنجزتَ $passedLessons درسًا من $totalLessons في هذه المادة.",
+                        text = uiTf("أنجزتَ {0} درسًا من {1} في هذه المادة.", passedLessons, totalLessons),
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "تُفتح امتحانات المادة والمحاكي بعد إنجاز $neededLessons درسًا.",
+                        text = uiTf("تُفتح امتحانات المادة بعد إنجاز {0} درسًا.", neededLessons),
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "تبقّى لك $remaining درسًا.",
+                        text = uiTf("تبقّى لك {0} درسًا.", remaining),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
                         color = ExamWarnColor
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "والدرس يُحسب منجَزًا إذا نلتَ في اختباره عشرة من عشرين فما فوق.",
+                        text = uiT("والدرس يُحسب منجَزًا إذا نلتَ في اختباره عشرة من عشرين فما فوق."),
                         fontSize = 12.sp,
                         color = ExamMutedColor
                     )
@@ -165,41 +153,9 @@ fun CourseSubjectExamsScreen(subjectName: String, onBack: () -> Unit) {
                         onClick = { showLockMessage = false },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "حسنًا", fontSize = 14.sp)
+                        Text(text = uiT("حسنًا"), fontSize = 14.sp)
                     }
                 }
-            }
-        }
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 10.dp)
-                .clickable {
-                    if (unlocked) {
-                        inSimulator = true
-                    } else {
-                        showLockMessage = true
-                    }
-                }
-        ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
-                Text(
-                    text = if (unlocked) {
-                        "🎯 المحاكي (نمط اللجنة الوطنية)"
-                    } else {
-                        "🔒 المحاكي (نمط اللجنة الوطنية)"
-                    },
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Black,
-                    color = ExamWarnColor
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "خمسة خيارات · مؤقّت نازل · تسليم نهائي · تصحيح بالشروح",
-                    fontSize = 12.sp,
-                    color = ExamMutedColor
-                )
             }
         }
 
@@ -234,7 +190,7 @@ fun CourseSubjectExamsScreen(subjectName: String, onBack: () -> Unit) {
                     if (score != null) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "أفضل نقطة لك: $score/20",
+                            text = uiTf("أفضل نقطة لك: {0}/20", score),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (score >= 10) ExamOkColor else ExamWarnColor
@@ -298,7 +254,7 @@ private fun CourseExamRunner(
             ExamBackLink(text = "رجوع إلى الامتحانات", onClick = onBack)
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "امتحان رقم ${exam.n}",
+                text = uiTf("امتحان رقم {0}", exam.n),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Black
             )
@@ -325,7 +281,7 @@ private fun CourseExamRunner(
 
             if (exam.groups.isNotEmpty()) {
                 Text(
-                    text = "توزيع الأسئلة",
+                    text = uiT("توزيع الأسئلة"),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Black,
                     color = ExamOkColor
@@ -355,7 +311,7 @@ private fun CourseExamRunner(
                 onClick = { started = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "بدء الامتحان ($total سؤالًا)", fontSize = 15.sp)
+                Text(text = uiTf("بدء الامتحان ({0} سؤالًا)", total), fontSize = 15.sp)
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -369,10 +325,10 @@ private fun CourseExamRunner(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            Text(text = "نتيجة الامتحان", fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(text = uiT("نتيجة الامتحان"), fontSize = 18.sp, fontWeight = FontWeight.Black)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "امتحان رقم ${exam.n} · $subjectName",
+                text = uiTf("امتحان رقم {0} · {1}", exam.n, subjectName),
                 fontSize = 13.sp,
                 color = ExamMutedColor
             )
@@ -391,7 +347,7 @@ private fun CourseExamRunner(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "إجابات صحيحة: $correctCount من $total",
+                        text = uiTf("إجابات صحيحة: {0} من {1}", correctCount, total),
                         fontSize = 14.sp,
                         color = ExamMutedColor
                     )
@@ -417,14 +373,14 @@ private fun CourseExamRunner(
                 onClick = { attempt++ },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "إعادة الامتحان", fontSize = 15.sp)
+                Text(text = uiT("إعادة الامتحان"), fontSize = 15.sp)
             }
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { onBack() },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "رجوع إلى الامتحانات", fontSize = 15.sp)
+                Text(text = uiT("رجوع إلى الامتحانات"), fontSize = 15.sp)
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -443,7 +399,7 @@ private fun CourseExamRunner(
         ExamBackLink(text = "الخروج من الامتحان", onClick = onBack)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "السؤال ${index + 1} من $total",
+            text = uiTf("السؤال {0} من {1}", index + 1, total),
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = ExamMutedColor
@@ -519,7 +475,7 @@ private fun CourseExamRunner(
             if (!isRight) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "الصواب: ${question.c[question.k]}",
+                    text = uiTf("الصواب: {0}", question.c[question.k]),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = ExamOkColor

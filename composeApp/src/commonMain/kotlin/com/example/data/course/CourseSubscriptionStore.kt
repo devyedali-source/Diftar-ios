@@ -56,13 +56,13 @@ object CourseSubscriptionStore {
         if (expiry <= 0L) return false
         val owner = getOwnerUid(context, specId)
         if (owner.isNotBlank() && currentUid.isNotBlank() && owner != currentUid) return false
-        return System.currentTimeMillis() < expiry
+        return com.example.data.security.TrustedClock.now() < expiry
     }
 
     fun remainingDays(context: Context, specId: String): Int {
         val expiry = getExpiryMillis(context, specId)
         if (expiry <= 0L) return 0
-        val diff = expiry - System.currentTimeMillis()
+        val diff = expiry - com.example.data.security.TrustedClock.now()
         if (diff <= 0L) return 0
         val days = diff / (24L * 60L * 60L * 1000L)
         return (days + 1).toInt()
@@ -107,5 +107,64 @@ object CourseSubscriptionStore {
 
     fun clearAll(context: Context) {
         prefs(context).edit().clear().apply()
+    }
+
+    /**
+     * يسترجع التفعيلات الصالحة من الخادم (طلبات اكتملت ولم تنتهِ مدّتها) لحساب هذا المستخدم،
+     * فلا يضيع الاشتراك عند حذف التطبيق وإعادة تثبيته أو تغيير الهاتف.
+     * يعيد true إذا نجح الاتصال بالخادم (حتى لو لم يوجد شيء)، وfalse عند الفشل.
+     * لا يحذف أي تفعيل محلي، ولا يقصّر مدّة أي تفعيل موجود.
+     */
+    suspend fun restoreFromServer(context: Context, uid: String): Boolean {
+        if (uid.isBlank()) return false
+        val validSpecIds = setOf("MAINAR", "TEACHAR", "MAINDU", "TEACHDU")
+        var attempt = 0
+        while (attempt < 3) {
+            attempt++
+            val docs: List<com.google.firebase.firestore.DocumentSnapshot>? =
+                kotlinx.coroutines.withTimeoutOrNull(15_000L) {
+                    kotlinx.coroutines.suspendCancellableCoroutine<List<com.google.firebase.firestore.DocumentSnapshot>?> { cont ->
+                        try {
+                            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                .collection("course_activation_requests")
+                                .whereEqualTo("userId", uid)
+                                .get()
+                                .addOnSuccessListener { snap ->
+                                    if (cont.isActive) cont.resume(snap.documents, null)
+                                }
+                                .addOnFailureListener {
+                                    if (cont.isActive) cont.resume(null, null)
+                                }
+                        } catch (e: Exception) {
+                            if (cont.isActive) cont.resume(null, null)
+                        }
+                    }
+                }
+            if (docs != null) {
+                val now = com.example.data.security.TrustedClock.now()
+                // أبعد تاريخ انتهاء لكل تخصّص من بين الطلبات المكتملة
+                val best = HashMap<String, Long>()
+                for (d in docs) {
+                    if (d.getString("status") != "completed") continue
+                    val specId = d.getString("specId") ?: continue
+                    if (specId !in validSpecIds) continue
+                    val exp = d.getLong("expiresAt") ?: continue
+                    if (exp <= now) continue
+                    if (exp > (best[specId] ?: 0L)) best[specId] = exp
+                }
+                for ((specId, exp) in best) {
+                    val owner = getOwnerUid(context, specId)
+                    val localExp = getExpiryMillis(context, specId)
+                    val localValidForUser =
+                        localExp > now && (owner.isBlank() || owner == uid)
+                    if (!localValidForUser || exp > localExp) {
+                        saveActivationUntil(context, specId, uid, exp)
+                    }
+                }
+                return true
+            }
+            if (attempt < 3) kotlinx.coroutines.delay(1_500L * attempt)
+        }
+        return false
     }
 }

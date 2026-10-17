@@ -243,8 +243,127 @@ object LessonPreparationRepository {
             referenceText = referenceText,
             teachingAids = teachingAidsText,
             specificObjective = specificObjective,
-            procedureSteps = procedureSteps
+            procedureSteps = procedureSteps,
+            bookPages = prep.livre?.takeIf { it.book.isNotBlank() && it.pages.isNotEmpty() }?.let {
+                com.example.data.planning.LessonBookPages(it.book, it.titre, it.pages, it.aux)
+            },
+            board = buildBoardData(prep, isFrench)
         )
+    }
+
+    private val boardSectionLabels = listOf(
+        "ألاحظ وأكتشف", "أنمي معارفي", "أتمرن", "أستنتج", "أطبق", "أوظف مكتسباتي", "أقوم مكتسباتي", "أثري تعلمي", "أختبر تعلمي"
+    )
+
+    /** يستخرج النصوص المقتبسة من المستوى الأعلى بين « »، مع احترام الاقتباس المتداخل (« » داخل « »). */
+    private fun boardExtractQuotes(line: String): List<String> {
+        val out = mutableListOf<String>()
+        if (line.contains('«')) {
+            var depth = 0
+            var start = -1
+            for (i in line.indices) {
+                val c = line[i]
+                if (c == '«') {
+                    if (depth == 0) start = i + 1
+                    depth++
+                } else if (c == '»' && depth > 0) {
+                    depth--
+                    if (depth == 0 && start >= 0) {
+                        out.add(line.substring(start, i).trim())
+                        start = -1
+                    }
+                }
+            }
+        } else if (line.count { it == '"' } >= 2) {
+            val parts = line.split('"')
+            for (k in 1 until parts.size step 2) {
+                if (k < parts.size - 1) out.add(parts[k].trim())
+            }
+        }
+        return out
+    }
+
+    private fun boardShorten(text: String, max: Int): String {
+        val t = text.trim()
+        if (t.length <= max) return t
+        val cut = t.substring(0, max)
+        val end = maxOf(cut.lastIndexOf('.'), cut.lastIndexOf('؟'), cut.lastIndexOf('?'), cut.lastIndexOf('؛'), cut.lastIndexOf('\n'))
+        return (if (end > max / 2) cut.substring(0, end + 1) else cut.trimEnd() + "…").trim()
+    }
+
+    /**
+     * يبني محتوى السبورة من التحضير نفسه دون إضافة معلومات جديدة:
+     * الدرس = النصوص التي يكتبها المعلم بنصها (بين « »)، التطبيق = ما يُطلب من التلاميذ في خطوة التطبيق،
+     * الإدماج = ما يُطلب منهم في خطوة الإدماج (إن وجدت). لا تدخل إجراءات المعلم.
+     */
+    private fun buildBoardData(prep: PreparationItem, isFrench: Boolean): com.example.data.planning.LessonBoardData? {
+        // السبورة تُبنى من نص مكتوب خصيصاً للتلاميذ فقط؛ ولا تُشتق من عبارات التحضير الموجهة للمعلم
+        val t = prep.tableau ?: return null
+        if (t.lesson.isBlank() && t.application.isBlank()) return null
+        return com.example.data.planning.LessonBoardData(t.lesson, t.application, t.integration, t.aux)
+    }
+
+    @Suppress("unused")
+    private fun buildBoardDataFromPrep(prep: PreparationItem, isFrench: Boolean): com.example.data.planning.LessonBoardData? {
+        val etapes = prep.deroulement.etapes
+        if (etapes.isEmpty()) return null
+        fun byCode(code: String) = etapes.firstOrNull { it.code == code }
+        val dev = byCode("developpement")
+        val pres = byCode("presentation")
+        val app = byCode("application")
+        val integ = byCode("integration")
+
+        fun quotes(e: com.example.data.planning.canonical.PreparationEtape?): List<String> =
+            e?.activites_enseignant.orEmpty()
+                .flatMap { line -> boardExtractQuotes(line) }
+                .filter { it.length >= 10 && boardSectionLabels.none { label -> it.contains(label) && it.length <= label.length + 4 } }
+
+        var lessonParts = quotes(dev)
+        if (lessonParts.isEmpty()) lessonParts = quotes(pres)
+        // دروس القراءة: يضاف جدول المفردات الذي يثبّته المعلم على السبورة بعد مطلع النص
+        val isReading = prep.official.domaine.endsWith("LECT")
+        val vocabLines = if (isReading) {
+            dev?.activites_enseignant.orEmpty()
+                .filter { it.contains("المفردات") && it.contains(":") }
+                .map { it.substringAfter(":").trim() }
+                .filter { it.isNotBlank() }
+                .map { (if (isFrench) "Vocabulaire : " else "المفردات: ") + it }
+        } else emptyList()
+
+        val lessonText = if (lessonParts.isNotEmpty()) {
+            (lessonParts + vocabLines).joinToString("\n\n")
+        } else {
+            val parts = mutableListOf<String>()
+            dev?.consigne?.takeIf { it.isNotBlank() }?.let { parts.add(it.trim()) }
+            if (prep.fiche.vocabulaire_cle.isNotEmpty()) {
+                parts.add((if (isFrench) "Mots-clés : " else "المفردات: ") + prep.fiche.vocabulaire_cle.joinToString(if (isFrench) ", " else "، "))
+            }
+            parts.joinToString("\n\n")
+        }
+
+        // التطبيق/الإدماج: ما يطلب من التلاميذ فعله (تعليمة التلميذ + الأسئلة والنصوص المكتوبة)، دون إجراءات المعلم
+        val questionRegex = Regex("[^:؟.«»\\n]+؟")
+        fun stepText(e: com.example.data.planning.canonical.PreparationEtape?): String {
+            if (e == null) return ""
+            val parts = mutableListOf<String>()
+            e.consigne?.takeIf { it.isNotBlank() }?.let { parts.add("• " + it.trim()) }
+            val lines = e.activites_enseignant
+            val extra = mutableListOf<String>()
+            lines.forEach { line ->
+                boardExtractQuotes(line).filter { it.length >= 6 }.forEach { extra.add(it) }
+                questionRegex.findAll(line.replace(Regex("«[^»]*»"), "")).forEach { m ->
+                    val q = m.value.trim()
+                    if (q.length >= 6) extra.add(q)
+                }
+            }
+            extra.distinct().forEach { parts.add("• $it") }
+            return parts.joinToString("\n\n")
+        }
+
+        val application = stepText(app)
+        val integration = stepText(integ)
+        if (lessonText.isBlank() && application.isBlank() && integration.isBlank()) return null
+        return com.example.data.planning.LessonBoardData(lessonText, application, integration)
     }
 
     /**
@@ -340,9 +459,156 @@ object LessonPreparationRepository {
         return null
     }
 
+    private fun levelIntOf(levelCode: String): Int =
+        when (OfficialAnnualPlanningRepository.normalizeLevelCode(levelCode)) {
+            "1AP" -> 1
+            "2AP" -> 2
+            "3AP" -> 3
+            "4AP" -> 4
+            "5AP" -> 5
+            "6AP" -> 6
+            else -> 1
+        }
+
+    private fun findPrepFor(
+        lvl: Int,
+        inst: com.example.data.planning.canonical.CanonicalLessonInstance
+    ): PreparationItem? {
+        val list = prepsByLevelAndWeek[Pair(lvl, inst.semaine)] ?: return null
+        return (list.firstOrNull {
+            it.first.official.lesson_unit_id.equals(inst.lesson_unit_id, ignoreCase = true) &&
+                it.first.official.partie == inst.partie
+        } ?: list.firstOrNull {
+            it.first.official.lesson_unit_id.equals(inst.lesson_unit_id, ignoreCase = true)
+        })?.first
+    }
+
+    /** هل للدرس صفحات كتاب؟ وهل له سبورة مكتوبة؟ (قبل فتح التحضير) */
+    fun contentFlags(
+        context: Context,
+        levelCode: String,
+        inst: com.example.data.planning.canonical.CanonicalLessonInstance
+    ): Pair<Boolean, Boolean> {
+        initialize(context)
+        val prep = findPrepFor(levelIntOf(levelCode), inst) ?: return Pair(false, false)
+        val hasBook = !prep.livre?.pages.isNullOrEmpty()
+        val t = prep.tableau
+        val hasBoard = t != null && (t.lesson.isNotBlank() || t.application.isNotBlank())
+        return Pair(hasBook, hasBoard)
+    }
+
+    /**
+     * عدد الدروس التي لها صفحات كتاب وعدد التي لها سبورة مكتوبة، من بين الدروس المعطاة.
+     * يعيد Pair(عدد محتوى الكتب، عدد محتوى السبورات).
+     */
+    fun countBooksAndBoards(
+        context: Context,
+        levelCode: String,
+        instances: List<com.example.data.planning.canonical.CanonicalLessonInstance>
+    ): Pair<Int, Int> {
+        var books = 0
+        var boards = 0
+        for (inst in instances) {
+            val (b, t) = contentFlags(context, levelCode, inst)
+            if (b) books++
+            if (t) boards++
+        }
+        return Pair(books, boards)
+    }
+
     /**
      * Retrieves the raw PreparationItem if needed for advanced pedagogical inspection.
      */
+    /** مجال داخل مادة: الكفايات (1..3) ونصّها المأخوذ من المنهاج الموريتاني */
+    data class CompSphere(val code: String, val label: String, val cbs: Map<Int, String>)
+    data class CompDiscipline(val code: String, val label: String, val spheres: List<CompSphere>)
+
+    private val competencyCatalogCache = mutableMapOf<Int, List<CompDiscipline>>()
+
+    /**
+     * فهرس المواد والمجالات والكفايات (K1..K3) لمستوى معيّن، من بيانات التحضير الرسمية.
+     * التربية البدنية مستثناة (نشاط ساحة وليست درساً).
+     */
+    fun getCompetencyCatalog(context: Context, level: Int): List<CompDiscipline> {
+        initialize(context)
+        synchronized(this) {
+            competencyCatalogCache[level]?.let { return it }
+            val prefix = "${level}AP|"
+            // نفس أسماء وترتيب المواد في صفحة النتائج
+            val order = listOf("TIS", "AR", "MATH", "CIV", "ART", "FR", "SOC", "SCI")
+            val resultsNames = mapOf(
+                "TIS" to "التربية الإسلامية - Education Islamique",
+                "AR" to "اللغة العربية - Langue arabe",
+                "MATH" to "الرياضيات - Mathématiques",
+                "CIV" to "التربية المدنية - Education Civique",
+                "ART" to "التربية الفنية - Education Technique",
+                "FR" to "الفرنسية - Français",
+                "SOC" to "التاريخ والجغرافيا - Histoire Géographie",
+                "SCI" to "العلوم الطبيعية - Sciences Naturelles"
+            )
+            val labels = LinkedHashMap<String, String>()
+            val spheres = LinkedHashMap<String, LinkedHashMap<String, Pair<String, MutableMap<Int, String>>>>()
+            for (prep in rawPrepItemsCache.values) {
+                val o = prep.official
+                if (!o.lesson_unit_id.startsWith(prefix)) continue
+                if (o.matiere == "EPS") continue
+                val mat = if (o.matiere == "TIC") "ART" else o.matiere
+                labels.putIfAbsent(mat, resultsNames[mat] ?: o.matiere_label ?: mat)
+                val sph = spheres.getOrPut(mat) { LinkedHashMap() }
+                val entry = sph.getOrPut(o.domaine) { Pair(o.domaine_label ?: o.domaine, mutableMapOf()) }
+                val k = o.competence?.filter { it.isDigit() }?.toIntOrNull() ?: continue
+                if (k !in 1..3) continue
+                val txt = (o.competence_enonce ?: "").trim()
+                    .replace(Regex("^ك\\s*:\\s*"), "")
+                if (txt.isNotBlank()) entry.second.putIfAbsent(k, txt)
+            }
+            val result = labels.keys
+                .sortedBy { val i = order.indexOf(it); if (i < 0) 99 else i }
+                .map { m ->
+                    CompDiscipline(
+                        m, labels[m] ?: m,
+                        spheres[m].orEmpty().map { (code, v) -> CompSphere(code, v.first, v.second.toSortedMap()) }
+                    )
+                }
+            competencyCatalogCache[level] = result
+            return result
+        }
+    }
+
+    /**
+     * اقتراحات الدعم/العلاج لكفاية معيّنة (K1..K3) في مادة ومجالات معيّنة من مستوى معيّن،
+     * مأخوذة من قسم «علاج» في أوراق التحضير (مقترح تربوي مساعد وليست نصا وزاريا حرفيا). بلا تكرار.
+     */
+    fun getRemediationSuggestions(
+        context: Context,
+        level: Int,
+        matiereCode: String,
+        sphereCodes: Set<String>,
+        k: Int,
+        limit: Int = 40
+    ): List<String> {
+        initialize(context)
+        synchronized(this) {
+            val prefix = "${level}AP|"
+            val out = LinkedHashSet<String>()
+            for (prep in rawPrepItemsCache.values) {
+                val o = prep.official
+                if (!o.lesson_unit_id.startsWith(prefix)) continue
+                val mat = if (o.matiere == "TIC") "ART" else o.matiere
+                if (mat != matiereCode) continue
+                if (o.domaine !in sphereCodes) continue
+                val pk = o.competence?.filter { it.isDigit() }?.toIntOrNull() ?: continue
+                if (pk != k) continue
+                prep.evaluation?.remediation?.forEach { r ->
+                    val t = r.trim()
+                    if (t.isNotBlank()) out.add(t)
+                }
+                if (out.size >= limit) break
+            }
+            return out.toList()
+        }
+    }
+
     fun getRawPreparation(preparationId: String): PreparationItem? {
         return rawPrepItemsCache[preparationId]
     }

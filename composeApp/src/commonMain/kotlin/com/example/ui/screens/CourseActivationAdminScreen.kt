@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,39 +74,35 @@ fun CourseActivationAdminView(
     var status by remember(requestId) { mutableStateOf("") }
     var createdAt by remember(requestId) { mutableStateOf(0L) }
     var expiresAt by remember(requestId) { mutableStateOf(0L) }
+    var loadFailed by remember(requestId) { mutableStateOf(false) }
+    var reloadKey by remember(requestId) { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(requestId) {
+    LaunchedEffect(requestId, reloadKey) {
         loading = true
         notFound = false
+        loadFailed = false
         errorText = ""
-        try {
-            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-            db.collection("course_activation_requests")
-                .document(requestId)
-                .get()
-                .addOnSuccessListener { snap ->
-                    if (!snap.exists()) {
-                        notFound = true
-                    } else {
-                        email = snap.getString("email") ?: ""
-                        specTitle = snap.getString("specTitle") ?: ""
-                        specId = snap.getString("specId") ?: ""
-                        userId = snap.getString("userId") ?: ""
-                        days = (snap.getLong("days") ?: 45L).toInt()
-                        status = snap.getString("status") ?: ""
-                        createdAt = snap.getLong("createdAt") ?: 0L
-                        expiresAt = snap.getLong("expiresAt") ?: 0L
-                    }
-                    loading = false
-                }
-                .addOnFailureListener { e ->
-                    errorText = e.message ?: "تعذّر جلب الطلب"
-                    loading = false
-                }
-        } catch (e: Exception) {
-            errorText = e.message ?: "تعذّر جلب الطلب"
-            loading = false
+        val snap = com.example.data.net.FirestoreRetry.getDoc(
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("course_activation_requests").document(requestId)
+        )
+        if (snap == null) {
+            loadFailed = true
+            errorText = "📶 الاتصال ضعيف: تعذّر جلب الطلب بعد عدة محاولات."
+        } else if (!snap.exists()) {
+            notFound = true
+        } else {
+            email = snap.getString("email") ?: ""
+            specTitle = snap.getString("specTitle") ?: ""
+            specId = snap.getString("specId") ?: ""
+            userId = snap.getString("userId") ?: ""
+            days = (snap.getLong("days") ?: 45L).toInt()
+            status = snap.getString("status") ?: ""
+            createdAt = snap.getLong("createdAt") ?: 0L
+            expiresAt = snap.getLong("expiresAt") ?: 0L
         }
+        loading = false
     }
 
     if (loading) {
@@ -113,7 +113,7 @@ fun CourseActivationAdminView(
         ) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "جارٍ جلب طلب تفعيل الدورة...", fontSize = 14.sp)
+            Text(text = uiT("جارٍ جلب طلب تفعيل الدورة..."), fontSize = 14.sp)
         }
         return
     }
@@ -125,24 +125,48 @@ fun CourseActivationAdminView(
             .padding(16.dp)
     ) {
         Text(
-            text = "تفعيل دورة تحضير مسابقات المعلمين",
+            text = uiT("تفعيل دورة تحضير مسابقات المعلمين"),
             fontSize = 18.sp,
             fontWeight = FontWeight.Black
         )
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "رقم الطلب: $requestId", fontSize = 11.sp, color = AdmMutedColor)
+        Text(text = uiTf("رقم الطلب: {0}", requestId), fontSize = 11.sp, color = AdmMutedColor)
         Spacer(modifier = Modifier.height(14.dp))
 
         if (notFound) {
             Text(
-                text = "لم يُعثر على هذا الطلب في قاعدة البيانات.",
+                text = uiT("لم يُعثر على هذا الطلب. قد يكون المرسل في منطقة ضعيفة الشبكة ولم يصل طلبه بعد، فأعد المحاولة بعد قليل."),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = AdmBadColor
             )
             Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { reloadKey++ }, modifier = Modifier.fillMaxWidth()) {
+                Text(text = uiT("إعادة المحاولة 🔄"), fontSize = 15.sp)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(onClick = { onClose() }, modifier = Modifier.fillMaxWidth()) {
-                Text(text = "إغلاق والعودة", fontSize = 15.sp)
+                Text(text = uiT("إغلاق والعودة"), fontSize = 15.sp)
+            }
+            return
+        }
+
+        if (loadFailed) {
+            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Text(
+                    text = errorText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AdmBadColor,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+            Button(onClick = { reloadKey++ }, modifier = Modifier.fillMaxWidth()) {
+                Text(text = uiT("إعادة المحاولة 🔄"), fontSize = 15.sp)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(onClick = { onClose() }, modifier = Modifier.fillMaxWidth()) {
+                Text(text = uiT("إغلاق والعودة"), fontSize = 15.sp)
             }
             return
         }
@@ -150,7 +174,7 @@ fun CourseActivationAdminView(
         if (errorText.isNotBlank()) {
             Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 Text(
-                    text = "خطأ: $errorText",
+                    text = uiTf("خطأ: {0}", errorText),
                     fontSize = 13.sp,
                     color = AdmBadColor,
                     modifier = Modifier.padding(12.dp)
@@ -164,14 +188,14 @@ fun CourseActivationAdminView(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "بريد المعلّم", fontSize = 13.sp, color = AdmMutedColor)
+                    Text(text = uiT("بريد المعلّم"), fontSize = 13.sp, color = AdmMutedColor)
                     Text(text = email.ifBlank { "—" }, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "التخصّص", fontSize = 13.sp, color = AdmMutedColor)
+                    Text(text = uiT("التخصّص"), fontSize = 13.sp, color = AdmMutedColor)
                     Text(
                         text = specTitle.ifBlank { specId.ifBlank { "—" } },
                         fontSize = 13.sp,
@@ -182,21 +206,21 @@ fun CourseActivationAdminView(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "المدّة", fontSize = 13.sp, color = AdmMutedColor)
-                    Text(text = "$days يومًا", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(text = uiT("المدّة"), fontSize = 13.sp, color = AdmMutedColor)
+                    Text(text = uiTf("{0} يومًا", days), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "وقت الطلب", fontSize = 13.sp, color = AdmMutedColor)
+                    Text(text = uiT("وقت الطلب"), fontSize = 13.sp, color = AdmMutedColor)
                     Text(text = admFormatMillis(createdAt), fontSize = 13.sp)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "الحالة", fontSize = 13.sp, color = AdmMutedColor)
+                    Text(text = uiT("الحالة"), fontSize = 13.sp, color = AdmMutedColor)
                     Text(
                         text = if (status == "completed") "مفعَّل" else "قيد الانتظار",
                         fontSize = 13.sp,
@@ -209,7 +233,7 @@ fun CourseActivationAdminView(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "ينتهي في", fontSize = 13.sp, color = AdmMutedColor)
+                        Text(text = uiT("ينتهي في"), fontSize = 13.sp, color = AdmMutedColor)
                         Text(
                             text = admFormatDate(expiresAt),
                             fontSize = 13.sp,
@@ -225,14 +249,14 @@ fun CourseActivationAdminView(
 
         if (status == "completed") {
             Text(
-                text = "هذا الطلب مفعَّل بالفعل.",
+                text = uiT("هذا الطلب مفعَّل بالفعل."),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = AdmOkColor
             )
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedButton(onClick = { onClose() }, modifier = Modifier.fillMaxWidth()) {
-                Text(text = "إغلاق والعودة", fontSize = 15.sp)
+                Text(text = uiT("إغلاق والعودة"), fontSize = 15.sp)
             }
         } else {
             Button(
@@ -240,30 +264,27 @@ fun CourseActivationAdminView(
                     if (working) return@Button
                     working = true
                     errorText = ""
-                    try {
-                        val calendar = Calendar.getInstance()
-                        calendar.add(Calendar.DAY_OF_YEAR, days)
-                        val newExpiry = calendar.timeInMillis
-                        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        val updates = mapOf(
-                            "status" to "completed",
-                            "activatedAt" to System.currentTimeMillis(),
-                            "expiresAt" to newExpiry
+                    // تاريخ الانتهاء يُحسب مرة واحدة لكل ضغطة حتى لا يتغير مع إعادة المحاولة
+                    val calendar = Calendar.getInstance()
+                    calendar.add(Calendar.DAY_OF_YEAR, days)
+                    val newExpiry = calendar.timeInMillis
+                    val activatedAtNow = System.currentTimeMillis()
+                    scope.launch {
+                        val ok = com.example.data.net.FirestoreRetry.updateDoc(
+                            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                .collection("course_activation_requests").document(requestId),
+                            mapOf(
+                                "status" to "completed",
+                                "activatedAt" to activatedAtNow,
+                                "expiresAt" to newExpiry
+                            )
                         )
-                        db.collection("course_activation_requests")
-                            .document(requestId)
-                            .update(updates)
-                            .addOnSuccessListener {
-                                status = "completed"
-                                expiresAt = newExpiry
-                                working = false
-                            }
-                            .addOnFailureListener { e ->
-                                errorText = e.message ?: "تعذّر التفعيل"
-                                working = false
-                            }
-                    } catch (e: Exception) {
-                        errorText = e.message ?: "تعذّر التفعيل"
+                        if (ok) {
+                            status = "completed"
+                            expiresAt = newExpiry
+                        } else {
+                            errorText = "📶 لم يتأكد التفعيل بسبب ضعف الاتصال. قد يكون تمّ فعلًا؛ اضغط «تفعيل» مرة أخرى للتأكد (آمن ولا يتكرر)."
+                        }
                         working = false
                     }
                 },
@@ -277,7 +298,7 @@ fun CourseActivationAdminView(
             }
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(onClick = { onClose() }, modifier = Modifier.fillMaxWidth()) {
-                Text(text = "إغلاق بلا تفعيل", fontSize = 15.sp)
+                Text(text = uiT("إغلاق بلا تفعيل"), fontSize = 15.sp)
             }
         }
 

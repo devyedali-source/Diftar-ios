@@ -103,6 +103,50 @@ object CourseRepository {
         return getSubject(context, subjectName)?.sim ?: emptyList()
     }
 
+    /**
+     * المحاكي الشامل لتخصّص: كل محاكاة تجمع محاكاة واحدة من كل مادة في التخصّص
+     * (20 سؤالًا من كل مادة)، فتصير 60 سؤالًا في ثلاث ساعات.
+     */
+    fun getMergedSimulators(context: Context, trackKey: String): List<CourseExam> {
+        val names = getSubjectNames(context, trackKey)
+        val subjects = names.mapNotNull { name -> getSubject(context, name)?.let { name to it } }
+        if (subjects.isEmpty() || subjects.size != names.size) return emptyList()
+        val sorted = subjects.map { (name, subject) -> name to subject.sim.sortedBy { it.n } }
+        val count = sorted.minOf { it.second.size }
+        val result = ArrayList<CourseExam>()
+        for (i in 0 until count) {
+            val allQs = ArrayList<CourseQuestion>()
+            val sections = ArrayList<CourseSimSection>()
+            for ((name, sims) in sorted) {
+                val part = sims[i]
+                sections.add(
+                    CourseSimSection(
+                        title = name,
+                        start = allQs.size,
+                        textTitle = part.textTitle,
+                        text = part.text,
+                        situationText = part.situationText
+                    )
+                )
+                allQs.addAll(part.qs)
+            }
+            result.add(
+                CourseExam(
+                    id = "SIMX_" + trackKey.uppercase() + "_" + (i + 1),
+                    n = i + 1,
+                    count = allQs.size,
+                    qs = allQs,
+                    meta = "180 د · ${allQs.size} سؤالًا (20 من كل مادة) · التنقيط /20 · النجاح 10",
+                    struct = "محاكاة شاملة تجمع مواد التخصّص: " + names.joinToString("، ") +
+                        ". لكل مادة 20 سؤالًا، ومدّة الامتحان ثلاث ساعات.",
+                    pass = 10,
+                    sections = sections
+                )
+            )
+        }
+        return result
+    }
+
     fun getExam(context: Context, subjectName: String, examId: String): CourseExam? {
         val subject = getSubject(context, subjectName) ?: return null
         return subject.sub.firstOrNull { it.id == examId }

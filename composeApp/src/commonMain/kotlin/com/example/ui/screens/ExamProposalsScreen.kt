@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -96,7 +98,7 @@ fun ExamProposalsScreen(
         ) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "جارٍ تحميل المحتوى...", fontSize = 14.sp)
+            Text(text = uiT("جارٍ تحميل المحتوى..."), fontSize = 14.sp)
         }
         return
     }
@@ -114,7 +116,7 @@ fun ExamProposalsScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "تعذّر تحميل المحتوى",
+                text = uiT("تعذّر تحميل المحتوى"),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = ExamErrorColor
@@ -178,7 +180,7 @@ fun ExamProposalsScreen(
                     )
                     val label = if (subject.proposals.size > 10) "مقترحاً" else "مقترحات"
                     Text(
-                        text = "مقترحات امتحان الأسبوع $semaine • ${subject.proposals.size} $label",
+                        text = uiTf("مقترحات امتحان الأسبوع {0} • {1} {2}", semaine, subject.proposals.size, label),
                         fontSize = 12.sp,
                         color = BentoPrimaryDesc
                     )

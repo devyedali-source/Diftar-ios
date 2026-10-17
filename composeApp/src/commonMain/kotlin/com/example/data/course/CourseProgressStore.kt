@@ -84,6 +84,23 @@ object CourseProgressStore {
         return if (remaining > 0) remaining else 0
     }
 
+    const val SIMULATOR_LESSONS_PER_SUBJECT = 2
+
+    /** المحاكي الشامل يُفتح بعد النجاح في درسين من كل مادة في التخصّص. */
+    fun isMergedSimulatorUnlocked(context: Context, trackKey: String): Boolean {
+        val names = CourseRepository.getSubjectNames(context, trackKey)
+        if (names.isEmpty()) return false
+        return names.all { countPassedLessons(context, it) >= SIMULATOR_LESSONS_PER_SUBJECT }
+    }
+
+    /** المواد التي لم يبلغ فيها المستخدم شرط الفتح، مع عدد الدروس الناقصة. */
+    fun simulatorMissingBySubject(context: Context, trackKey: String): List<Pair<String, Int>> {
+        return CourseRepository.getSubjectNames(context, trackKey).mapNotNull { name ->
+            val missing = SIMULATOR_LESSONS_PER_SUBJECT - countPassedLessons(context, name)
+            if (missing > 0) name to missing else null
+        }
+    }
+
     fun clearAll(context: Context) {
         prefs(context).edit().clear().apply()
     }

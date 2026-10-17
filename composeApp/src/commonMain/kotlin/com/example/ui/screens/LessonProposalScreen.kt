@@ -2,13 +2,35 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
@@ -70,15 +92,17 @@ fun LessonProposalScreen(
     // Screen Security Enforcer (FLAG_SECURE) to prevent screenshotting, recording, and recent app previews (Bypassed temporarily until Sep 30, 2026)
     DisposableEffect(Unit) {
         val activity = context as? android.app.Activity
-        val calendar = java.util.Calendar.getInstance()
+        val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = com.example.data.security.TrustedClock.now() }
         val isBeforeOct2026 = calendar.get(java.util.Calendar.YEAR) < 2026 || 
             (calendar.get(java.util.Calendar.YEAR) == 2026 && calendar.get(java.util.Calendar.MONTH) < java.util.Calendar.OCTOBER)
         
-        if (!isBeforeOct2026) {
+        // مدير الأقسام وحده مسموح له بلقطات الشاشة وتسجيلها؛ باقي المستخدمين يبقون محميين
+        val secureEnabled = !isBeforeOct2026 && !com.example.data.security.ScreenSecurity.isCaptureAllowedForCurrentUser()
+        if (secureEnabled) {
             activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         }
         onDispose {
-            if (!isBeforeOct2026) {
+            if (secureEnabled) {
                 activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
             }
         }
@@ -111,11 +135,16 @@ fun LessonProposalScreen(
         mutableStateOf(initialTaught)
     }
 
+    var showBoard by remember(lesson.id) { mutableStateOf(false) }
+    var showBook by remember(lesson.id) { mutableStateOf(false) }
+
     val domainText = remember(lesson, context) {
         val lvlCode = com.example.data.planning.canonical.OfficialAnnualPlanningRepository.getLevelCodeFromInt(lesson.level)
         val rawDomain = lesson.domain.ifBlank { "المجال العام" }
         getDomainArabicLabel(context, lvlCode, rawDomain)
     }
+
+    val fr = lesson.isFrench
 
     val unitNum = remember(lesson.id) {
         getUnitInfo(lesson)
@@ -187,6 +216,7 @@ fun LessonProposalScreen(
     }
 
     DisableSelection {
+        Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -226,59 +256,56 @@ fun LessonProposalScreen(
 
                         Column {
                             Text(
-                                text = "مذكرة تحضير الدرس",
+                                text = uiT("مذكرة تحضير الدرس"),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 color = InkDarkBlue
                             )
-                            val termNum = OfficialPlanningHierarchyAdapter.getTermForWeek(currentWeek)
-                            Text(
-                                text = "الفصل ${getFaslArabicName(termNum)} ← الأسبوع $currentWeek ← ${com.example.data.planning.canonical.OfficialAnnualPlanningRepository.mapMatiereToArabic(lesson.subject)} ← $domainText",
-                                fontSize = 11.sp,
-                                color = InkSoftBlue,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "الدرس: ${lesson.title}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = InkDarkBlue,
-                                maxLines = Int.MAX_VALUE,
-                                overflow = TextOverflow.Clip,
-                                softWrap = true
-                            )
                         }
                     }
 
-                    if (classId != 0L) {
-                        OutlinedButton(
-                            onClick = {
-                                val newState = AnnualPlanningProgressManager.toggleLessonTaught(context, classId, lesson.id)
-                                isTaught = newState
-                            },
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                    if (proposalDataState.value?.board != null) {
+                        Button(
+                            onClick = { showBoard = true },
                             shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, if (isTaught) Color(0xFF2E7D32) else PaperBorderBlue),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (isTaught) Color(0xFFE8F5E9) else Color.Transparent,
-                                contentColor = if (isTaught) Color(0xFF1B5E20) else InkDarkBlue
-                            ),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF111111), contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                             modifier = Modifier.height(32.dp)
                         ) {
                             Text(
-                                text = if (isTaught) "✓ تم الإنجاز" else "تسجيل كمنجز",
+                                text = if (fr) "Tableau" else "السبورة",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Black
                             )
                         }
-                    } else {
+                    }
+                    if (proposalDataState.value?.bookPages != null) {
+                        Button(
+                            onClick = { showBook = true },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = InkDarkBlue, contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text(
+                                text = if (fr) "Manuel" else "صفحات الكتاب",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+                    if (classId == 0L) {
                         IconButton(
                             onClick = onBack,
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = InkDarkBlue)
                         }
+                    }
                     }
                 }
             }
@@ -302,7 +329,7 @@ fun LessonProposalScreen(
                             strokeWidth = 3.dp
                         )
                         Text(
-                            text = "جارٍ تحضير الورقة...",
+                            text = uiT("جارٍ تحضير الورقة..."),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = InkDarkBlue
@@ -310,8 +337,9 @@ fun LessonProposalScreen(
                     }
                 }
             } else {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    // Scrollable White Preparation Sheet
+                CompositionLocalProvider(LocalLayoutDirection provides (if (fr) LayoutDirection.Ltr else LayoutDirection.Rtl)) {
+                    // Scrollable White Preparation Sheet (قابلة للتقريب بإصبعين)
+                    ZoomableSheet {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -333,6 +361,17 @@ fun LessonProposalScreen(
                                         .padding(horizontal = 12.dp, vertical = 12.dp),
                                     verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
+                                    // 0. تاريخا اليوم المسجّلان محلياً أعلى الورقة (خارج الجدول)
+                                    val prepCtx = androidx.compose.ui.platform.LocalContext.current
+                                    val (prepHijri, prepGreg) = remember(fr) { com.example.ui.utils.LocalDates.today(prepCtx, fr) }
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(text = prepHijri, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = InkDarkBlue, modifier = Modifier.fillMaxWidth())
+                                        Text(text = prepGreg, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = InkDarkBlue, modifier = Modifier.fillMaxWidth())
+                                    }
+
                                     // 1. ترويسة من صفّين، كل صف أربع خانات
                                     Box(
                                         modifier = Modifier
@@ -349,25 +388,25 @@ fun LessonProposalScreen(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 HeaderCell(
-                                                    title = "التاريخ الهجري:",
+                                                    title = (if (fr) "Date (hégire) :" else "التاريخ الهجري:"),
                                                     value = "................",
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 PaperVerticalLine()
                                                 HeaderCell(
-                                                    title = "الموافق الميلادي:",
+                                                    title = (if (fr) "Date :" else "الموافق الميلادي:"),
                                                     value = "................",
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 PaperVerticalLine()
                                                 HeaderCell(
-                                                    title = "المستوى:",
-                                                    value = proposalData.levelTitle.ifBlank { "${getLevelArabicName(lesson.level)} ابتدائي" },
+                                                    title = (if (fr) "Niveau :" else "المستوى:"),
+                                                    value = if (fr) "${getLevelFrenchName(lesson.level)} année" else proposalData.levelTitle.ifBlank { "${getLevelArabicName(lesson.level)} ابتدائي" },
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 PaperVerticalLine()
                                                 HeaderCell(
-                                                    title = if (proposalData.sessionInfo.isNotBlank()) "رمز الحصة:" else "",
+                                                    title = if (proposalData.sessionInfo.isNotBlank()) (if (fr) "Séance :" else "رمز الحصة:") else "",
                                                     value = proposalData.sessionInfo,
                                                     modifier = Modifier.weight(1f)
                                                 )
@@ -383,25 +422,25 @@ fun LessonProposalScreen(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 HeaderCell(
-                                                    title = "المادة:",
+                                                    title = (if (fr) "Matière :" else "المادة:"),
                                                     value = proposalData.subject.ifBlank { lesson.subject },
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 PaperVerticalLine()
                                                 HeaderCell(
-                                                    title = "المجال:",
+                                                    title = (if (fr) "Domaine :" else "المجال:"),
                                                     value = proposalData.domain.ifBlank { domainText },
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 PaperVerticalLine()
                                                 HeaderCell(
-                                                    title = "الموضوع:",
+                                                    title = (if (fr) "Thème :" else "الموضوع:"),
                                                     value = proposalData.topic.ifBlank { lesson.title },
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 PaperVerticalLine()
                                                 HeaderCell(
-                                                    title = if (proposalData.durationText.isNotBlank()) "المدة:" else "",
+                                                    title = if (proposalData.durationText.isNotBlank()) (if (fr) "Durée :" else "المدة:") else "",
                                                     value = proposalData.durationText,
                                                     modifier = Modifier.weight(1f)
                                                 )
@@ -416,13 +455,13 @@ fun LessonProposalScreen(
                                             verticalArrangement = Arrangement.spacedBy(2.dp)
                                         ) {
                                             Text(
-                                                text = "الوسائل:",
+                                                text = (if (fr) "Moyens :" else "الوسائل:"),
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = InkDarkBlue
                                             )
                                             Text(
-                                                text = proposalData.teachingAids,
+                                                text = if (fr) proposalData.teachingAids.replace("المفردات الأساسية: ", "Vocabulaire : ").replace("،", ",") else proposalData.teachingAids,
                                                 fontSize = 12.sp,
                                                 color = InkMediumBlue,
                                                 lineHeight = 18.sp,
@@ -438,7 +477,7 @@ fun LessonProposalScreen(
                                             verticalArrangement = Arrangement.spacedBy(2.dp)
                                         ) {
                                             Text(
-                                                text = "المرجع:",
+                                                text = (if (fr) "Référence :" else "المرجع:"),
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = InkDarkBlue
@@ -466,7 +505,7 @@ fun LessonProposalScreen(
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                 ) {
                                                     Text(
-                                                        text = "الكفاية:",
+                                                        text = (if (fr) "Compétence :" else "الكفاية:"),
                                                         fontSize = 12.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = InkDarkBlue
@@ -488,7 +527,7 @@ fun LessonProposalScreen(
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                 ) {
                                                     Text(
-                                                        text = "الوحدة:",
+                                                        text = (if (fr) "Unité :" else "الوحدة:"),
                                                         fontSize = 12.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = InkDarkBlue
@@ -521,7 +560,7 @@ fun LessonProposalScreen(
                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 Text(
-                                                    text = "الهدف المميز:",
+                                                    text = (if (fr) "Objectif spécifique :" else "الهدف المميز:"),
                                                     fontSize = 12.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = InkDarkBlue
@@ -541,7 +580,7 @@ fun LessonProposalScreen(
 
                                     // 5. عنوان في وسط الشاشة: "سير الدرس"
                                     Text(
-                                        text = "سير الدرس",
+                                        text = if (fr) "Déroulement de la leçon" else "سير الدرس",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Black,
                                         color = InkDarkBlue,
@@ -567,7 +606,7 @@ fun LessonProposalScreen(
                                             modifier = Modifier.weight(1f),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            SignatureBox(title = "توقيع المعلم", modifier = Modifier.fillMaxWidth())
+                                            SignatureBox(title = if (fr) "Signature de l'enseignant" else "توقيع المعلم", modifier = Modifier.fillMaxWidth())
                                             if (stampTeacherSettings.show) {
                                                 Box(
                                                     modifier = Modifier
@@ -576,7 +615,7 @@ fun LessonProposalScreen(
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     OfficialStampVisual(
-                                                        roleTitle = "المعلم",
+                                                        roleTitle = if (fr) "Enseignant" else "المعلم",
                                                         personName = stampTeacherSettings.name,
                                                         schoolName = classSchoolNameState.value,
                                                         shape = stampTeacherSettings.shape,
@@ -592,7 +631,7 @@ fun LessonProposalScreen(
                                             modifier = Modifier.weight(1f),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            SignatureBox(title = "توقيع المدير", modifier = Modifier.fillMaxWidth())
+                                            SignatureBox(title = if (fr) "Signature du directeur" else "توقيع المدير", modifier = Modifier.fillMaxWidth())
                                             if (stampPrincipalSettings.show) {
                                                 Box(
                                                     modifier = Modifier
@@ -601,7 +640,7 @@ fun LessonProposalScreen(
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     OfficialStampVisual(
-                                                        roleTitle = "المدير",
+                                                        roleTitle = if (fr) "Directeur" else "المدير",
                                                         personName = stampPrincipalSettings.name,
                                                         schoolName = classSchoolNameState.value,
                                                         shape = "circle",
@@ -617,13 +656,13 @@ fun LessonProposalScreen(
                                             modifier = Modifier.weight(1f),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            SignatureBox(title = "توقيع المفتش", modifier = Modifier.fillMaxWidth())
+                                            SignatureBox(title = if (fr) "Signature de l'inspecteur" else "توقيع المفتش", modifier = Modifier.fillMaxWidth())
                                         }
                                     }
 
                                     // تنبيه تربوي أسفل خانات التوقيعات الثلاث
                                     Text(
-                                        text = "هذا التحضير لا يغني عن كتابة المعلم لتحضيره الخاص! هذا مثال تحضير مساعد يربط بين التحضير والتخطيط السنوي وأرقام صفحات الدرس من الكتاب",
+                                        text = if (fr) "Cette fiche ne remplace pas la préparation personnelle de l'enseignant. C'est un modèle d'aide qui relie la préparation à la planification annuelle et aux pages du manuel." else "هذا التحضير لا يغني عن كتابة المعلم لتحضيره الخاص! هذا مثال تحضير مساعد يربط بين التحضير والتخطيط السنوي وأرقام صفحات الدرس من الكتاب",
                                         fontSize = 11.sp,
                                         color = Color(0xFFD32F2F),
                                         textAlign = TextAlign.Center,
@@ -640,8 +679,28 @@ fun LessonProposalScreen(
                             Spacer(modifier = Modifier.height(20.dp))
                         }
                     }
+                    }
                 }
             }
+        }
+
+        if (showBook) {
+            proposalDataState.value?.bookPages?.let { bp ->
+                BookPagesViewer(bp = bp, isFrench = fr, onClose = { showBook = false })
+            }
+        }
+        if (showBoard) {
+            proposalDataState.value?.let { pd ->
+                LessonBlackboardScreen(
+                    data = pd,
+                    isFrench = fr,
+                    subjectFallback = lesson.subject,
+                    domainFallback = domainText,
+                    topicFallback = lesson.title,
+                    onClose = { showBoard = false }
+                )
+            }
+        }
         }
     }
 }
@@ -736,7 +795,7 @@ private fun LessonProcedureTable(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "لا توجد خطوات سير مفصلة لهذا الدرس حاليًا.",
+                text = if (isFrench) "Aucune étape détaillée pour cette leçon." else "لا توجد خطوات سير مفصلة لهذا الدرس حاليًا.",
                 fontSize = 12.sp,
                 color = InkSoftBlue
             )
@@ -760,22 +819,22 @@ private fun LessonProcedureTable(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TableHeadText(
-                    text = "مراحل الدرس",
+                    text = if (isFrench) "Étapes" else "مراحل الدرس",
                     modifier = Modifier.weight(0.22f)
                 )
                 PaperVerticalLine()
                 TableHeadText(
-                    text = "نشاط المعلم",
+                    text = if (isFrench) "Activité du maître" else "نشاط المعلم",
                     modifier = Modifier.weight(0.35f)
                 )
                 PaperVerticalLine()
                 TableHeadText(
-                    text = "نشاط التلميذ",
+                    text = if (isFrench) "Activité de l'élève" else "نشاط التلميذ",
                     modifier = Modifier.weight(0.33f)
                 )
                 PaperVerticalLine()
                 TableHeadText(
-                    text = "المدة",
+                    text = if (isFrench) "Durée" else "المدة",
                     modifier = Modifier.weight(0.10f)
                 )
             }
@@ -1549,6 +1608,248 @@ private fun RemediationProposalCard(
                         color = Color(0xFF334155),
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+        }
+    }
+}
+
+
+/** عنوان قسم صفحات الكتاب (يظهر بعد ورقة التحضير). */
+@Composable
+private fun BookPagesHeader(bp: com.example.data.planning.LessonBookPages, isFrench: Boolean) {
+    val pagesText = bp.pages.joinToString(if (isFrench) ", " else "، ")
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 8.dp, start = 4.dp, end = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = if (isFrench) "Pages du manuel liées à cette préparation" else "صفحات الكتاب المرتبطة بهذا التحضير",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Black,
+            color = Color(0xFF1E3A8A),
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = bp.title + (if (isFrench) " — p. " else " — ص ") + pagesText,
+            fontSize = 11.sp,
+            color = Color(0xFF475569),
+            textAlign = TextAlign.Center,
+            lineHeight = 16.sp
+        )
+        if (bp.aux) {
+            Text(
+                text = if (isFrench) "Pages suggérées (مقترح تربوي مساعد) : à vérifier par l'enseignant." else "صفحات مقترحة للاستئناس (مقترح تربوي مساعد) وليست مرجعًا رسميًا ملزمًا.",
+                fontSize = 11.sp,
+                color = Color(0xFFD32F2F),
+                textAlign = TextAlign.Center,
+                lineHeight = 16.sp
+            )
+        }
+    }
+}
+
+/** صورة صفحة من الكتاب: تُقرأ من حزمة الكتب التي تنزّلها Google Play بعد التثبيت. */
+@Composable
+private fun BookPageImage(book: String, page: Int) {
+    val context = LocalContext.current
+    val bitmapState = produceState<androidx.compose.ui.graphics.ImageBitmap?>(initialValue = null, book, page) {
+        var tries = 0
+        while (value == null && tries < 200) {
+            value = withContext(Dispatchers.IO) {
+                try {
+                    com.example.data.BookPack.open(context, book, page)?.use { input ->
+                        android.graphics.BitmapFactory.decodeStream(input)?.asImageBitmap()
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (value == null) {
+                // الحزمة لم تصل بعد: اطلب التنزيل وأعد المحاولة بعد قليل
+                com.example.data.BookPack.requestDownload(context)
+                kotlinx.coroutines.delay(3000)
+                tries++
+            }
+        }
+    }
+    val bitmap = bitmapState.value
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .shadow(1.dp, RoundedCornerShape(4.dp))
+            .border(1.dp, Color(0xFFD1D5DB), RoundedCornerShape(4.dp)),
+        color = Color.White,
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = "ص $page",
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 2.dp, color = Color(0xFF1E3A8A))
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = uiT("جاري تحميل الكتب… تحتاج إنترنت مرة واحدة فقط"),
+                        fontSize = 11.sp,
+                        color = Color(0xFF6B7280),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * تقريب الشاشة: قرص بإصبعين للتكبير والتصغير (من 1× إلى 3×)، سحب بإصبع واحد للتنقل جانبيًا
+ * عند التكبير، والنقر مرتين للتكبير أو للعودة إلى الحجم العادي. التمرير الطولي يبقى كما هو.
+ * يكبّر ورقة التحضير وصفحات الكتب معًا.
+ */
+@Composable
+internal fun ZoomableSheet(content: @Composable () -> Unit) {
+    val contentDirection = LocalLayoutDirection.current
+    val baseDensity = LocalDensity.current
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var widthPx by remember { mutableStateOf(0f) }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()
+                .onSizeChanged { widthPx = it.width.toFloat() }
+                .pointerInput(Unit) {
+                    detectTapGestures(onDoubleTap = { tap ->
+                        val target = if (scale > 1.05f) 1f else 2f
+                        val ratio = target / scale
+                        val maxOff = size.width * (target - 1f)
+                        offsetX = ((offsetX + tap.x) * ratio - tap.x).coerceIn(0f, maxOff)
+                        scale = target
+                    })
+                }
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.changes.size >= 2) {
+                                val zoom = event.calculateZoom()
+                                if (zoom != 1f) {
+                                    val c = event.calculateCentroid()
+                                    val newScale = (scale * zoom).coerceIn(1f, 3f)
+                                    val ratio = newScale / scale
+                                    val maxOff = size.width * (newScale - 1f)
+                                    offsetX = ((offsetX + c.x) * ratio - c.x).coerceIn(0f, maxOff)
+                                    scale = newScale
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    enabled = scale > 1.05f,
+                    state = rememberDraggableState { delta ->
+                        val maxOff = widthPx * (scale - 1f)
+                        offsetX = (offsetX - delta).coerceIn(0f, maxOff)
+                    }
+                )
+        ) {
+            val viewWidth = maxWidth
+            val viewHeight = maxHeight
+            val s = scale
+            CompositionLocalProvider(
+                LocalDensity provides Density(baseDensity.density * s, baseDensity.fontScale)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .wrapContentSize(Alignment.TopStart, unbounded = true)
+                        .requiredSize(viewWidth, viewHeight / s)
+                        .graphicsLayer {
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            translationX = -offsetX
+                        }
+                ) {
+                    CompositionLocalProvider(LocalLayoutDirection provides contentDirection) {
+                        content()
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/** عرض صفحات الكتاب المرتبطة بالتحضير في شاشة مستقلة، مع التقريب بإصبعين. */
+@Composable
+private fun BookPagesViewer(
+    bp: com.example.data.planning.LessonBookPages,
+    isFrench: Boolean,
+    onClose: () -> Unit
+) {
+    androidx.activity.compose.BackHandler(onBack = onClose)
+    CompositionLocalProvider(LocalLayoutDirection provides (if (isFrench) LayoutDirection.Ltr else LayoutDirection.Rtl)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF1F5F9))
+        ) {
+            Surface(modifier = Modifier.fillMaxWidth(), color = PaperPureWhite, shadowElevation = 1.dp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color(0xFFF8FAFC), CircleShape)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = InkDarkBlue)
+                    }
+                    Text(
+                        text = if (isFrench) "Pages du manuel" else "صفحات الكتاب",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        color = InkDarkBlue
+                    )
+                }
+            }
+            ZoomableSheet {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    item(key = "book_pages_header") {
+                        BookPagesHeader(bp = bp, isFrench = isFrench)
+                    }
+                    items(bp.pages, key = { "book_${bp.book}_$it" }) { pageNumber ->
+                        BookPageImage(book = bp.book, page = pageNumber)
+                    }
+                    item { Spacer(modifier = Modifier.height(20.dp)) }
                 }
             }
         }

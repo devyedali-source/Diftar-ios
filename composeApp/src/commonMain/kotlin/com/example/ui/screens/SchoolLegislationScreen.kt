@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import android.content.Context
 import android.content.Intent
@@ -161,7 +163,7 @@ fun SchoolLegislationScreen(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("ابحث في المواد، الأبواب، أو النصوص... 🔍", fontSize = 14.sp) },
+            placeholder = { Text(uiT("ابحث في المواد، الأبواب، أو النصوص... 🔍"), fontSize = 14.sp) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -285,7 +287,7 @@ fun SchoolLegislationScreen(
                                 Text("📖", fontSize = 20.sp)
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "تابع القراءة من حيث توقفت:",
+                                        text = uiT("تابع القراءة من حيث توقفت:"),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = BentoPrimary
@@ -331,14 +333,14 @@ fun SchoolLegislationScreen(
                                 ) {
                                     Text("🇲🇷", fontSize = 20.sp)
                                     Text(
-                                        text = "التشريع المدرسي الموريتاني",
+                                        text = uiT("التشريع المدرسي الموريتاني"),
                                         fontWeight = FontWeight.Black,
                                         fontSize = 14.sp,
                                         color = BentoSecondary
                                     )
                                 }
                                 Text(
-                                    text = "دليل التشريعات والأنظمة الرسمية الصادرة عن وزارة التهذيب الوطني وإصلاح النظام التعليمي. يضم 131 مادة كاملة بدون إنترنت لتمكين المعلم من حقوقه وواجباته وتنظيم عمله اليومي.",
+                                    text = uiT("دليل التشريعات والأنظمة الرسمية الصادرة عن وزارة التهذيب الوطني وإصلاح النظام التعليمي. يضم 131 مادة كاملة بدون إنترنت لتمكين المعلم من حقوقه وواجباته وتنظيم عمله اليومي."),
                                     fontSize = 11.5.sp,
                                     color = BentoPrimaryDesc,
                                     lineHeight = 16.sp
@@ -556,7 +558,7 @@ fun ArticleCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "اضغط لعرض المادة كاملة... 👇",
+                        text = uiT("اضغط لعرض المادة كاملة... 👇"),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimary
@@ -586,27 +588,27 @@ fun ArticleCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("🏛️ المصدر:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                        Text(uiT("🏛️ المصدر:"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                         Text(article.source, fontSize = 10.sp, color = BentoPrimaryDesc)
                     }
 
                     if (article.sourcePage != null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("📄 الصفحة:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                            Text(uiT("📄 الصفحة:"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                             Text(article.sourcePage.toString(), fontSize = 10.sp, color = BentoPrimaryDesc)
                         }
                     }
 
                     if (!article.officialGazetteIssue.isNullOrBlank()) {
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("🗞️ العدد:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                            Text(uiT("🗞️ العدد:"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                             Text(article.officialGazetteIssue, fontSize = 10.sp, color = BentoPrimaryDesc)
                         }
                     }
 
                     if (!article.decreeDate.isNullOrBlank()) {
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("📅 تاريخ المرسوم:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                            Text(uiT("📅 تاريخ المرسوم:"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                             Text(article.decreeDate, fontSize = 10.sp, color = BentoPrimaryDesc)
                         }
                     }
@@ -640,7 +642,7 @@ fun ArticleCard(
                     ) {
                         Icon(Icons.Default.KeyboardArrowUp, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("طي المادة", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiT("طي المادة"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
@@ -655,7 +657,7 @@ fun ArticleCard(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("مشاركة المادة 🤝", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiT("مشاركة المادة 🤝"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

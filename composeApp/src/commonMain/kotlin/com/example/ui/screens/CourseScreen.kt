@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -102,15 +104,17 @@ fun CourseScreen() {
     // Screen Security Enforcer (FLAG_SECURE) to prevent screenshotting, recording, and recent app previews (Bypassed temporarily until Sep 30, 2026)
     androidx.compose.runtime.DisposableEffect(Unit) {
         val activity = context as? android.app.Activity
-        val calendar = java.util.Calendar.getInstance()
+        val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = com.example.data.security.TrustedClock.now() }
         val isBeforeOct2026 = calendar.get(java.util.Calendar.YEAR) < 2026 ||
             (calendar.get(java.util.Calendar.YEAR) == 2026 && calendar.get(java.util.Calendar.MONTH) < java.util.Calendar.OCTOBER)
 
-        if (!isBeforeOct2026) {
+        // مدير الأقسام وحده مسموح له بلقطات الشاشة وتسجيلها؛ باقي المستخدمين يبقون محميين
+        val secureEnabled = !isBeforeOct2026 && !com.example.data.security.ScreenSecurity.isCaptureAllowedForCurrentUser()
+        if (secureEnabled) {
             activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         }
         onDispose {
-            if (!isBeforeOct2026) {
+            if (secureEnabled) {
                 activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
             }
         }
@@ -125,6 +129,7 @@ fun CourseScreen() {
     var examsSubject by remember { mutableStateOf<String?>(null) }
     var writingsSubject by remember { mutableStateOf<String?>(null) }
     var placeRestored by remember { mutableStateOf(false) }
+    var inSimulator by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val ok = withContext(Dispatchers.IO) {
@@ -140,8 +145,13 @@ fun CourseScreen() {
                 val sp = COURSE_SPECIALIZATIONS.find { it.id == savedSpecId }
                 if (sp != null && CourseSubscriptionStore.isUnlocked(context, sp.id, uid)) {
                     selectedSpec = sp
+                    if (store.getBoolean(context, "course_merged_sim") &&
+                        CourseProgressStore.isMergedSimulatorUnlocked(context, sp.trackKey)
+                    ) {
+                        inSimulator = true
+                    }
                     val subj = store.getString(context, "course_subject")
-                    if (subj != null && CourseRepository.getSubjectNames(context, sp.trackKey).contains(subj)) {
+                    if (!inSimulator && subj != null && CourseRepository.getSubjectNames(context, sp.trackKey).contains(subj)) {
                         selectedSubject = subj
                         if (store.getBoolean(context, "course_in_exams")) {
                             examsSubject = subj
@@ -164,15 +174,29 @@ fun CourseScreen() {
         loading = false
     }
 
-    LaunchedEffect(placeRestored, selectedSpec?.id, selectedSubject, selectedLessonId, inTest, examsSubject, writingsSubject) {
+    LaunchedEffect(placeRestored, selectedSpec?.id, selectedSubject, selectedLessonId, inTest, examsSubject, writingsSubject, inSimulator) {
         if (!placeRestored) return@LaunchedEffect
         val store = com.example.data.state.LastPlaceStore
         store.putString(context, "course_spec", selectedSpec?.id)
         store.putString(context, "course_subject", selectedSubject)
         store.putString(context, "course_lesson", selectedLessonId)
         store.putBoolean(context, "course_in_test", inTest)
+        store.putBoolean(context, "course_merged_sim", inSimulator)
         store.putBoolean(context, "course_in_exams", examsSubject != null)
         store.putBoolean(context, "course_in_writings", writingsSubject != null)
+    }
+
+    // زر الرجوع في الهاتف: خطوة واحدة إلى الخلف داخل الدورة
+    androidx.activity.compose.BackHandler(enabled = selectedSpec != null) {
+        when {
+            inTest -> inTest = false
+            selectedLessonId != null -> selectedLessonId = null
+            writingsSubject != null -> writingsSubject = null
+            examsSubject != null -> examsSubject = null
+            inSimulator -> inSimulator = false
+            selectedSubject != null -> selectedSubject = null
+            else -> selectedSpec = null
+        }
     }
 
     androidx.compose.runtime.DisposableEffect(Unit) {
@@ -193,7 +217,7 @@ fun CourseScreen() {
         ) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "جارٍ تحضير الدورة...", fontSize = 14.sp)
+            Text(text = uiT("جارٍ تحضير الدورة..."), fontSize = 14.sp)
         }
         return
     }
@@ -205,7 +229,7 @@ fun CourseScreen() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "تعذّر تحميل محتوى الدورة",
+                text = uiT("تعذّر تحميل محتوى الدورة"),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = CourseBadColor
@@ -229,6 +253,7 @@ fun CourseScreen() {
 
     if (spec == null) {
         CourseSpecializationList(onSelect = {
+            inSimulator = false
             selectedSpec = it
             selectedSubject = null
             selectedLessonId = null
@@ -238,6 +263,14 @@ fun CourseScreen() {
     }
 
     if (subjectName == null) {
+        if (inSimulator) {
+            CourseSimulatorScreen(
+                trackKey = spec.trackKey,
+                subjectName = spec.title,
+                onBack = { inSimulator = false }
+            )
+            return
+        }
         CourseSubjectList(
             spec = spec,
             onBack = { selectedSpec = null },
@@ -245,7 +278,8 @@ fun CourseScreen() {
                 selectedSubject = it
                 selectedLessonId = null
                 inTest = false
-            }
+            },
+            onOpenSimulator = { inSimulator = true }
         )
         return
     }
@@ -291,7 +325,7 @@ fun CourseScreen() {
             CourseBackLink(text = "رجوع إلى الدروس", onClick = { selectedLessonId = null })
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "تعذّر العثور على الدرس",
+                text = uiT("تعذّر العثور على الدرس"),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = CourseBadColor
@@ -335,6 +369,25 @@ private fun CourseSpecializationList(onSelect: (CourseSpecialization) -> Unit) {
     val currentUid = currentUser?.uid ?: ""
     val currentEmail = currentUser?.email ?: ""
     var lockedSpec by remember { mutableStateOf<CourseSpecialization?>(null) }
+    // يزيد بعد استرجاع التفعيلات من الخادم لإعادة رسم القائمة
+    var restoreTick by remember { mutableStateOf(0) }
+    var restoring by remember { mutableStateOf(false) }
+
+    // استرجاع التفعيلات من الخادم (بعد إعادة تثبيت التطبيق أو تغيير الهاتف)
+    LaunchedEffect(currentUid) {
+        if (currentUid.isNotBlank()) {
+            restoring = true
+            val before = COURSE_SPECIALIZATIONS.map {
+                CourseSubscriptionStore.getExpiryMillis(context, it.id)
+            }
+            CourseSubscriptionStore.restoreFromServer(context, currentUid)
+            val after = COURSE_SPECIALIZATIONS.map {
+                CourseSubscriptionStore.getExpiryMillis(context, it.id)
+            }
+            if (before != after) restoreTick++
+            restoring = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -342,10 +395,10 @@ private fun CourseSpecializationList(onSelect: (CourseSpecialization) -> Unit) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(text = "اختر التخصّص", fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Text(text = uiT("اختر التخصّص"), fontSize = 18.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "دورة تحضير مسابقات المعلمين",
+            text = uiT("دورة تحضير مسابقات المعلمين"),
             fontSize = 13.sp,
             color = CourseMutedColor
         )
@@ -361,18 +414,18 @@ private fun CourseSpecializationList(onSelect: (CourseSpecialization) -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = "📢 عن الدورة",
+                    text = uiT("📢 عن الدورة"),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Black,
                     color = CourseOkColor
                 )
                 Text(
-                    text = "محتوى هذه الدورة مأخوذ من البرنامج الرسمي لمسابقات المعلمين، وهو نفسه المحتوى الذي يُمتحن فيه التلاميذ المعلمون.",
+                    text = uiT("محتوى هذه الدورة مأخوذ من البرنامج الرسمي لمسابقات المعلمين، وهو نفسه المحتوى الذي يُمتحن فيه التلاميذ المعلمون."),
                     fontSize = 13.5.sp,
                     lineHeight = 21.sp
                 )
                 Text(
-                    text = "وتدرّبك الدورة على المحاكي: امتحانات على نفس نمط الامتحانات الرقمية المعتمدة في منصّة اللجنة الوطنية للمسابقات.",
+                    text = uiT("وتدرّبك الدورة على المحاكي: امتحانات على نفس نمط الامتحانات الرقمية المعتمدة في منصّة اللجنة الوطنية للمسابقات."),
                     fontSize = 13.5.sp,
                     lineHeight = 21.sp,
                     fontWeight = FontWeight.Bold
@@ -392,6 +445,7 @@ private fun CourseSpecializationList(onSelect: (CourseSpecialization) -> Unit) {
         }
 
         for (spec in COURSE_SPECIALIZATIONS) {
+            @Suppress("UNUSED_VARIABLE") val tick = restoreTick
             val unlocked = CourseSubscriptionStore.isUnlocked(context, spec.id, currentUid)
             val daysLeft = CourseSubscriptionStore.remainingDays(context, spec.id)
             val expiryText = CourseSubscriptionStore.formatExpiryDate(context, spec.id)
@@ -428,14 +482,14 @@ private fun CourseSpecializationList(onSelect: (CourseSpecialization) -> Unit) {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "مفتوح · تبقّى $daysLeft يومًا · ينتهي في $expiryText",
+                                text = uiTf("مفتوح · تبقّى {0} يومًا · ينتهي في {1}", daysLeft, expiryText),
                                 fontSize = 12.sp,
                                 color = if (expiringSoon) CourseWarnColor else CourseOkColor
                             )
                             if (expiringSoon) {
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "اشتراكك يقارب الانتهاء، جدّده قبل انقطاع المحتوى.",
+                                    text = uiT("اشتراكك يقارب الانتهاء، جدّده قبل انقطاع المحتوى."),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = CourseWarnColor
@@ -444,7 +498,7 @@ private fun CourseSpecializationList(onSelect: (CourseSpecialization) -> Unit) {
                         } else {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "يحتاج تفعيلًا",
+                                text = uiT("يحتاج تفعيلًا"),
                                 fontSize = 12.sp,
                                 color = CourseWarnColor
                             )
@@ -461,10 +515,14 @@ private fun CourseSpecializationList(onSelect: (CourseSpecialization) -> Unit) {
 private fun CourseSubjectList(
     spec: CourseSpecialization,
     onBack: () -> Unit,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    onOpenSimulator: () -> Unit
 ) {
     val context = LocalContext.current
     val subjectNames = CourseRepository.getSubjectNames(context, spec.trackKey)
+    val simUnlocked = CourseProgressStore.isMergedSimulatorUnlocked(context, spec.trackKey)
+    val simMissing = CourseProgressStore.simulatorMissingBySubject(context, spec.trackKey)
+    var showSimLock by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -476,13 +534,13 @@ private fun CourseSubjectList(
         Spacer(modifier = Modifier.height(10.dp))
         Text(text = spec.title, fontSize = 18.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "اختر المادة", fontSize = 13.sp, color = CourseMutedColor)
+        Text(text = uiT("اختر المادة"), fontSize = 13.sp, color = CourseMutedColor)
         Spacer(modifier = Modifier.height(14.dp))
 
         for (name in subjectNames) {
             val subject = CourseRepository.getSubject(context, name)
             val lessonsCount = subject?.lessons?.size ?: 0
-            val examsCount = (subject?.sub?.size ?: 0) + (subject?.sim?.size ?: 0)
+            val examsCount = subject?.sub?.size ?: 0
             val writingsCount = subject?.wr?.size ?: 0
             val passed = CourseProgressStore.countPassedLessons(context, name)
             val percent = CourseProgressStore.subjectProgressPercent(context, name)
@@ -497,14 +555,14 @@ private fun CourseSubjectList(
                     Text(text = name, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "$lessonsCount درسًا · $examsCount امتحانًا" +
+                        text = uiTf("{0} درسًا · {1} امتحانًا", lessonsCount, examsCount) +
                             (if (writingsCount > 0) " · $writingsCount موضوع إنتاج" else ""),
                         fontSize = 13.sp,
                         color = CourseMutedColor
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "المنجَز: $passed من $lessonsCount ($percent٪)",
+                        text = uiTf("المنجَز: {0} من {1} ({2}٪)", passed, lessonsCount, percent),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (passed > 0) CourseOkColor else CourseMutedColor
@@ -512,6 +570,81 @@ private fun CourseSubjectList(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(10.dp))
+        if (showSimLock && !simUnlocked) {
+            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = uiT("🔒 المحاكي مقفل"),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black,
+                        color = CourseWarnColor
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = uiTf("يُفتح المحاكي بعد النجاح في {0} دروس من كل مادة.", CourseProgressStore.SIMULATOR_LESSONS_PER_SUBJECT),
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    for ((name, missing) in simMissing) {
+                        Text(
+                            text = uiTf("• {0}: تبقّى {1} درسًا", name, missing),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CourseWarnColor
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = uiT("والدرس يُحسب منجَزًا إذا نلتَ في اختباره عشرة من عشرين فما فوق."),
+                        fontSize = 12.sp,
+                        color = CourseMutedColor
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = { showSimLock = false },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = uiT("حسنًا"), fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 5.dp)
+                .clickable {
+                    if (simUnlocked) onOpenSimulator() else showSimLock = true
+                }
+        ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                Text(
+                    text = if (simUnlocked) "🎯 المحاكي الشامل" else "🔒 المحاكي الشامل",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Black,
+                    color = CourseWarnColor
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = uiTf("كل المواد في امتحان واحد · {0} سؤالًا (20 من كل مادة) · 3 ساعات", subjectNames.size * 20),
+                    fontSize = 13.sp,
+                    color = CourseMutedColor
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (simUnlocked) {
+                        "خمسة خيارات · مؤقّت نازل · تسليم نهائي · تصحيح بالشروح"
+                    } else {
+                        "يُفتح بعد النجاح في ${CourseProgressStore.SIMULATOR_LESSONS_PER_SUBJECT} دروس من كل مادة"
+                    },
+                    fontSize = 12.sp,
+                    color = CourseMutedColor
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -540,7 +673,7 @@ private fun CourseLessonList(
         Text(text = subjectName, fontSize = 18.sp, fontWeight = FontWeight.Black)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "${spec.title} · ${lessons.size} درسًا · المنجَز $passed",
+            text = uiTf("{0} · {1} درسًا · المنجَز {2}", spec.title, lessons.size, passed),
             fontSize = 13.sp,
             color = CourseMutedColor
         )
@@ -584,7 +717,7 @@ private fun CourseLessonList(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "الإنتاج الكتابي",
+                        text = uiT("الإنتاج الكتابي"),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Black,
                         color = CourseOkColor
@@ -710,12 +843,12 @@ private fun CourseLessonDetail(
                 )
                 if (lesson.ref.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(text = "المرجع: ${lesson.ref}", fontSize = 12.sp, color = CourseMutedColor)
+                    Text(text = uiTf("المرجع: {0}", lesson.ref), fontSize = 12.sp, color = CourseMutedColor)
                 }
                 if (score != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "أفضل نقطة لك في هذا الدرس: $score/20",
+                        text = uiTf("أفضل نقطة لك في هذا الدرس: {0}/20", score),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (score >= 10) CourseOkColor else CourseWarnColor
@@ -758,7 +891,7 @@ private fun CourseLessonDetail(
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "الجواب: ${example.answer}",
+                                text = uiTf("الجواب: {0}", example.answer),
                                 fontSize = 14.sp,
                                 color = CourseOkColor
                             )
@@ -786,7 +919,7 @@ private fun CourseLessonDetail(
             onClick = { onStartTest() },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(text = "اختبر نفسك (${lesson.qs.size} سؤالًا)", fontSize = 15.sp)
+            Text(text = uiTf("اختبر نفسك ({0} سؤالًا)", lesson.qs.size), fontSize = 15.sp)
         }
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -804,7 +937,7 @@ private fun CourseLessonTest(
     val context = LocalContext.current
     val total = lesson.qs.size
 
-    val testPosId = "lesson_" + lesson.id
+    val testPosId = "lesson15_" + lesson.id
     val restoredPos = remember(lesson.id) {
         com.example.data.course.CourseAttemptStore.loadTestPosition(context, testPosId)
             ?.takeIf { it.first in 0 until total && it.second in 0..it.first }
@@ -842,7 +975,7 @@ private fun CourseLessonTest(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            Text(text = "نتيجة اختبار الدرس", fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(text = uiT("نتيجة اختبار الدرس"), fontSize = 18.sp, fontWeight = FontWeight.Black)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "${lesson.no}. ${lesson.title} · $subjectName",
@@ -868,7 +1001,7 @@ private fun CourseLessonTest(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "إجابات صحيحة: $correctCount من $total",
+                        text = uiTf("إجابات صحيحة: {0} من {1}", correctCount, total),
                         fontSize = 14.sp,
                         color = CourseMutedColor
                     )
@@ -900,7 +1033,7 @@ private fun CourseLessonTest(
                         onClick = { onGoToNextLesson() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "الدرس الموالي", fontSize = 15.sp)
+                        Text(text = uiT("الدرس الموالي"), fontSize = 15.sp)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -908,19 +1041,19 @@ private fun CourseLessonTest(
                     onClick = { onExitToLesson() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "إعادة قراءة الدرس", fontSize = 15.sp)
+                    Text(text = uiT("إعادة قراءة الدرس"), fontSize = 15.sp)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { attempt++ },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "إعادة الامتحان", fontSize = 15.sp)
+                    Text(text = uiT("إعادة الامتحان"), fontSize = 15.sp)
                 }
             } else {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "ننصحك بإعادة قراءة الدرس قراءةً متأنّية قبل إعادة الاختبار، " +
+                        text = uiT("ننصحك بإعادة قراءة الدرس قراءةً متأنّية قبل إعادة الاختبار، ") +
                             "فالمراجعة الهادئة أنفع من تكرار المحاولة.",
                         fontSize = 14.sp,
                         modifier = Modifier.padding(12.dp)
@@ -931,14 +1064,14 @@ private fun CourseLessonTest(
                     onClick = { onExitToLesson() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "إعادة قراءة الدرس", fontSize = 15.sp)
+                    Text(text = uiT("إعادة قراءة الدرس"), fontSize = 15.sp)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { attempt++ },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "إعادة الامتحان", fontSize = 15.sp)
+                    Text(text = uiT("إعادة الامتحان"), fontSize = 15.sp)
                 }
             }
 
@@ -961,7 +1094,7 @@ private fun CourseLessonTest(
         CourseBackLink(text = "الخروج من الاختبار", onClick = onExitToLesson)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "السؤال ${index + 1} من $total",
+            text = uiTf("السؤال {0} من {1}", index + 1, total),
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = CourseMutedColor
@@ -1037,7 +1170,7 @@ private fun CourseLessonTest(
             if (!isRight) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "الصواب: ${question.c[question.k]}",
+                    text = uiTf("الصواب: {0}", question.c[question.k]),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = CourseOkColor
@@ -1124,7 +1257,7 @@ fun CourseVerificationScreen() {
         ) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "جارٍ قراءة محتوى الدورة...", fontSize = 14.sp)
+            Text(text = uiT("جارٍ قراءة محتوى الدورة..."), fontSize = 14.sp)
         }
         return
     }
@@ -1137,7 +1270,7 @@ fun CourseVerificationScreen() {
             .padding(16.dp)
     ) {
         Text(
-            text = "تحقّق مؤقّت من محتوى الدورة",
+            text = uiT("تحقّق مؤقّت من محتوى الدورة"),
             fontSize = 18.sp,
             fontWeight = FontWeight.Black
         )
@@ -1145,7 +1278,7 @@ fun CourseVerificationScreen() {
 
         if (s == null || s.lessons == 0) {
             Text(
-                text = "فشلت قراءة الملف ❌",
+                text = uiT("فشلت قراءة الملف ❌"),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = CourseBadColor
@@ -1155,14 +1288,14 @@ fun CourseVerificationScreen() {
                 Column(modifier = Modifier.padding(12.dp)) {
                     CourseCheckRow("المواد", s.subjects, 4)
                     CourseCheckRow("الدروس", s.lessons, 181)
-                    CourseCheckRow("أسئلة الدروس", s.lessonQuestions, 5430)
+                    CourseCheckRow("أسئلة الدروس", s.lessonQuestions, 2715)
                     CourseCheckRow("الامتحانات", s.exams, 80)
                     CourseCheckRow("أسئلة الامتحانات", s.examQuestions, 1800)
                     CourseCheckRow("مواضيع الإنتاج الكتابي", s.writings, 20)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "المسارات", fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(text = uiT("المسارات"), fontSize = 16.sp, fontWeight = FontWeight.Black)
             Spacer(modifier = Modifier.height(8.dp))
             for (track in tracks) {
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -1217,7 +1350,7 @@ private fun CourseSubscriptionDialog(
                     if (snapshot == null || !snapshot.exists()) return@addSnapshotListener
                     val status = snapshot.getString("status") ?: ""
                     val expiresAt = snapshot.getLong("expiresAt") ?: 0L
-                    if (status == "completed" && expiresAt > System.currentTimeMillis()) {
+                    if (status == "completed" && expiresAt > com.example.data.security.TrustedClock.now()) {
                         val alreadyUnlocked = CourseSubscriptionStore.isUnlocked(
                             context,
                             spec.id,
@@ -1270,14 +1403,11 @@ private fun CourseSubscriptionDialog(
     val activationLink = "https://diftar-almoaalim.web.app/course-activate/$requestId"
 
     val messageText = "السلام عليكم،\n" +
-        "أنا المعلم صاحب البريد: ${if (email.isBlank()) "غير متوفّر" else email}\n" +
+        "أنا مستخدم لتطبيق دفتر المعلم\n" +
         "أريد تفعيل دورة تحضير مسابقات المعلمين\n\n" +
         "التخصّص المطلوب: ${spec.title}\n" +
         "المدّة: ${CourseSubscriptionStore.SUBSCRIPTION_DAYS} يومًا\n" +
         "السعر: ${CourseSubscriptionStore.SUBSCRIPTION_PRICE}\n" +
-        "------------------------------------\n" +
-        "🔑 رقم طلب التفعيل:\n" +
-        "$requestId\n" +
         "------------------------------------\n" +
         "رابط طلب التفعيل:\n" +
         activationLink
@@ -1285,7 +1415,7 @@ private fun CourseSubscriptionDialog(
     AlertDialog(
         onDismissRequest = { onDismiss() },
         title = {
-            Text(text = "تفعيل الدورة", fontWeight = FontWeight.Black, fontSize = 17.sp)
+            Text(text = uiT("تفعيل الدورة"), fontWeight = FontWeight.Black, fontSize = 17.sp)
         },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -1301,9 +1431,9 @@ private fun CourseSubscriptionDialog(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "المدّة", fontSize = 14.sp, color = CourseMutedColor)
+                    Text(text = uiT("المدّة"), fontSize = 14.sp, color = CourseMutedColor)
                     Text(
-                        text = "${CourseSubscriptionStore.SUBSCRIPTION_DAYS} يومًا",
+                        text = uiTf("{0} يومًا", CourseSubscriptionStore.SUBSCRIPTION_DAYS),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1312,7 +1442,7 @@ private fun CourseSubscriptionDialog(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "السعر", fontSize = 14.sp, color = CourseMutedColor)
+                    Text(text = uiT("السعر"), fontSize = 14.sp, color = CourseMutedColor)
                     Text(
                         text = CourseSubscriptionStore.SUBSCRIPTION_PRICE,
                         fontSize = 14.sp,
@@ -1324,7 +1454,7 @@ private fun CourseSubscriptionDialog(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "ينتهي في", fontSize = 14.sp, color = CourseMutedColor)
+                    Text(text = uiT("ينتهي في"), fontSize = 14.sp, color = CourseMutedColor)
                     Text(
                         text = expiryPreview,
                         fontSize = 14.sp,
@@ -1341,14 +1471,14 @@ private fun CourseSubscriptionDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "كل تخصّص يُفعَّل وحده، وتفعيل هذا التخصّص لا يفتح التخصّصات الأخرى.",
+                    text = uiT("كل تخصّص يُفعَّل وحده، وتفعيل هذا التخصّص لا يفتح التخصّصات الأخرى."),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = CourseWarnColor
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "بالضغط على الزرّ يُفتح الواتساب برسالة جاهزة إلى مدير الأقسام.",
+                    text = uiT("بالضغط على الزرّ يُفتح الواتساب برسالة جاهزة إلى مدير الأقسام."),
                     fontSize = 12.sp,
                     color = CourseMutedColor
                 )
@@ -1396,12 +1526,12 @@ private fun CourseSubscriptionDialog(
                     onDismiss()
                 }
             ) {
-                Text(text = "إرسال طلب التفعيل", fontWeight = FontWeight.Black)
+                Text(text = uiT("إرسال طلب التفعيل"), fontWeight = FontWeight.Black)
             }
         },
         dismissButton = {
             TextButton(onClick = { onDismiss() }) {
-                Text(text = "إغلاق")
+                Text(text = uiT("إغلاق"))
             }
         }
     )

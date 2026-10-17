@@ -84,12 +84,17 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 
     private val prefs = application.getSharedPreferences("teacher_settings_prefs", android.content.Context.MODE_PRIVATE)
 
+    // زر تبديل اللغة محذوف: الواجهة عربية دائماً
     private val _appLanguage = MutableStateFlow("ar")
+        .also { com.example.ui.utils.AppLocalization.lang = it.value }
     val appLanguage: StateFlow<String> = _appLanguage.asStateFlow()
 
+    /** لغة واجهة التطبيق فقط ("ar" أو "fr")؛ لا تمسّ البيانات ولا ملفات PDF. */
     fun setAppLanguage(lang: String) {
-        _appLanguage.value = "ar"
-        prefs.edit().putString("app_language", "ar").apply()
+        val l = if (lang == "fr") "fr" else "ar"
+        _appLanguage.value = l
+        com.example.ui.utils.AppLocalization.lang = l
+        prefs.edit().putString("app_language", l).apply()
     }
 
     private var currentRepository: TeacherRepository? = null
@@ -331,6 +336,10 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         try {
             val uid = _currentUser.value?.uid ?: return
             if (!isNetworkAvailable()) return
+            // نحدّث الساعة الموثوقة بوقت الخادم قبل مقارنة تواريخ الانتهاء
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.example.data.security.TrustedClock.syncWithServer()
+            }
 
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 val db = FirebaseFirestore.getInstance()
@@ -479,6 +488,50 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     private val deletedGlobalSubjectIds = MutableStateFlow<Set<Long>>(emptySet())
     private val _students = MutableStateFlow<List<Student>>(emptyList())
     private val _grades = MutableStateFlow<List<Grade>>(emptyList())
+    private val _attendance = MutableStateFlow<List<com.example.data.models.AttendanceRecord>>(emptyList())
+    val attendance: StateFlow<List<com.example.data.models.AttendanceRecord>> = _attendance.asStateFlow()
+
+    private val _competencies = MutableStateFlow<List<com.example.data.models.CompetencyEntry>>(emptyList())
+    val competencies: StateFlow<List<com.example.data.models.CompetencyEntry>> = _competencies.asStateFlow()
+
+    /** يحفظ خانة تقييم: value=0 وملاحظة فارغة تعني حذف الخانة */
+    fun saveCompetencyEntry(classId: Long, studentId: Long, entryKey: String, value: Int, note: String = "") {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            if (value == 0 && note.isBlank()) {
+                repository.deleteCompetency(classId, studentId, entryKey)
+            } else {
+                repository.insertCompetencies(listOf(com.example.data.models.CompetencyEntry(classId, studentId, entryKey, value, note)))
+            }
+        }
+    }
+
+    /** أيام التدريس (MON..FRI) — افتراضياً كل أيام الأسبوع الدراسي */
+    private val _teachingDays = MutableStateFlow(
+        (prefs.getString("teaching_days", null) ?: "MON,TUE,WED,THU,FRI").split(",").filter { it.isNotBlank() }.toSet()
+    )
+    val teachingDays: StateFlow<Set<String>> = _teachingDays.asStateFlow()
+
+    fun saveTeachingDays(days: Set<String>) {
+        _teachingDays.value = days
+        prefs.edit().putString("teaching_days", days.joinToString(",")).apply()
+    }
+
+    /** يحفظ سجل غياب يوم كامل لقسم: لكل تلميذ (صباحاً، مساءً) غائب أم لا */
+    fun saveAttendanceDay(classId: Long, date: String, absences: Map<Long, Pair<Boolean, Boolean>>) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val records = absences.map { (sid, p) ->
+                com.example.data.models.AttendanceRecord(sid, date, classId, p.first, p.second)
+            }
+            repository.insertAttendance(records)
+        }
+    }
+
+    fun deleteAttendanceDay(classId: Long, date: String) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            repository.deleteAttendanceDay(classId, date)
+        }
+    }
+
     private val _manualTermAverages = MutableStateFlow<List<com.example.data.models.StudentManualTermAverage>>(emptyList())
     val manualTermAverages: StateFlow<List<com.example.data.models.StudentManualTermAverage>> = _manualTermAverages.asStateFlow()
     private val _customizations = MutableStateFlow<List<ClassSubjectCustomization>>(emptyList())
@@ -512,7 +565,7 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 
     private fun isFinalTermOnlySeasonOpen(): Boolean {
         return try {
-            val calendar = java.util.Calendar.getInstance()
+            val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = com.example.data.security.TrustedClock.now() }
             val year = calendar.get(java.util.Calendar.YEAR)
             val month = calendar.get(java.util.Calendar.MONTH) + 1
             val day = calendar.get(java.util.Calendar.DAY_OF_MONTH)
@@ -742,6 +795,16 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
             launch {
                 activeRepo.allGrades.collect { list ->
                     _grades.value = list
+                }
+            }
+            launch {
+                activeRepo.allCompetencies.collect { list ->
+                    _competencies.value = list
+                }
+            }
+            launch {
+                activeRepo.allAttendance.collect { list ->
+                    _attendance.value = list
                 }
             }
             launch {
@@ -1119,7 +1182,7 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     private fun isTermActivationExpired(academicYear: String): Boolean {
         return try {
             val endYear = academicYear.split("-").getOrNull(1)?.trim()?.toIntOrNull() ?: return false
-            val calendar = java.util.Calendar.getInstance()
+            val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = com.example.data.security.TrustedClock.now() }
             val currentYear = calendar.get(java.util.Calendar.YEAR)
             val currentMonth = calendar.get(java.util.Calendar.MONTH) + 1
             currentYear > endYear || (currentYear == endYear && currentMonth >= 8)
@@ -1234,6 +1297,19 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                                     e.printStackTrace()
                                 }
                               }
+                            }
+                        }
+
+                        // نتائج طلبات تصحيح بيانات القسم التي كتبها المدير (موافقة/رفض)
+                        @Suppress("UNCHECKED_CAST")
+                        val infoResults: List<Pair<Long, Map<String, Any>>> = snapshot.documents.mapNotNull { d ->
+                            val cId = d.id.toLongOrNull() ?: return@mapNotNull null
+                            val res = d.get("infoRequestResult") as? Map<String, Any> ?: return@mapNotNull null
+                            cId to res
+                        }
+                        if (infoResults.isNotEmpty()) {
+                            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                applyClassInfoResults(uid, infoResults)
                             }
                         }
                     } catch (e: Exception) {
@@ -2637,7 +2713,7 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     // --- CRUD Actions ---
 
     fun getAutomaticAcademicYear(): String {
-        val calendar = java.util.Calendar.getInstance()
+        val calendar = java.util.Calendar.getInstance().apply { timeInMillis = com.example.data.security.TrustedClock.now() }
         val year = calendar.get(java.util.Calendar.YEAR)
         val month = calendar.get(java.util.Calendar.MONTH) + 1 // 1-indexed (Jan is 1, Dec is 12)
         // Starts in December (12). So if month is 12 or Jan-July (month <= 7) we format it.
@@ -2786,6 +2862,578 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
             }
 
         return true
+    }
+
+    // ===== تصحيح بيانات القسم (المدرسة / الولاية / المقاطعة) مع منع التلاعب =====
+    // القواعد:
+    //  1) تصحيح مباشر مرة واحدة فقط لكل قسم، وبشرط ألا يكون القسم مدفوعاً (لا فصل ثانٍ/ثالث/أخير مفعّل).
+    //  2) بعد ذلك، أو إذا كان القسم مدفوعاً: «طلب تصحيح» يراجعه المدير ويوافق أو يرفض.
+    //  3) كل تغيير يُسجَّل في infoChangeLog داخل مستند القسم بالسحابة (teachers/{uid}/classes/{classId}).
+    // التحقق يتم على الخادم داخل معاملة (Transaction) فلا يمكن تجاوزه بحذف بيانات الجهاز.
+
+    private val infoResultMutex = kotlinx.coroutines.sync.Mutex()
+
+    private fun isClassInfoAdmin(): Boolean =
+        _currentUser.value?.email?.trim()?.lowercase() == "elyedalimoctar@gmail.com"
+
+    private fun normalizeInfoText(s: String): String = s.trim().replace(Regex("\\s+"), " ")
+
+    /** يعيد بناء اسم القسم المعروض بعد تغيير اسم المدرسة مع بقاء بقية الاسم (المستوى والقسم والعام). */
+    private fun buildCorrectedClassName(
+        oldName: String,
+        oldSchool: String,
+        newSchool: String,
+        level: Int,
+        sectionName: String,
+        academicYear: String
+    ): String {
+        val os = oldSchool.trim()
+        return if (os.isNotEmpty() && oldName.startsWith(os)) {
+            newSchool + oldName.substring(os.length)
+        } else {
+            "$newSchool - س$level ($sectionName) [$academicYear]"
+        }
+    }
+
+    /** يعيد رسالة الخطأ إن كانت المدخلات غير صالحة، أو null إن كانت صالحة. */
+    private fun validateClassInfoChange(local: ClassSection, school: String, wilaya: String, moughataa: String): String? {
+        if (school.length < 2) return "اكتب اسم المدرسة (حرفان على الأقل)."
+        if (school.length > 80) return "اسم المدرسة طويل جداً (80 حرفاً كحد أقصى)."
+        if (school == local.schoolName.trim() && wilaya == local.wilaya.trim() && moughataa == local.moughataa.trim()) {
+            return "لم تغيّر أي معلومة. عدّل اسم المدرسة أو الولاية أو المقاطعة أولاً."
+        }
+        val duplicate = _classSections.value.any {
+            it.id != local.id &&
+                it.level == local.level &&
+                it.academicYear.trim() == local.academicYear.trim() &&
+                it.sectionName.trim().equals(local.sectionName.trim(), ignoreCase = true) &&
+                it.wilaya.trim().equals(wilaya, ignoreCase = true) &&
+                it.moughataa.trim().equals(moughataa, ignoreCase = true) &&
+                it.schoolName.trim().equals(school, ignoreCase = true)
+        }
+        if (duplicate) return "يوجد لديك قسم آخر بنفس المدرسة والمستوى والاسم في هذا العام."
+        return null
+    }
+
+    /** يقرأ من الخادم حالة قسم المعلم: هل يمكنه التصحيح المباشر؟ وهل لديه طلب معلّق؟ */
+    fun fetchClassInfoStatus(classId: Long, onResult: (ClassInfoStatus) -> Unit) {
+        val uid = _currentUser.value?.uid
+        if (uid == null) {
+            onResult(ClassInfoStatus(error = "يجب تسجيل الدخول أولاً."))
+            return
+        }
+        if (!isNetworkAvailable()) {
+            onResult(ClassInfoStatus(error = "لا يوجد اتصال بالإنترنت. تصحيح بيانات القسم يحتاج اتصالاً للتحقق من الخادم."))
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val status = try {
+                val ref = FirebaseFirestore.getInstance().collection("teachers").document(uid)
+                    .collection("classes").document(classId.toString())
+                val doc = Tasks.await(ref.get(com.google.firebase.firestore.Source.SERVER), 15, java.util.concurrent.TimeUnit.SECONDS)
+                val paid = (doc.getBoolean("isActivated") ?: false) ||
+                    (doc.getBoolean("isTerm2Activated") ?: false) ||
+                    (doc.getBoolean("isTerm3Activated") ?: false) ||
+                    (doc.getBoolean("isTerm4Activated") ?: false)
+                val used = (doc.getLong("infoEditCount") ?: 0L) >= 1L
+                @Suppress("UNCHECKED_CAST")
+                val pending = doc.get("pendingInfo") as? Map<String, Any>
+                ClassInfoStatus(
+                    canEditDirectly = !paid && !used,
+                    lockReason = if (paid) "PAID" else if (used) "USED" else "",
+                    pending = pending
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                ClassInfoStatus(error = "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.")
+            }
+            withContext(kotlinx.coroutines.Dispatchers.Main) { onResult(status) }
+        }
+    }
+
+    /** تصحيح مباشر (مرة واحدة، لقسم غير مدفوع). التحقق النهائي يتم على الخادم داخل معاملة. */
+    fun applyDirectClassInfoCorrection(
+        classId: Long,
+        newSchoolRaw: String,
+        newWilayaRaw: String,
+        newMoughataaRaw: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val uid = _currentUser.value?.uid
+        val local = _classSections.value.find { it.id == classId }
+        if (uid == null || local == null) {
+            onResult(false, "تعذّر تحديد القسم. أعد المحاولة.")
+            return
+        }
+        val school = normalizeInfoText(newSchoolRaw)
+        val wilaya = normalizeInfoText(newWilayaRaw)
+        val moughataa = normalizeInfoText(newMoughataaRaw)
+        val validation = validateClassInfoChange(local, school, wilaya, moughataa)
+        if (validation != null) {
+            onResult(false, validation)
+            return
+        }
+        if (!isNetworkAvailable()) {
+            onResult(false, "لا يوجد اتصال بالإنترنت. لم يتم أي تغيير.")
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var ok = false
+            var message = ""
+            try {
+                val db = FirebaseFirestore.getInstance()
+                val ref = db.collection("teachers").document(uid)
+                    .collection("classes").document(classId.toString())
+                val newName = buildCorrectedClassName(local.name, local.schoolName, school, local.level, local.sectionName, local.academicYear)
+                val now = System.currentTimeMillis()
+                val logEntry = hashMapOf<String, Any>(
+                    "at" to now,
+                    "type" to "direct",
+                    "oldSchoolName" to local.schoolName,
+                    "newSchoolName" to school,
+                    "oldWilaya" to local.wilaya,
+                    "newWilaya" to wilaya,
+                    "oldMoughataa" to local.moughataa,
+                    "newMoughataa" to moughataa
+                )
+                val outcome = Tasks.await(
+                    db.runTransaction<String> { tx ->
+                        val snap = tx.get(ref)
+                        val paid = (snap.getBoolean("isActivated") ?: false) ||
+                            (snap.getBoolean("isTerm2Activated") ?: false) ||
+                            (snap.getBoolean("isTerm3Activated") ?: false) ||
+                            (snap.getBoolean("isTerm4Activated") ?: false)
+                        if (paid) return@runTransaction "PAID"
+                        if ((snap.getLong("infoEditCount") ?: 0L) >= 1L) return@runTransaction "USED"
+                        val data = hashMapOf<String, Any>(
+                            "id" to local.id,
+                            "name" to newName,
+                            "wilaya" to wilaya,
+                            "moughataa" to moughataa,
+                            "schoolName" to school,
+                            "level" to local.level,
+                            "sectionName" to local.sectionName,
+                            "academicYear" to local.academicYear,
+                            "infoEditCount" to 1L,
+                            "infoChangeLog" to com.google.firebase.firestore.FieldValue.arrayUnion(logEntry),
+                            "pendingInfo" to com.google.firebase.firestore.FieldValue.delete()
+                        )
+                        tx.set(ref, data, com.google.firebase.firestore.SetOptions.merge())
+                        "OK"
+                    },
+                    20, java.util.concurrent.TimeUnit.SECONDS
+                )
+                when (outcome) {
+                    "OK" -> {
+                        val latest = repository.getClassSectionById(classId) ?: local
+                        val updated = latest.copy(
+                            name = buildCorrectedClassName(latest.name, latest.schoolName, school, latest.level, latest.sectionName, latest.academicYear),
+                            schoolName = school,
+                            wilaya = wilaya,
+                            moughataa = moughataa
+                        )
+                        repository.insertClassSection(updated)
+                        _classSections.value = _classSections.value.map { if (it.id == classId) updated else it }
+                        ok = true
+                        message = "تم تصحيح بيانات القسم بنجاح ✅"
+                    }
+                    "PAID" -> message = "هذا القسم مفعّل (مدفوع)، لذلك لا يمكن تعديله مباشرة. أرسل طلب تصحيح للمدير."
+                    else -> message = "استعملت التصحيح المباشر لهذا القسم من قبل. أرسل طلب تصحيح للمدير."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                message = "تعذّر تأكيد العملية على الخادم. افتح نافذة التصحيح من جديد للتحقق من حالة القسم."
+            }
+            withContext(kotlinx.coroutines.Dispatchers.Main) { onResult(ok, message) }
+        }
+    }
+
+    /** إرسال طلب تصحيح إلى المدير (يُحفظ في مستند القسم بالسحابة تحت pendingInfo). */
+    fun submitClassInfoRequest(
+        classId: Long,
+        newSchoolRaw: String,
+        newWilayaRaw: String,
+        newMoughataaRaw: String,
+        reasonRaw: String,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        val user = _currentUser.value
+        val uid = user?.uid
+        val local = _classSections.value.find { it.id == classId }
+        if (uid == null || local == null) {
+            onResult(false, "تعذّر تحديد القسم. أعد المحاولة.")
+            return
+        }
+        val school = normalizeInfoText(newSchoolRaw)
+        val wilaya = normalizeInfoText(newWilayaRaw)
+        val moughataa = normalizeInfoText(newMoughataaRaw)
+        val reason = normalizeInfoText(reasonRaw)
+        val validation = validateClassInfoChange(local, school, wilaya, moughataa)
+        if (validation != null) {
+            onResult(false, validation)
+            return
+        }
+        if (reason.isEmpty()) {
+            onResult(false, "اكتب سبب التصحيح (كلمة واحدة تكفي) ليراجعه المدير.")
+            return
+        }
+        if (reason.length > 300) {
+            onResult(false, "سبب التصحيح طويل جداً (300 حرف كحد أقصى).")
+            return
+        }
+        if (!isNetworkAvailable()) {
+            onResult(false, "لا يوجد اتصال بالإنترنت. لم يُرسل الطلب.")
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var ok = false
+            var message = ""
+            try {
+                val ref = FirebaseFirestore.getInstance().collection("teachers").document(uid)
+                    .collection("classes").document(classId.toString())
+                val existing = Tasks.await(ref.get(com.google.firebase.firestore.Source.SERVER), 15, java.util.concurrent.TimeUnit.SECONDS)
+                val request = hashMapOf<String, Any>(
+                    "oldSchoolName" to local.schoolName,
+                    "oldWilaya" to local.wilaya,
+                    "oldMoughataa" to local.moughataa,
+                    "newSchoolName" to school,
+                    "newWilaya" to wilaya,
+                    "newMoughataa" to moughataa,
+                    "reason" to reason,
+                    "requestedAt" to System.currentTimeMillis(),
+                    "email" to (user?.email ?: ""),
+                    "displayName" to (user?.displayName ?: "")
+                )
+                val data = hashMapOf<String, Any>(
+                    "id" to local.id,
+                    "teacherId" to uid,
+                    "pendingInfo" to request
+                )
+                if (!existing.exists()) {
+                    data["name"] = local.name
+                    data["wilaya"] = local.wilaya
+                    data["moughataa"] = local.moughataa
+                    data["schoolName"] = local.schoolName
+                    data["level"] = local.level
+                    data["sectionName"] = local.sectionName
+                    data["academicYear"] = local.academicYear
+                }
+                Tasks.await(ref.set(data, com.google.firebase.firestore.SetOptions.merge()), 15, java.util.concurrent.TimeUnit.SECONDS)
+                ok = true
+                message = "تم إرسال طلب التصحيح للمدير ✅. ستصلك نتيجته في الإشعارات."
+            } catch (e: Exception) {
+                e.printStackTrace()
+                message = "تعذّر إرسال الطلب بسبب ضعف الاتصال. حاول مرة أخرى."
+            }
+            withContext(kotlinx.coroutines.Dispatchers.Main) { onResult(ok, message) }
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun parseClassInfoRequest(doc: com.google.firebase.firestore.DocumentSnapshot): ClassInfoRequest? {
+        return try {
+            val pending = doc.get("pendingInfo") as? Map<String, Any> ?: return null
+            val teacherId = doc.reference.path.split("/").getOrNull(1) ?: return null
+            val classId = (doc.get("id") as? Number)?.toLong() ?: doc.id.toLongOrNull() ?: return null
+            val log = (doc.get("infoChangeLog") as? List<*>)?.mapNotNull { it as? Map<String, Any> } ?: emptyList()
+            ClassInfoRequest(
+                teacherId = teacherId,
+                classId = classId,
+                className = doc.getString("name") ?: "",
+                level = (doc.get("level") as? Number)?.toInt() ?: 1,
+                sectionName = doc.getString("sectionName") ?: "",
+                academicYear = doc.getString("academicYear") ?: "",
+                currentSchool = doc.getString("schoolName") ?: "",
+                currentWilaya = doc.getString("wilaya") ?: "",
+                currentMoughataa = doc.getString("moughataa") ?: "",
+                newSchool = pending["newSchoolName"] as? String ?: "",
+                newWilaya = pending["newWilaya"] as? String ?: "",
+                newMoughataa = pending["newMoughataa"] as? String ?: "",
+                reason = pending["reason"] as? String ?: "",
+                email = pending["email"] as? String ?: "",
+                displayName = pending["displayName"] as? String ?: "",
+                requestedAt = (pending["requestedAt"] as? Number)?.toLong() ?: 0L,
+                isPaid = (doc.getBoolean("isActivated") ?: false) ||
+                    (doc.getBoolean("isTerm2Activated") ?: false) ||
+                    (doc.getBoolean("isTerm3Activated") ?: false) ||
+                    (doc.getBoolean("isTerm4Activated") ?: false),
+                editCount = (doc.getLong("infoEditCount") ?: 0L).toInt(),
+                changeLog = log
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private val _classInfoRequests = MutableStateFlow<List<ClassInfoRequest>>(emptyList())
+    val classInfoRequests: StateFlow<List<ClassInfoRequest>> = _classInfoRequests.asStateFlow()
+
+    /** المدير: يفتح طلباً واحداً من رابط الواتساب (يقرأ مستند القسم من الخادم). */
+    fun loadClassInfoRequest(teacherId: String, classId: Long, onResult: (ClassInfoRequest?, String?) -> Unit) {
+        if (!isClassInfoAdmin()) {
+            onResult(null, "هذه الصفحة مخصصة لمدير الأقسام فقط.")
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var req: ClassInfoRequest? = null
+            var err: String? = null
+            try {
+                val doc = Tasks.await(
+                    FirebaseFirestore.getInstance().collection("teachers").document(teacherId)
+                        .collection("classes").document(classId.toString())
+                        .get(com.google.firebase.firestore.Source.SERVER),
+                    15, java.util.concurrent.TimeUnit.SECONDS
+                )
+                if (!doc.exists()) {
+                    err = "لم يُعثر على هذا القسم في السحابة."
+                } else {
+                    req = parseClassInfoRequest(doc)
+                    if (req == null) err = "لا يوجد طلب تصحيح معلّق لهذا القسم (ربما عولج سابقاً)."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                err = "📶 الاتصال ضعيف: تعذّر تحميل الطلب. تأكد من الشبكة ثم أعد المحاولة."
+            }
+            withContext(kotlinx.coroutines.Dispatchers.Main) { onResult(req, err) }
+        }
+    }
+
+    /** موافقة المدير: يطبّق التغيير في مستند القسم ويترك النتيجة لجهاز المعلم ليطبّقها محلياً. */
+    fun approveClassInfoRequest(req: ClassInfoRequest, onResult: (Boolean, String) -> Unit) {
+        if (!isClassInfoAdmin()) {
+            onResult(false, "غير مصرح لك.")
+            return
+        }
+        if (!isNetworkAvailable()) {
+            onResult(false, "لا يوجد اتصال بالإنترنت.")
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var ok = false
+            var message = ""
+            try {
+                val db = FirebaseFirestore.getInstance()
+                val ref = db.collection("teachers").document(req.teacherId)
+                    .collection("classes").document(req.classId.toString())
+                val now = System.currentTimeMillis()
+                val outcome = Tasks.await(
+                    db.runTransaction<String> { tx ->
+                        val snap = tx.get(ref)
+                        @Suppress("UNCHECKED_CAST")
+                        val pending = snap.get("pendingInfo") as? Map<String, Any> ?: return@runTransaction "GONE"
+                        val reqAt = (pending["requestedAt"] as? Number)?.toLong() ?: 0L
+                        if (reqAt != req.requestedAt) return@runTransaction "CHANGED"
+                        val newSchool = (pending["newSchoolName"] as? String)?.trim().orEmpty()
+                        val newWilaya = (pending["newWilaya"] as? String)?.trim().orEmpty()
+                        val newMoughataa = (pending["newMoughataa"] as? String)?.trim().orEmpty()
+                        if (newSchool.length < 2) return@runTransaction "INVALID"
+                        val oldSchool = snap.getString("schoolName") ?: ""
+                        val level = (snap.get("level") as? Number)?.toInt() ?: req.level
+                        val section = snap.getString("sectionName") ?: req.sectionName
+                        val year = snap.getString("academicYear") ?: req.academicYear
+                        val newName = buildCorrectedClassName(snap.getString("name") ?: "", oldSchool, newSchool, level, section, year)
+                        val logEntry = hashMapOf<String, Any>(
+                            "at" to now,
+                            "type" to "approved",
+                            "oldSchoolName" to oldSchool,
+                            "newSchoolName" to newSchool,
+                            "oldWilaya" to (snap.getString("wilaya") ?: ""),
+                            "newWilaya" to newWilaya,
+                            "oldMoughataa" to (snap.getString("moughataa") ?: ""),
+                            "newMoughataa" to newMoughataa,
+                            "reason" to ((pending["reason"] as? String) ?: "")
+                        )
+                        val data = hashMapOf<String, Any>(
+                            "name" to newName,
+                            "schoolName" to newSchool,
+                            "wilaya" to newWilaya,
+                            "moughataa" to newMoughataa,
+                            "pendingInfo" to com.google.firebase.firestore.FieldValue.delete(),
+                            "infoRequestResult" to hashMapOf<String, Any>(
+                                "status" to "approved",
+                                "at" to now,
+                                "schoolName" to newSchool,
+                                "wilaya" to newWilaya,
+                                "moughataa" to newMoughataa
+                            ),
+                            "infoChangeLog" to com.google.firebase.firestore.FieldValue.arrayUnion(logEntry)
+                        )
+                        tx.set(ref, data, com.google.firebase.firestore.SetOptions.merge())
+                        "OK"
+                    },
+                    20, java.util.concurrent.TimeUnit.SECONDS
+                )
+                when (outcome) {
+                    "OK" -> {
+                        ok = true
+                        message = "تمت الموافقة وتحديث بيانات القسم ✅"
+                    }
+                    "GONE" -> {
+                        ok = true
+                        message = "هذا الطلب لم يعد معلّقاً (عالجه المعلم أو شخص آخر)."
+                    }
+                    "CHANGED" -> message = "المعلم عدّل طلبه للتو. حدّث القائمة ثم راجع الطلب الجديد."
+                    else -> message = "بيانات الطلب غير صالحة."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                message = "تعذّرت العملية بسبب ضعف الاتصال. حاول مرة أخرى."
+            }
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (ok) {
+                    _classInfoRequests.value = _classInfoRequests.value.filterNot {
+                        it.teacherId == req.teacherId && it.classId == req.classId
+                    }
+                }
+                onResult(ok, message)
+            }
+        }
+    }
+
+    /** رفض المدير للطلب مع ملاحظة اختيارية تصل للمعلم. */
+    fun rejectClassInfoRequest(req: ClassInfoRequest, noteRaw: String, onResult: (Boolean, String) -> Unit) {
+        if (!isClassInfoAdmin()) {
+            onResult(false, "غير مصرح لك.")
+            return
+        }
+        if (!isNetworkAvailable()) {
+            onResult(false, "لا يوجد اتصال بالإنترنت.")
+            return
+        }
+        val note = normalizeInfoText(noteRaw).take(200)
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var ok = false
+            var message = ""
+            try {
+                val db = FirebaseFirestore.getInstance()
+                val ref = db.collection("teachers").document(req.teacherId)
+                    .collection("classes").document(req.classId.toString())
+                val now = System.currentTimeMillis()
+                val outcome = Tasks.await(
+                    db.runTransaction<String> { tx ->
+                        val snap = tx.get(ref)
+                        @Suppress("UNCHECKED_CAST")
+                        val pending = snap.get("pendingInfo") as? Map<String, Any> ?: return@runTransaction "GONE"
+                        val reqAt = (pending["requestedAt"] as? Number)?.toLong() ?: 0L
+                        if (reqAt != req.requestedAt) return@runTransaction "CHANGED"
+                        val logEntry = hashMapOf<String, Any>(
+                            "at" to now,
+                            "type" to "rejected",
+                            "oldSchoolName" to (snap.getString("schoolName") ?: ""),
+                            "newSchoolName" to ((pending["newSchoolName"] as? String) ?: ""),
+                            "reason" to ((pending["reason"] as? String) ?: ""),
+                            "note" to note
+                        )
+                        val data = hashMapOf<String, Any>(
+                            "pendingInfo" to com.google.firebase.firestore.FieldValue.delete(),
+                            "infoRequestResult" to hashMapOf<String, Any>(
+                                "status" to "rejected",
+                                "at" to now,
+                                "note" to note
+                            ),
+                            "infoChangeLog" to com.google.firebase.firestore.FieldValue.arrayUnion(logEntry)
+                        )
+                        tx.set(ref, data, com.google.firebase.firestore.SetOptions.merge())
+                        "OK"
+                    },
+                    20, java.util.concurrent.TimeUnit.SECONDS
+                )
+                when (outcome) {
+                    "OK" -> {
+                        ok = true
+                        message = "تم رفض الطلب وإبلاغ المعلم."
+                    }
+                    "GONE" -> {
+                        ok = true
+                        message = "هذا الطلب لم يعد معلّقاً."
+                    }
+                    else -> message = "المعلم عدّل طلبه للتو. حدّث القائمة ثم راجع الطلب الجديد."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                message = "تعذّرت العملية بسبب ضعف الاتصال. حاول مرة أخرى."
+            }
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (ok) {
+                    _classInfoRequests.value = _classInfoRequests.value.filterNot {
+                        it.teacherId == req.teacherId && it.classId == req.classId
+                    }
+                }
+                onResult(ok, message)
+            }
+        }
+    }
+
+    /**
+     * جهاز المعلم: يطبّق نتيجة طلب التصحيح التي كتبها المدير (infoRequestResult) على القسم المحلي،
+     * يُنشئ إشعاراً مرة واحدة، ثم يمسح العلامة من السحابة.
+     */
+    private suspend fun applyClassInfoResults(uid: String, results: List<Pair<Long, Map<String, Any>>>) {
+        infoResultMutex.withLock {
+            results.forEach { (classId, res) ->
+                try {
+                    val status = res["status"] as? String ?: return@forEach
+                    val at = (res["at"] as? Number)?.toLong() ?: 0L
+                    val local = repository.getClassSectionById(classId)
+                    val marker = "info_result_done_${classId}_$at"
+                    val alreadyHandled = prefs.getBoolean(marker, false)
+                    if (local != null) {
+                        if (status == "approved") {
+                            val newSchool = (res["schoolName"] as? String)?.trim().orEmpty()
+                            val newWilaya = (res["wilaya"] as? String)?.trim().orEmpty()
+                            val newMoughataa = (res["moughataa"] as? String)?.trim().orEmpty()
+                            if (newSchool.length >= 2) {
+                                val updated = local.copy(
+                                    name = buildCorrectedClassName(local.name, local.schoolName, newSchool, local.level, local.sectionName, local.academicYear),
+                                    schoolName = newSchool,
+                                    wilaya = newWilaya,
+                                    moughataa = newMoughataa
+                                )
+                                if (updated != local) {
+                                    repository.insertClassSection(updated)
+                                    _classSections.value = _classSections.value.map { if (it.id == classId) updated else it }
+                                }
+                                if (!alreadyHandled) {
+                                    repository.insertLocalNotification(
+                                        LocalNotification(
+                                            title = "تمت الموافقة على تصحيح بيانات القسم ✅",
+                                            message = "تم تحديث بيانات القسم: ${updated.name}",
+                                            createdAt = System.currentTimeMillis(),
+                                            isRead = false,
+                                            classId = classId
+                                        )
+                                    )
+                                }
+                            }
+                        } else if (status == "rejected" && !alreadyHandled) {
+                            val note = (res["note"] as? String)?.trim().orEmpty()
+                            repository.insertLocalNotification(
+                                LocalNotification(
+                                    title = "لم تتم الموافقة على طلب التصحيح",
+                                    message = "قسم ${local.name}" + if (note.isNotEmpty()) "\nملاحظة المدير: $note" else "",
+                                    createdAt = System.currentTimeMillis(),
+                                    isRead = false,
+                                    classId = classId
+                                )
+                            )
+                        }
+                    }
+                    prefs.edit().putBoolean(marker, true).apply()
+                    val ref = FirebaseFirestore.getInstance().collection("teachers").document(uid)
+                        .collection("classes").document(classId.toString())
+                    Tasks.await(
+                        ref.set(
+                            mapOf("infoRequestResult" to com.google.firebase.firestore.FieldValue.delete()),
+                            com.google.firebase.firestore.SetOptions.merge()
+                        ),
+                        10, java.util.concurrent.TimeUnit.SECONDS
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 
     fun fillActiveClassWithDemoStudents(onSuccess: () -> Unit, onFailure: (String) -> Unit) {
@@ -3036,6 +3684,8 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
                         repository.deleteManualTermAveragesByClass(id)
+                        repository.deleteAttendanceByClass(id)
+                        repository.deleteCompetenciesByClass(id)
                         repository.deleteGradesByClass(id)
                         repository.deleteStudentsByClass(id)
                         repository.deleteCustomizationsByClass(id)
@@ -3114,6 +3764,8 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
             try {
                 repository.deleteGradesByStudent(id)
                 repository.deleteManualTermAveragesByStudent(id)
+                repository.deleteAttendanceByStudent(id)
+                repository.deleteCompetenciesByStudent(id)
                 repository.deleteStudent(id)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -3270,9 +3922,51 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         return cust?.maxPoints ?: subject.maxPoints
     }
 
+    /**
+     * حماية قفل الفصول: يمنع كتابة أو حذف الدرجات في فصل مقفول مهما كانت الصفحة التي جاء منها الاختيار.
+     * - الفصل المختار حاليًا (بما فيه الفصل الرابع للوافدين) يجب أن يكون مفعّلًا لقسم التلميذ.
+     * - وما عدا الفصل الرابع، يجب أن يكون فصل الدرجة نفسه مفعّلًا.
+     * - إن لم يوجد التلميذ أو قسمه (بيانات لم تُحمَّل بعد) يُسمح بالعملية حتى لا يتعطل العمل.
+     */
+    private fun isGradeWriteAllowed(studentId: Long, termId: Int): Boolean {
+        val classId = _students.value.find { it.id == studentId }?.classId ?: return true
+        val cls = _classSections.value.find { it.id == classId } ?: return true
+        val selected = _selectedTermId.value
+        if (!cls.isTermUnlocked(selected)) return false
+        if (selected != 4 && !cls.isTermUnlocked(termId)) return false
+        return true
+    }
+
+    /** للمعدلات اليدوية (وضع الفصل الرابع): الفصل المختار حاليًا يجب أن يكون مفعّلًا لقسم التلميذ. */
+    private fun isSelectedTermOpenForStudent(studentId: Long): Boolean {
+        val classId = _students.value.find { it.id == studentId }?.classId ?: return true
+        val cls = _classSections.value.find { it.id == classId } ?: return true
+        return cls.isTermUnlocked(_selectedTermId.value)
+    }
+
+    @Volatile private var lastTermLockedToastAt = 0L
+
+    private fun notifyTermLocked() {
+        val nowMs = System.currentTimeMillis()
+        if (nowMs - lastTermLockedToastAt < 2500L) return
+        lastTermLockedToastAt = nowMs
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(
+                getApplication(),
+                "🔒 هذا الفصل مقفول لهذا القسم، فعّله أولًا لإدراج النتائج",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     // Save grades list (bulk entry for subject or student)
-    fun saveGrades(gradesList: List<Grade>) {
-        if (gradesList.isEmpty()) return
+    // يعيد true إذا حُفظت كل الدرجات، وfalse إذا رُفض بعضها أو كلها بسبب قفل الفصل
+    fun saveGrades(allGrades: List<Grade>): Boolean {
+        if (allGrades.isEmpty()) return true
+        val gradesList = allGrades.filter { isGradeWriteAllowed(it.studentId, it.termId) }
+        val allAllowed = gradesList.size == allGrades.size
+        if (!allAllowed) notifyTermLocked()
+        if (gradesList.isEmpty()) return false
 
         // Coerce grades to be within [0, maxPoints] of their subject in this student's class
         val validatedGradesList = gradesList.map { grade ->
@@ -3291,10 +3985,15 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 e.printStackTrace()
             }
         }
+        return allAllowed
     }
 
     // Single grade saving
     fun saveSingleGrade(studentId: Long, subjectId: Long, score: Double, termId: Int) {
+        if (!isGradeWriteAllowed(studentId, termId)) {
+            notifyTermLocked()
+            return
+        }
         val limit = resolvedMaxPointsFor(studentId, subjectId)
         val finalScore = if (limit != null) {
             score.coerceIn(0.0, limit.toDouble())
@@ -3314,6 +4013,10 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deleteGrade(studentId: Long, subjectId: Long, termId: Int) {
+        if (!isGradeWriteAllowed(studentId, termId)) {
+            notifyTermLocked()
+            return
+        }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.NonCancellable) {
             try {
                 repository.deleteGrade(studentId, subjectId, termId)
@@ -3497,6 +4200,10 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun saveStudentManualTermAverage(studentId: Long, termId: Int, score: Double) {
+        if (!isSelectedTermOpenForStudent(studentId)) {
+            notifyTermLocked()
+            return
+        }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val manualAvg = com.example.data.models.StudentManualTermAverage(studentId, termId, score.coerceIn(0.0, 20.0))
             repository.insertManualTermAverage(manualAvg)
@@ -3508,6 +4215,10 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deleteStudentManualTermAverage(studentId: Long, termId: Int) {
+        if (!isSelectedTermOpenForStudent(studentId)) {
+            notifyTermLocked()
+            return
+        }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             repository.deleteManualTermAverage(studentId, termId)
             val current = _manualTermAverages.value.toMutableList()
@@ -3551,8 +4262,13 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         averagesMap: Map<Long, Double>,
         onSuccess: (() -> Unit)? = null
     ) {
+        val allowedMap = averagesMap.filter { (studentId, _) -> isSelectedTermOpenForStudent(studentId) }
+        if (allowedMap.size != averagesMap.size) {
+            notifyTermLocked()
+            if (allowedMap.isEmpty()) return
+        }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            val list = averagesMap.map { (studentId, score) ->
+            val list = allowedMap.map { (studentId, score) ->
                 com.example.data.models.StudentManualTermAverage(studentId, termId, score.coerceIn(0.0, 20.0))
             }
             list.forEach { repository.insertManualTermAverage(it) }
@@ -3927,6 +4643,8 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Toggle term activation of a class for a specific teacher
+    private val activationAttemptGen = java.util.concurrent.ConcurrentHashMap<Long, Int>()
+
     fun toggleClassTermActivation(
         teacherId: String,
         classId: Long,
@@ -3983,6 +4701,7 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
             
 
             val previousStatsList = _allClassesForStats.value
+            val activationGen = activationAttemptGen.merge(classId, 1) { old, inc -> old + inc } ?: 1
             _allClassesForStats.value = previousStatsList.map { cls ->
                 if (cls.id == classId) {
                     cls.copy(
@@ -4012,7 +4731,8 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                     onSuccess()
                 }
                 .addOnFailureListener {
-                    _allClassesForStats.value = previousStatsList
+                    // لا نتراجع إذا نجحت محاولة أحدث لنفس القسم (يحدث عند إعادة المحاولة في شبكة ضعيفة)
+                    if (activationAttemptGen[classId] == activationGen) _allClassesForStats.value = previousStatsList
                     onFailure("تعذّر تأكيد التفعيل على الخادم. لم يتم التفعيل، حاول مرة أخرى.")
                 }
             }
@@ -4041,6 +4761,7 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
             val newIsActivated = curT1 && curT4
 
             val previousStatsList = _allClassesForStats.value
+            val activationGen = activationAttemptGen.merge(classId, 1) { old, inc -> old + inc } ?: 1
             _allClassesForStats.value = previousStatsList.map { cls ->
                 if (cls.id == classId) {
                     cls.copy(
@@ -4069,7 +4790,8 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                     onSuccess()
                 }
                 .addOnFailureListener { e ->
-                    _allClassesForStats.value = previousStatsList
+                    // لا نتراجع إذا نجحت محاولة أحدث لنفس القسم (يحدث عند إعادة المحاولة في شبكة ضعيفة)
+                    if (activationAttemptGen[classId] == activationGen) _allClassesForStats.value = previousStatsList
                     onFailure(e.message ?: "فشل تفعيل فصول السنة")
                 }
             }
@@ -4185,6 +4907,9 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                             }
                         }
                         _statsLoadError.value = null
+                        _classInfoRequests.value = snapshot.documents
+                            .mapNotNull { parseClassInfoRequest(it) }
+                            .sortedBy { it.requestedAt }
                         if (list.isNotEmpty()) {
                             val currentMap = _allClassesForStats.value.associateBy { it.id }.toMutableMap()
                             list.forEach { currentMap[it.id] = it }
@@ -4226,7 +4951,9 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         val nowMs = System.currentTimeMillis()
         val lastFetchMs = prefs.getLong("last_exchange_fetch_time", 0L)
         val withinDailyWindow = (nowMs - lastFetchMs) < 86400000L
-        val skipServer = withinDailyWindow && !force
+        // لا نتخطى الاتصال بالخادم إذا لم يكن لدينا أي إعلان معتمد محفوظ محلياً (وإلا تبقى الصفحة فارغة 24 ساعة)
+        val hasApprovedCached = _exchangePosts.value.any { it.isApproved }
+        val skipServer = withinDailyWindow && !force && hasApprovedCached
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val localPosts = activeDatabase.teacherDao().getAllExchangePosts()
@@ -4243,14 +4970,16 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         if (!isNetworkAvailable()) return
         prefs.edit().putLong("last_exchange_fetch_time", nowMs).apply()
         try {
+            // نجلب الإعلانات المعتمدة فقط (بدون orderBy حتى لا نحتاج فهرساً مركّباً) ثم نرتّبها محلياً،
+            // وإلا ضاعت المعتمدة بين آخر 4 إعلانات قد تكون كلها قيد المراجعة.
             FirebaseFirestore.getInstance().collection("teacher_exchanges")
-                .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(exchangePostsLimit)
+                .whereEqualTo("isApproved", true)
+                .limit(exchangePostsLimit + 16L)
                 .get(com.google.firebase.firestore.Source.SERVER)
                 .addOnSuccessListener { snapshot ->
                     if (snapshot == null) return@addOnSuccessListener
-                    _hasMoreExchangePosts.value = snapshot.documents.size >= exchangePostsLimit
-                    val remotePosts = snapshot.documents.mapNotNull { doc ->
+                    _hasMoreExchangePosts.value = snapshot.documents.size >= exchangePostsLimit + 16L
+                    val mapDoc: (com.google.firebase.firestore.DocumentSnapshot) -> TeacherExchangePost? = { doc ->
                         try {
                             TeacherExchangePost(
                                 id = doc.id,
@@ -4279,8 +5008,24 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                             null
                         }
                     }
+                    val approvedPosts = snapshot.documents.mapNotNull(mapDoc)
                     viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                         try {
+                            // إعلاناتي أنا (حتى غير المعتمدة) لتبقى ظاهرة في «منشوراتي»
+                            val ownPosts: List<TeacherExchangePost> = try {
+                                val uid = _currentUser.value?.uid ?: ""
+                                if (uid.isBlank()) emptyList() else {
+                                    val ownSnap = com.google.android.gms.tasks.Tasks.await(
+                                        FirebaseFirestore.getInstance().collection("teacher_exchanges")
+                                            .whereEqualTo("userId", uid)
+                                            .get(com.google.firebase.firestore.Source.SERVER)
+                                    )
+                                    ownSnap.documents.mapNotNull(mapDoc)
+                                }
+                            } catch (ex: Exception) {
+                                emptyList()
+                            }
+                            val remotePosts = (approvedPosts + ownPosts).distinctBy { it.id }
                             try {
                                 val myUid = _currentUser.value?.uid ?: ""
                                 if (myUid.isNotBlank()) {
@@ -4652,10 +5397,24 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                if (isNetworkAvailable()) {
-                    FirebaseFirestore.getInstance().collection("teacher_exchanges")
-                        .document(postId)
-                        .update("isApproved", isApproved)
+                // لا نُعلن النجاح إلا بعد تأكيد الخادم؛ وإلا بقي الإعلان غير منشور سحابيًا رغم ظهور "تمت الموافقة"
+                if (!isNetworkAvailable()) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        onFailure("لا يوجد اتصال بالإنترنت حاليًا")
+                    }
+                    return@launch
+                }
+                val cloudOk = com.example.data.net.FirestoreRetry.updateDoc(
+                    FirebaseFirestore.getInstance().collection("teacher_exchanges").document(postId),
+                    mapOf("isApproved" to isApproved),
+                    attempts = 1,
+                    perTryMs = 20_000L
+                )
+                if (!cloudOk) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        onFailure("تعذّر تأكيد الحالة على الخادم بسبب ضعف الشبكة")
+                    }
+                    return@launch
                 }
 
                 val currentPosts = activeDatabase.teacherDao().getAllExchangePosts()
@@ -4862,6 +5621,38 @@ data class TeacherInfo(
     val displayName: String = "",
     val email: String = "",
     val syncedAt: Long = 0L
+)
+
+/** حالة تصحيح بيانات قسم المعلم كما يقرؤها الجهاز من الخادم. */
+data class ClassInfoStatus(
+    val canEditDirectly: Boolean = false,
+    /** "" = لا قفل، "PAID" = القسم مدفوع، "USED" = استُعمل التصحيح المباشر من قبل */
+    val lockReason: String = "",
+    val pending: Map<String, Any>? = null,
+    val error: String? = null
+)
+
+/** طلب تصحيح بيانات قسم ينتظر موافقة المدير. */
+data class ClassInfoRequest(
+    val teacherId: String,
+    val classId: Long,
+    val className: String,
+    val level: Int,
+    val sectionName: String,
+    val academicYear: String,
+    val currentSchool: String,
+    val currentWilaya: String,
+    val currentMoughataa: String,
+    val newSchool: String,
+    val newWilaya: String,
+    val newMoughataa: String,
+    val reason: String,
+    val email: String,
+    val displayName: String,
+    val requestedAt: Long,
+    val isPaid: Boolean,
+    val editCount: Int,
+    val changeLog: List<Map<String, Any>>
 )
 
 data class CourseActivationStat(

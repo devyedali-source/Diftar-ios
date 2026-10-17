@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import android.content.Context
 import android.widget.Toast
@@ -140,15 +142,17 @@ private fun AnnualPlanningScreenContent(
     // Screen Security Enforcer (FLAG_SECURE) to prevent screenshotting, recording, and recent app previews (Bypassed temporarily until Sep 30, 2026)
     DisposableEffect(Unit) {
         val activity = context as? android.app.Activity
-        val calendar = java.util.Calendar.getInstance()
+        val calendar = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply { timeInMillis = com.example.data.security.TrustedClock.now() }
         val isBeforeOct2026 = calendar.get(java.util.Calendar.YEAR) < 2026 || 
             (calendar.get(java.util.Calendar.YEAR) == 2026 && calendar.get(java.util.Calendar.MONTH) < java.util.Calendar.OCTOBER)
         
-        if (!isBeforeOct2026) {
+        // مدير الأقسام وحده مسموح له بلقطات الشاشة وتسجيلها؛ باقي المستخدمين يبقون محميين
+        val secureEnabled = !isBeforeOct2026 && !com.example.data.security.ScreenSecurity.isCaptureAllowedForCurrentUser()
+        if (secureEnabled) {
             activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         }
         onDispose {
-            if (!isBeforeOct2026) {
+            if (secureEnabled) {
                 activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
             }
         }
@@ -321,6 +325,7 @@ private fun AnnualPlanningScreenContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
+                        modifier = Modifier.weight(1f).padding(end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -340,40 +345,93 @@ private fun AnnualPlanningScreenContent(
                             }
                         }
                         Text(
-                            text = "التخطيط السنوي للمنهاج الرسمي",
+                            text = uiT("التخطيط السنوي للمنهاج الرسمي"),
                             fontWeight = FontWeight.Black,
                             fontSize = 15.sp,
-                            color = BentoPrimary
+                            color = BentoPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
-                    }
-
-                    // Dynamic Count Badge (الأعداد تُحسب ديناميكيًا من المجموعات الفعلية)
-                    val activeCount = remember(currentLevel, selectedTerm, selectedWeek, selectedSubject, selectedDomain, levelCode) {
-                        when (currentLevel) {
-                            NavLevel.TERMS -> OfficialAnnualPlanningRepository.getAllLessonInstances(context, levelCode).size
-                            NavLevel.WEEKS -> OfficialAnnualPlanningRepository.getAllLessonInstances(context, levelCode).count { it.fasl == selectedTerm }
-                            NavLevel.SUBJECTS -> OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek ?: 1).size
-                            NavLevel.DOMAINS -> OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek ?: 1).count { it.matiere.equals(selectedSubject?.nom, ignoreCase = true) || it.matiere.equals(selectedSubject?.code, ignoreCase = true) }
-                            NavLevel.LESSONS -> OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek ?: 1).count {
-                                (it.matiere.equals(selectedSubject?.nom, ignoreCase = true) || it.matiere.equals(selectedSubject?.code, ignoreCase = true)) &&
-                                (it.domaine.equals(selectedDomain, ignoreCase = true) || getDomainArabicLabel(context, levelCode, it.domaine).equals(selectedDomain, ignoreCase = true))
+                        // مؤشر دائري صغير بنسبة تنزيل صور الكتب؛ يختفي عند الاكتمال
+                        val booksPercent by remember { com.example.data.BookPack.downloadProgress(context) }
+                            .collectAsState(initial = null)
+                        booksPercent?.let { pct ->
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(34.dp)) {
+                                CircularProgressIndicator(
+                                    progress = { pct / 100f },
+                                    modifier = Modifier.size(34.dp),
+                                    strokeWidth = 3.dp,
+                                    color = BentoPrimary,
+                                    trackColor = BentoLightLavender
+                                )
+                                Text(
+                                    text = "$pct%",
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = BentoPrimary
+                                )
                             }
-                            else -> 0
                         }
                     }
 
-                    val countLabel = if (activeCount > 10) "تحضيراً" else "تحاضير"
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFE8F5E9)
-                    ) {
-                        Text(
-                            text = "$activeCount $countLabel",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFF2E7D32),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                    // Dynamic Count Badge (الأعداد تُحسب ديناميكيًا من المجموعات الفعلية)
+                    val activeInstances = remember(currentLevel, selectedTerm, selectedWeek, selectedSubject, selectedDomain, levelCode) {
+                        when (currentLevel) {
+                            NavLevel.TERMS -> OfficialAnnualPlanningRepository.getAllLessonInstances(context, levelCode)
+                            NavLevel.WEEKS -> OfficialAnnualPlanningRepository.getAllLessonInstances(context, levelCode).filter { it.fasl == selectedTerm }
+                            NavLevel.SUBJECTS -> OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek ?: 1)
+                            NavLevel.DOMAINS -> OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek ?: 1).filter { it.matiere.equals(selectedSubject?.nom, ignoreCase = true) || it.matiere.equals(selectedSubject?.code, ignoreCase = true) }
+                            NavLevel.LESSONS -> OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek ?: 1).filter {
+                                (it.matiere.equals(selectedSubject?.nom, ignoreCase = true) || it.matiere.equals(selectedSubject?.code, ignoreCase = true)) &&
+                                (it.domaine.equals(selectedDomain, ignoreCase = true) || getDomainArabicLabel(context, levelCode, it.domaine).equals(selectedDomain, ignoreCase = true))
+                            }
+                            else -> emptyList()
+                        }
+                    }
+                    val activeCount = activeInstances.size
+                    val booksAndBoards = remember(activeInstances, levelCode) {
+                        com.example.data.planning.LessonPreparationRepository.countBooksAndBoards(context, levelCode, activeInstances)
+                    }
+
+                    val countLabel = if (activeCount > 10) uiT("تحضيراً") else uiT("تحاضير")
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFE8F5E9)
+                        ) {
+                            Text(
+                                text = "$activeCount $countLabel",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF2E7D32),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFE3F2FD)
+                        ) {
+                            Text(
+                                text = uiTf("محتوى كتب: {0}", booksAndBoards.first),
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1565C0),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFEEEEEE)
+                        ) {
+                            Text(
+                                text = uiTf("محتوى سبورات: {0}", booksAndBoards.second),
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF212121),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
                     }
                 }
 
@@ -387,7 +445,7 @@ private fun AnnualPlanningScreenContent(
                         trail.add("الأسبوع $selectedWeek")
                     }
                     if (navHistory.size > 3 && selectedSubject != null) {
-                        trail.add(OfficialAnnualPlanningRepository.mapMatiereToArabic(selectedSubject!!.nom))
+                        trail.add(planningSubjectLabel(selectedSubject!!.nom))
                     }
                     if (navHistory.size > 4 && selectedDomain != null) {
                         trail.add(getDomainArabicLabel(context, levelCode, selectedDomain!!))
@@ -475,13 +533,13 @@ private fun AnnualPlanningScreenContent(
                                                         verticalArrangement = Arrangement.spacedBy(6.dp)
                                                     ) {
                                                         Text(
-                                                            text = "دليل النجاح في مسابقة دخول سنة أولى إعدادية",
+                                                            text = uiT("دليل النجاح في مسابقة دخول سنة أولى إعدادية"),
                                                             fontSize = 15.5.sp,
                                                             fontWeight = FontWeight.Bold,
                                                             color = BentoPrimary
                                                         )
                                                         Text(
-                                                            text = "$subjectsCount مواد • $totalExercisesCount تمرين",
+                                                            text = uiTf("{0} مواد • {1} تمرين", subjectsCount, totalExercisesCount),
                                                             fontSize = 12.5.sp,
                                                             color = BentoPrimaryDesc,
                                                             fontWeight = FontWeight.Medium
@@ -674,6 +732,7 @@ private fun TermsListScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
+                            modifier = Modifier.weight(1f),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
@@ -713,7 +772,7 @@ private fun TermsListScreen(
                                     color = BentoPrimary
                                 )
                                 Text(
-                                    text = "الأسابيع ${weeksForTerm.firstOrNull() ?: 1} - ${weeksForTerm.lastOrNull() ?: 13} (${weeksForTerm.size} أسبوعاً)",
+                                    text = uiTf("الأسابيع {0} - {1} ({2} أسبوعاً)", weeksForTerm.firstOrNull() ?: 1, weeksForTerm.lastOrNull() ?: 13, weeksForTerm.size),
                                     fontSize = 11.5.sp,
                                     color = BentoPrimaryDesc,
                                     fontWeight = FontWeight.Medium
@@ -726,7 +785,7 @@ private fun TermsListScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             val termPreps = OfficialAnnualPlanningRepository.getAllLessonInstances(context, levelCode).count { it.fasl == termNum }
-                            val countLabel = if (termPreps > 10) "تحضيراً" else "تحاضير"
+                            val countLabel = if (termPreps > 10) uiT("تحضيراً") else uiT("تحاضير")
 
                             Text(
                                 text = "$termPreps $countLabel",
@@ -741,7 +800,7 @@ private fun TermsListScreen(
                                     color = Color(0xFFFFEBEE)
                                 ) {
                                     Text(
-                                        text = "مقفل",
+                                        text = uiT("مقفل"),
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFD32F2F),
@@ -806,8 +865,12 @@ private fun WeeksListScreen(
             }
             val officialLabel = cleanLabelExams(rawOfficialLabel)
 
-            val weekPreps = remember(levelCode, weekNumber) {
-                OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, weekNumber).size
+            val weekInstances = remember(levelCode, weekNumber) {
+                OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, weekNumber)
+            }
+            val weekPreps = weekInstances.size
+            val weekContent = remember(weekInstances, levelCode) {
+                com.example.data.planning.LessonPreparationRepository.countBooksAndBoards(context, levelCode, weekInstances)
             }
 
             val (cardBg, borderColor, badgeBg, badgeColor) = when (weekType) {
@@ -853,7 +916,7 @@ private fun WeeksListScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "الأسبوع $weekNumber",
+                                text = uiTf("الأسبوع {0}", weekNumber),
                                 fontWeight = FontWeight.Black,
                                 fontSize = 15.sp,
                                 color = BentoPrimary
@@ -879,6 +942,7 @@ private fun WeeksListScreen(
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
+                        ContentChips(weekContent.first, weekContent.second, weekPreps)
                     }
 
                     Row(
@@ -886,7 +950,7 @@ private fun WeeksListScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (weekPreps > 0) {
-                            val label = if (weekPreps > 10) "تحضيراً" else "تحاضير"
+                            val label = if (weekPreps > 10) uiT("تحضيراً") else uiT("تحاضير")
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFF1F5F9)
@@ -905,7 +969,7 @@ private fun WeeksListScreen(
                                 color = Color(0xFFE8F5E9)
                             ) {
                                 Text(
-                                    text = "🌴 عطلة سعيدة",
+                                    text = uiT("🌴 عطلة سعيدة"),
                                     fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF2E7D32),
@@ -1008,7 +1072,7 @@ private fun SubjectsListScreen(
 
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
-                                    text = "مقترحات امتحان الأسبوع $selectedWeek",
+                                    text = uiTf("مقترحات امتحان الأسبوع {0}", selectedWeek),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = BentoPrimary
@@ -1073,7 +1137,7 @@ private fun SubjectsListScreen(
                                             verticalArrangement = Arrangement.spacedBy(2.dp)
                                         ) {
                                             Text(
-                                                text = subject.name,
+                                                text = subject.name.let { if (it == "اللغة الفرنسية" || it == "الفرنسية") "Français" else it },
                                                 fontWeight = FontWeight.Black,
                                                 fontSize = 14.5.sp,
                                                 color = BentoPrimary
@@ -1107,7 +1171,7 @@ private fun SubjectsListScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "لا توجد مواد أو دروس مقررة في هذا الأسبوع المخصص لـ (الأنشطة والامتحانات أو العطل).",
+                        text = uiT("لا توجد مواد أو دروس مقررة في هذا الأسبوع المخصص لـ (الأنشطة والامتحانات أو العطل)."),
                         textAlign = TextAlign.Center,
                         fontSize = 13.sp,
                         color = BentoPrimaryDesc,
@@ -1132,10 +1196,14 @@ private fun SubjectsListScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(activeSubjects, key = { it.nom }) { subject ->
-                val prepCount = remember(levelCode, selectedWeek, subject) {
-                    OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek).count {
+                val subjectInstances = remember(levelCode, selectedWeek, subject) {
+                    OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek).filter {
                         it.matiere.equals(subject.nom, ignoreCase = true) || it.matiere.equals(subject.code, ignoreCase = true)
                     }
+                }
+                val prepCount = subjectInstances.size
+                val subjectContent = remember(subjectInstances, levelCode) {
+                    com.example.data.planning.LessonPreparationRepository.countBooksAndBoards(context, levelCode, subjectInstances)
                 }
 
                 Card(
@@ -1155,6 +1223,7 @@ private fun SubjectsListScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
+                            modifier = Modifier.weight(1f),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
@@ -1173,19 +1242,22 @@ private fun SubjectsListScreen(
                                 }
                             }
 
-                            Text(
-                                text = OfficialAnnualPlanningRepository.mapMatiereToArabic(subject.nom),
-                                fontWeight = FontWeight.Black,
-                                fontSize = 14.5.sp,
-                                color = BentoPrimary
-                            )
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(
+                                    text = planningSubjectLabel(subject.nom),
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 14.5.sp,
+                                    color = BentoPrimary
+                                )
+                                ContentChips(subjectContent.first, subjectContent.second, prepCount)
+                            }
                         }
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val countLabel = if (prepCount > 10) "تحضيراً" else "تحاضير"
+                            val countLabel = if (prepCount > 10) uiT("تحضيراً") else uiT("تحاضير")
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFF1F5F9)
@@ -1232,7 +1304,7 @@ private fun DomainsListScreen(
     if (activeDomains.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "لا توجد مجالات فرعية مقررة لهذه المادة في هذا الأسبوع.",
+                text = uiT("لا توجد مجالات فرعية مقررة لهذه المادة في هذا الأسبوع."),
                 textAlign = TextAlign.Center,
                 fontSize = 13.sp,
                 color = BentoPrimaryDesc,
@@ -1250,11 +1322,15 @@ private fun DomainsListScreen(
                     getDomainArabicLabel(context, levelCode, domainCode)
                 }
 
-                val prepCount = remember(levelCode, selectedWeek, selectedSubject, domainCode) {
-                    OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek).count {
+                val domainInstances = remember(levelCode, selectedWeek, selectedSubject, domainCode) {
+                    OfficialAnnualPlanningRepository.getLessonInstancesForWeek(context, levelCode, selectedWeek).filter {
                         (it.matiere.equals(selectedSubject.nom, ignoreCase = true) || it.matiere.equals(selectedSubject.code, ignoreCase = true)) &&
                         it.domaine == domainCode
                     }
+                }
+                val prepCount = domainInstances.size
+                val domainContent = remember(domainInstances, levelCode) {
+                    com.example.data.planning.LessonPreparationRepository.countBooksAndBoards(context, levelCode, domainInstances)
                 }
 
                 Card(
@@ -1274,6 +1350,7 @@ private fun DomainsListScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
+                            modifier = Modifier.weight(1f),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
@@ -1292,13 +1369,15 @@ private fun DomainsListScreen(
                                 }
                             }
 
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
                                     text = domainArabicName,
+                                    modifier = Modifier.fillMaxWidth(),
                                     fontWeight = FontWeight.Black,
                                     fontSize = 14.sp,
                                     color = BentoPrimary
                                 )
+                                ContentChips(domainContent.first, domainContent.second, prepCount)
                             }
                         }
 
@@ -1306,7 +1385,7 @@ private fun DomainsListScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            val countLabel = if (prepCount > 10) "تحضيراً" else "تحاضير"
+                            val countLabel = if (prepCount > 10) uiT("تحضيراً") else uiT("تحاضير")
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFE8F5E9)
@@ -1357,7 +1436,7 @@ private fun LessonsListScreen(
     if (lessons.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "لا توجد دروس مقررة في هذا المجال الفرعي لهذا الأسبوع.",
+                text = uiT("لا توجد دروس مقررة في هذا المجال الفرعي لهذا الأسبوع."),
                 textAlign = TextAlign.Center,
                 fontSize = 13.sp,
                 color = BentoPrimaryDesc,
@@ -1467,9 +1546,14 @@ private fun LessonsListScreen(
                                 }
                             }
 
+                            val lessonFlags = remember(lesson, levelCode) {
+                                com.example.data.planning.LessonPreparationRepository.contentFlags(context, levelCode, lesson)
+                            }
+                            LessonContentChips(lessonFlags.first, lessonFlags.second)
+
                             if (cleanComp.isNotBlank()) {
                                 Text(
-                                    text = "🎯 الكفاية: $cleanComp",
+                                    text = uiTf("🎯 الكفاية: {0}", cleanComp),
                                     fontSize = 11.sp,
                                     color = Color(0xFF455A64),
                                     maxLines = 1,
@@ -1580,7 +1664,7 @@ private fun CurriculumHeaderCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "تقدم إنجاز البرنامج الدراسي 📈",
+                        text = uiT("تقدم إنجاز البرنامج الدراسي 📈"),
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         color = BentoPrimary
@@ -1618,14 +1702,14 @@ private fun CurriculumHeaderCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "الإنجاز: $completedWeeks من $totalWeeks أسبوعاً",
+                        text = uiTf("الإنجاز: {0} من {1} أسبوعاً", completedWeeks, totalWeeks),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimary
                     )
                     if (currentWeek in 1..38) {
                         Text(
-                            text = "الأسبوع الدراسي الحالي: $currentWeek",
+                            text = uiTf("الأسبوع الدراسي الحالي: {0}", currentWeek),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimaryDesc
@@ -1657,7 +1741,7 @@ private fun CompactColorKeyBar() {
         ) {
             item {
                 Text(
-                    text = "دليل الألوان:",
+                    text = uiT("دليل الألوان:"),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     color = BentoPrimary
@@ -1796,7 +1880,7 @@ private fun TermAccordionCard(
                         color = Color(0xFFFFEBEE)
                     ) {
                         Text(
-                            text = "مقفل",
+                            text = uiT("مقفل"),
                             fontSize = 10.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFD32F2F),
@@ -1904,7 +1988,7 @@ private fun WeeklyPlanCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "الأسبوع $week",
+                            text = uiTf("الأسبوع {0}", week),
                             fontWeight = FontWeight.Black,
                             fontSize = 15.5.sp,
                             color = BentoPrimary
@@ -2058,7 +2142,7 @@ private fun SubjectSectionInWeek(
                     }
                 }
                 Text(
-                    text = OfficialAnnualPlanningRepository.mapMatiereToArabic(subject.nom),
+                    text = planningSubjectLabel(subject.nom),
                     fontWeight = FontWeight.Black,
                     fontSize = 13.sp,
                     color = BentoPrimary
@@ -2111,7 +2195,7 @@ private fun SubjectSectionInWeek(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = "↳ المجال: $domainName",
+                                text = uiTf("↳ المجال: {0}", domainName),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = BentoPrimaryDesc
@@ -2213,7 +2297,7 @@ private fun LessonRowInsideDomain(
 
                 if (competence.isNotBlank()) {
                     Text(
-                        text = "🎯 الكفاية: $competence",
+                        text = uiTf("🎯 الكفاية: {0}", competence),
                         fontSize = 10.5.sp,
                         color = Color(0xFF455A64),
                         maxLines = 2,
@@ -2265,7 +2349,7 @@ private fun IntegrationStationBox(
                     color = Color(0xFFE65100)
                 ) {
                     Text(
-                        text = "إدماج / تقويم / علاج",
+                        text = uiT("إدماج / تقويم / علاج"),
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -2326,14 +2410,14 @@ private fun UnassignedLevelCard(
                     modifier = Modifier.size(48.dp)
                 )
                 Text(
-                    text = "تحديد مستوى القسم",
+                    text = uiT("تحديد مستوى القسم"),
                     fontWeight = FontWeight.Black,
                     fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "لم يتم تحديد مستوى هذا القسم (${activeClass.getFormattedName()}) في السجل المحلي.\nيرجى اختيار المستوى التعليمي لعرض التخطيط السنوي:",
+                    text = uiTf("لم يتم تحديد مستوى هذا القسم ({0}) في السجل المحلي.\nيرجى اختيار المستوى التعليمي لعرض التخطيط السنوي:", activeClass.getFormattedName()),
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -2376,3 +2460,62 @@ private data class QuadColor(
     val badgeBg: Color,
     val badgeColor: Color
 )
+
+
+/** شارتان صغيرتان: كم درسًا له كتاب وكم درسًا له سبورة (من إجمالي الدروس). */
+@Composable
+internal fun ContentChips(books: Int, boards: Int, total: Int) {
+    if (total <= 0) return
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(shape = RoundedCornerShape(5.dp), color = Color(0xFFE3F2FD)) {
+            Text(
+                text = "📖 $books/$total",
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1565C0),
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+            )
+        }
+        Surface(shape = RoundedCornerShape(5.dp), color = Color(0xFFEEEEEE)) {
+            Text(
+                text = "⬛ $boards/$total",
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF212121),
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+/** في صف الدرس: هل فيه صفحات كتاب؟ وهل فيه سبورة؟ قبل فتح التحضير. */
+@Composable
+internal fun LessonContentChips(hasBook: Boolean, hasBoard: Boolean) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(shape = RoundedCornerShape(5.dp), color = if (hasBook) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)) {
+            Text(
+                text = if (hasBook) "📖 فيه كتاب" else "بلا كتاب",
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (hasBook) Color(0xFF1565C0) else Color(0xFF9E9E9E),
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+            )
+        }
+        Surface(shape = RoundedCornerShape(5.dp), color = if (hasBoard) Color(0xFFEEEEEE) else Color(0xFFF5F5F5)) {
+            Text(
+                text = if (hasBoard) "⬛ فيه سبورة" else "بلا سبورة",
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (hasBoard) Color(0xFF212121) else Color(0xFF9E9E9E),
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+
+/** اسم المادة في التخطيط السنوي: الفرنسية تُكتب Français وليس بالعربية */
+private fun planningSubjectLabel(matiere: String): String {
+    val ar = com.example.data.planning.canonical.OfficialAnnualPlanningRepository.mapMatiereToArabic(matiere)
+    return if (ar == "اللغة الفرنسية") "Français" else ar
+}

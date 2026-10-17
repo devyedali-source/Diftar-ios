@@ -81,6 +81,12 @@ private object AppState {
 
 @Composable
 fun App() {
+    // ساعة موثوقة وإعدادات تصميم اللوائح (نفس ما يجري في MainActivity بأندرويد)
+    remember {
+        com.example.data.security.TrustedClock.init(AppApplication)
+        com.example.ui.PrintDesign.load(AppApplication)
+        true
+    }
     LaunchedEffect(Unit) { AppState.showBiometricPrompt() }
     MyApplicationTheme {
         Box(Modifier.fillMaxSize()) {

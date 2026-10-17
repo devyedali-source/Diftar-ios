@@ -339,6 +339,8 @@ class GoogleDriveBackupManager(
             val customizations = repository.getAllCustomizationsList()
             val manualTermAverages = repository.getAllManualTermAveragesList()
             val localNotifications = repository.getAllLocalNotificationsList()
+            val attendance = repository.getAllAttendanceList()
+            val competencies = repository.getAllCompetenciesList()
 
             val settingsKeys = listOf(
                 "stamp_teacher_name", "stamp_teacher_role", "stamp_teacher_shape", "stamp_teacher_financial_id", "stamp_teacher_show_in_reports",
@@ -347,7 +349,7 @@ class GoogleDriveBackupManager(
                 "fail_bound_t1", "pass_bound_t1", "acceptable_bound_t1", "good_bound_t1", "very_good_bound_t1",
                 "fail_bound_t2", "pass_bound_t2", "acceptable_bound_t2", "good_bound_t2", "very_good_bound_t2",
                 "fail_bound_t3", "pass_bound_t3", "acceptable_bound_t3", "good_bound_t3", "very_good_bound_t3",
-                "is_out_of_ten", "use_final_exam_formula", "fail_note_exam_1_and_2", "app_language"
+                "is_out_of_ten", "use_final_exam_formula", "fail_note_exam_1_and_2", "app_language", "teaching_days"
             )
             val teacherPrefs = context.getSharedPreferences("teacher_settings_prefs", Context.MODE_PRIVATE)
             val teacherSettings = mutableMapOf<String, String>()
@@ -375,7 +377,9 @@ class GoogleDriveBackupManager(
                 customizations = customizations,
                 manualTermAverages = manualTermAverages,
                 teacherSettings = teacherSettings,
-                localNotifications = localNotifications
+                localNotifications = localNotifications,
+                attendance = attendance,
+                competencies = competencies
             )
 
             val jsonContent = backupAdapter.toJson(backupData)
@@ -526,7 +530,9 @@ class GoogleDriveBackupManager(
                 grades = backupData.grades,
                 customizations = backupData.customizations,
                 manualTermAverages = backupData.manualTermAverages,
-                localNotifications = backupData.localNotifications
+                localNotifications = backupData.localNotifications,
+                attendance = backupData.attendance,
+                competencies = backupData.competencies
             )
 
             try {

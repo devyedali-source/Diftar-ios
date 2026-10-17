@@ -10,6 +10,8 @@ import com.example.data.models.Student
 import com.example.data.models.Subject
 import com.example.data.models.ClassSubjectCustomization
 import com.example.data.models.StudentManualTermAverage
+import com.example.data.models.AttendanceRecord
+import com.example.data.models.CompetencyEntry
 import com.example.data.models.LocalNotification
 import kotlinx.coroutines.flow.Flow
 
@@ -163,10 +165,28 @@ class TeacherRepository(private val teacherDao: TeacherDao) {
         grades: List<Grade>,
         customizations: List<ClassSubjectCustomization>,
         manualTermAverages: List<StudentManualTermAverage>,
-        localNotifications: List<LocalNotification>
+        localNotifications: List<LocalNotification>,
+        attendance: List<AttendanceRecord> = emptyList(),
+        competencies: List<CompetencyEntry> = emptyList()
     ) {
-        teacherDao.restoreDatabase(sections, students, subjects, grades, customizations, manualTermAverages, localNotifications)
+        teacherDao.restoreDatabase(sections, students, subjects, grades, customizations, manualTermAverages, localNotifications, attendance, competencies)
     }
+
+    // --- Competency assessment ---
+    val allCompetencies: Flow<List<CompetencyEntry>> = teacherDao.getAllCompetencies()
+    suspend fun getAllCompetenciesList() = teacherDao.getAllCompetenciesList()
+    suspend fun insertCompetencies(records: List<CompetencyEntry>) = teacherDao.insertCompetencies(records)
+    suspend fun deleteCompetency(classId: Long, studentId: Long, entryKey: String) = teacherDao.deleteCompetency(classId, studentId, entryKey)
+    suspend fun deleteCompetenciesByStudent(studentId: Long) = teacherDao.deleteCompetenciesByStudent(studentId)
+    suspend fun deleteCompetenciesByClass(classId: Long) = teacherDao.deleteCompetenciesByClass(classId)
+
+    // --- Attendance ---
+    val allAttendance: Flow<List<AttendanceRecord>> = teacherDao.getAllAttendance()
+    suspend fun getAllAttendanceList() = teacherDao.getAllAttendanceList()
+    suspend fun insertAttendance(records: List<AttendanceRecord>) = teacherDao.insertAttendance(records)
+    suspend fun deleteAttendanceDay(classId: Long, date: String) = teacherDao.deleteAttendanceDay(classId, date)
+    suspend fun deleteAttendanceByStudent(studentId: Long) = teacherDao.deleteAttendanceByStudent(studentId)
+    suspend fun deleteAttendanceByClass(classId: Long) = teacherDao.deleteAttendanceByClass(classId)
 
     // --- Local Notifications ---
     fun getAllLocalNotifications(): Flow<List<LocalNotification>> {

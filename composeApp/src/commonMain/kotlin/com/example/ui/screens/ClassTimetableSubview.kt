@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
@@ -33,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.data.models.ClassSection
 import com.example.data.planning.AnnualPlanningRepository
 import com.example.data.planning.DayOfWeekAr
+import com.example.data.planning.CustomTimetableStore
 import com.example.data.planning.OfficialTimetableRepository
 import com.example.data.planning.OfficialTimetableSlot
 import com.example.data.planning.TimetablePeriodType
@@ -125,8 +128,27 @@ fun ClassTimetableSubview(
     var showAdjustDialog by remember { mutableStateOf(false) }
 
     // Retrieve active level timetable slots
-    val daySlots = remember(level, selectedDay) {
-        OfficialTimetableRepository.getSlotsForDay(level, selectedDay)
+    // جدول شخصي محلي (اختياري): إن وُجد يُعرض بدل الجدول الرسمي
+    var customSlots by remember(activeClass.id) { mutableStateOf(CustomTimetableStore.load(context, activeClass.id)) }
+    var editMode by remember { mutableStateOf(false) }
+    var swapSource by remember { mutableStateOf<OfficialTimetableSlot?>(null) }
+    var showResetConfirm by remember { mutableStateOf(false) }
+
+    val daySlots = remember(level, selectedDay, customSlots) {
+        val src = customSlots
+        if (src != null) {
+            src.filter { it.day == selectedDay }.sortedWith(compareBy({ it.periodType.ordinal }, { it.slotIndex }))
+        } else {
+            OfficialTimetableRepository.getSlotsForDay(level, selectedDay)
+        }
+    }
+
+    /** أي تعديل يبدأ من نسخة من الجدول الرسمي ثم يُحفظ محلياً */
+    fun mutateTimetable(change: (List<OfficialTimetableSlot>) -> List<OfficialTimetableSlot>) {
+        val base = customSlots ?: OfficialTimetableRepository.getTimetableForLevel(level)
+        val updated = change(base)
+        CustomTimetableStore.save(context, activeClass.id, updated)
+        customSlots = updated
     }
 
     val periodBeforeRecess = remember(daySlots) {
@@ -167,7 +189,7 @@ fun ClassTimetableSubview(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "الجدول الزمني للقسم",
+                            text = uiT("الجدول الزمني للقسم"),
                             fontWeight = FontWeight.Black,
                             fontSize = 16.sp,
                             color = BentoPrimary
@@ -179,7 +201,7 @@ fun ClassTimetableSubview(
                         color = BentoLightLavender
                     ) {
                         Text(
-                            text = "رسمي",
+                            text = if (customSlots != null) "شخصي" else "رسمي",
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
@@ -258,7 +280,7 @@ fun ClassTimetableSubview(
                         modifier = Modifier.size(12.dp)
                     )
                     Text(
-                        text = "تحقق من توافق التاريخ الهجري مع موريتانيا",
+                        text = uiT("عدّل التاريخ الهجري بعد انتهاء كل اجتماع للجنة الأهلة ليبقى التاريخ الهجري صحيحًا ومحليًا دون إنترنت"),
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimaryDesc.copy(alpha = 0.7f)
@@ -337,7 +359,7 @@ fun ClassTimetableSubview(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "نهاية الأسبوع: اليوم ليس من أيام الجدول الدراسي المعتمد.",
+                        text = uiT("نهاية الأسبوع: اليوم ليس من أيام الجدول الدراسي المعتمد."),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFE65100)
@@ -354,6 +376,47 @@ fun ClassTimetableSubview(
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { editMode = !editMode },
+                        modifier = Modifier.width(80.dp).height(36.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (editMode) Icons.Default.Check else Icons.Default.Edit,
+                            contentDescription = if (editMode) "إنهاء التعديل" else "تعديل جدولي",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            val all = customSlots ?: OfficialTimetableRepository.getTimetableForLevel(level)
+                            val html = com.example.ui.HtmlReportHelper.generateTimetableHtml(
+                                context, activeClass, all, customSlots != null, viewModel
+                            )
+                            com.example.ui.HtmlReportHelper.shareHtmlAsPdf(
+                                context, html, "الجدول_الزمني_${activeClass.name}.pdf", isLandscape = true
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
+                    ) { Text(uiT("مشاركة PDF"), maxLines = 1) }
+                }
+                if (customSlots != null) {
+                    OutlinedButton(
+                        onClick = { showResetConfirm = true },
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                    ) { Text(uiT("العودة للجدول الرسمي")) }
+                }
+                if (editMode) {
+                    Text(
+                        uiT("اضغط على أيقونة التبديل ⇅ بجانب الحصة لتبديل مكانها مع حصة أخرى. يُحفظ على هذا الجهاز فقط ولا يغيّر الجدول الرسمي."),
+                        fontSize = 11.sp, color = BentoPrimaryDesc, modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
             // PERIOD 1: MORNING 08:00 -> 10:00
             item {
                 PeriodHeaderCard(
@@ -367,7 +430,10 @@ fun ClassTimetableSubview(
                 item { EmptyPeriodCard() }
             } else {
                 items(periodBeforeRecess, key = { it.id }) { slot ->
-                    TimetableSlotCard(slot = slot)
+                    TimetableSlotCard(
+                        slot = slot, editMode = editMode,
+                        onSwap = { swapSource = slot }
+                    )
                 }
             }
 
@@ -389,7 +455,10 @@ fun ClassTimetableSubview(
                 item { EmptyPeriodCard() }
             } else {
                 items(periodAfterRecess, key = { it.id }) { slot ->
-                    TimetableSlotCard(slot = slot)
+                    TimetableSlotCard(
+                        slot = slot, editMode = editMode,
+                        onSwap = { swapSource = slot }
+                    )
                 }
             }
 
@@ -411,7 +480,7 @@ fun ClassTimetableSubview(
                         border = BorderStroke(0.8.dp, BentoGrayOutline.copy(alpha = 0.3f))
                     ) {
                         Text(
-                            text = "لا توجد حصص مبرمجة في الفترة المسائية",
+                            text = uiT("لا توجد حصص مبرمجة في الفترة المسائية"),
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimaryDesc.copy(alpha = 0.8f),
@@ -424,10 +493,93 @@ fun ClassTimetableSubview(
                 }
             } else {
                 items(periodAfternoon, key = { it.id }) { slot ->
-                    TimetableSlotCard(slot = slot)
+                    TimetableSlotCard(
+                        slot = slot, editMode = editMode,
+                        onSwap = { swapSource = slot }
+                    )
                 }
             }
         }
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text(uiT("العودة للجدول الرسمي")) },
+            text = { Text(uiT("سيُحذف جدولك الشخصي ويُعرض الجدول الرسمي. هل تريد المتابعة؟")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    CustomTimetableStore.clear(context, activeClass.id)
+                    customSlots = null
+                    editMode = false
+                    showResetConfirm = false
+                }) { Text(uiT("نعم")) }
+            },
+            dismissButton = { TextButton(onClick = { showResetConfirm = false }) { Text(uiT("إلغاء")) } }
+        )
+    }
+
+    // تبديل مكان حصة بحصة أخرى من الجدول نفسه (لا إضافة ولا حذف ولا تغيير مادة)
+    val src = swapSource
+    if (src != null) {
+        val base = customSlots ?: OfficialTimetableRepository.getTimetableForLevel(level)
+        var targetDay by remember(src.id) { mutableStateOf(src.day) }
+        val days = remember(base) { DayOfWeekAr.values().filter { d -> base.any { it.day == d } } }
+        val candidates = remember(base, targetDay, src.id) {
+            base.filter { it.day == targetDay && it.id != src.id }
+                .sortedWith(compareBy({ it.periodType.ordinal }, { it.slotIndex }))
+        }
+        fun periodName(t: TimetablePeriodType) = when (t) {
+            TimetablePeriodType.MORNING_BEFORE_RECESS -> "الصباحية الأولى"
+            TimetablePeriodType.MORNING_AFTER_RECESS -> "الصباحية الثانية"
+            TimetablePeriodType.AFTERNOON -> "المسائية"
+        }
+        fun slotName(x: OfficialTimetableSlot) =
+            if (x.branch.isNotBlank() && x.branch != x.subject) "${x.subject} (${x.branch})" else x.subject
+        AlertDialog(
+            onDismissRequest = { swapSource = null },
+            title = { Text(uiT("تبديل مكان الحصة")) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(slotName(src), fontWeight = FontWeight.Bold, color = BentoPrimary, fontSize = 14.sp)
+                    Text(uiT("اختر اليوم ثم الحصة التي تريد تبديل مكانها معها:"), fontSize = 12.sp, color = BentoPrimaryDesc)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(days) { d ->
+                            FilterChip(
+                                selected = d == targetDay,
+                                onClick = { targetDay = d },
+                                label = { Text(if (com.example.ui.utils.AppLocalization.lang == "fr") d.frenchName else d.arabicName, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+                    LazyColumn(Modifier.heightIn(max = 300.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(candidates, key = { it.id }) { c ->
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    mutateTimetable { l ->
+                                        l.map {
+                                            when (it.id) {
+                                                src.id -> it.copy(day = c.day, periodType = c.periodType, slotIndex = c.slotIndex)
+                                                c.id -> it.copy(day = src.day, periodType = src.periodType, slotIndex = src.slotIndex)
+                                                else -> it
+                                            }
+                                        }
+                                    }
+                                    swapSource = null
+                                }
+                            ) {
+                                Column(Modifier.padding(10.dp)) {
+                                    Text(slotName(c), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text(uiT(periodName(c.periodType)), fontSize = 11.sp, color = BentoPrimaryDesc)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { swapSource = null }) { Text(uiT("إلغاء")) } }
+        )
     }
 
     // 4. HIJRI ADJUSTMENT CALENDAR PICKER DIALOG
@@ -451,7 +603,7 @@ fun ClassTimetableSubview(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = "تعديل التاريخ الهجري محلياً",
+                        text = uiT("تعديل التاريخ الهجري محلياً"),
                         fontWeight = FontWeight.Black,
                         fontSize = 15.sp,
                         color = BentoPrimary,
@@ -470,7 +622,7 @@ fun ClassTimetableSubview(
                             Icon(Icons.Default.Remove, contentDescription = "السنة السابقة", tint = BentoPrimary)
                         }
                         Text(
-                            text = "السنة: $tempYear هـ",
+                            text = uiTf("السنة: {0} هـ", tempYear),
                             fontWeight = FontWeight.Black,
                             fontSize = 14.sp,
                             color = BentoPrimary,
@@ -487,7 +639,7 @@ fun ClassTimetableSubview(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "الشهر الهجري المعتمد:",
+                            text = uiT("الشهر الهجري المعتمد:"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimaryDesc
@@ -524,7 +676,7 @@ fun ClassTimetableSubview(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "يوم الشهر:",
+                            text = uiT("يوم الشهر:"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimaryDesc
@@ -569,7 +721,7 @@ fun ClassTimetableSubview(
                         color = BentoLightLavender.copy(alpha = 0.5f)
                     ) {
                         Text(
-                            text = "التاريخ الهجري المحدد: $tempDay $selectedMonthName $tempYear هـ",
+                            text = uiTf("التاريخ الهجري المحدد: {0} {1} {2} هـ", tempDay, selectedMonthName, tempYear),
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimary,
@@ -587,7 +739,7 @@ fun ClassTimetableSubview(
                             onClick = { showAdjustDialog = false },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("إلغاء", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
+                            Text(uiT("إلغاء"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
                         }
 
                         TextButton(
@@ -598,7 +750,7 @@ fun ClassTimetableSubview(
                             },
                             modifier = Modifier.weight(1.2f)
                         ) {
-                            Text("إعادة الضبط", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(uiT("إعادة الضبط"), color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
 
                         Button(
@@ -628,7 +780,7 @@ fun ClassTimetableSubview(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                         ) {
-                            Text("حفظ التعديل", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(uiT("حفظ التعديل"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
                     }
                 }
@@ -692,7 +844,7 @@ private fun EmptyPeriodCard() {
         border = BorderStroke(0.8.dp, BentoGrayOutline.copy(alpha = 0.3f))
     ) {
         Text(
-            text = "لا توجد حصص مبرمجة في هذه الفترة",
+            text = uiT("لا توجد حصص مبرمجة في هذه الفترة"),
             fontSize = 11.sp,
             color = BentoPrimaryDesc.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
@@ -737,7 +889,7 @@ private fun RecessCard() {
                     }
                 }
                 Text(
-                    text = "استراحة مبرمجة بيداغوجياً",
+                    text = uiT("استراحة مبرمجة بيداغوجياً"),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Black,
                     color = Color(0xFF00695C)
@@ -745,7 +897,7 @@ private fun RecessCard() {
             }
 
             Text(
-                text = "15 دقيقة",
+                text = uiT("15 دقيقة"),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 color = Color(0xFF00695C)
@@ -756,7 +908,9 @@ private fun RecessCard() {
 
 @Composable
 private fun TimetableSlotCard(
-    slot: OfficialTimetableSlot
+    slot: OfficialTimetableSlot,
+    editMode: Boolean = false,
+    onSwap: () -> Unit = {}
 ) {
     val icon = remember(slot.subject, slot.branch) {
         val sub = slot.subject.lowercase()
@@ -830,7 +984,7 @@ private fun TimetableSlotCard(
                     
                     if (slot.isFrench) {
                         Text(
-                            text = "اللغة الفرنسية • Programme de Français",
+                            text = uiT("اللغة الفرنسية • Programme de Français"),
                             fontSize = 10.sp,
                             color = Color(0xFF1976D2),
                             fontWeight = FontWeight.Bold
@@ -839,12 +993,17 @@ private fun TimetableSlotCard(
                 }
             }
 
+            if (editMode) {
+                IconButton(onClick = onSwap, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.SwapVert, contentDescription = "تبديل المكان", tint = BentoPrimary, modifier = Modifier.size(20.dp))
+                }
+            }
             Surface(
                 shape = RoundedCornerShape(6.dp),
                 color = Color(0xFFF1F5F9)
             ) {
                 Text(
-                    text = "${slot.durationMinutes} دقيقة",
+                    text = uiTf("{0} دقيقة", slot.durationMinutes),
                     fontSize = 10.5.sp,
                     fontWeight = FontWeight.Black,
                     color = BentoPrimaryDesc,

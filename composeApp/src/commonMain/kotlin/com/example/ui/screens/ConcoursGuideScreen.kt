@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -96,7 +98,7 @@ fun ConcoursGuideScreen(onBack: () -> Unit) {
         ) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "جارٍ تحميل المحتوى...", fontSize = 14.sp)
+            Text(text = uiT("جارٍ تحميل المحتوى..."), fontSize = 14.sp)
         }
         return
     }
@@ -110,7 +112,7 @@ fun ConcoursGuideScreen(onBack: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "تعذّر تحميل المحتوى",
+                text = uiT("تعذّر تحميل المحتوى"),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = CourseBadColor
@@ -169,7 +171,7 @@ fun ConcoursGuideScreen(onBack: () -> Unit) {
                 }
 
                 Text(
-                    text = "دليل النجاح في مسابقة دخول سنة أولى إعدادية",
+                    text = uiT("دليل النجاح في مسابقة دخول سنة أولى إعدادية"),
                     fontSize = 15.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = BentoPrimary
@@ -179,7 +181,7 @@ fun ConcoursGuideScreen(onBack: () -> Unit) {
 
         // Subtitle line: number of subjects and total exercises count
         Text(
-            text = "${subjects.size} مواد • $totalExercises تمرين",
+            text = uiTf("{0} مواد • {1} تمرين", subjects.size, totalExercises),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             color = BentoPrimaryDesc,
@@ -225,7 +227,7 @@ fun ConcoursGuideScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "$exercisesCount تمرين",
+                            text = uiTf("{0} تمرين", exercisesCount),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = BentoPrimary

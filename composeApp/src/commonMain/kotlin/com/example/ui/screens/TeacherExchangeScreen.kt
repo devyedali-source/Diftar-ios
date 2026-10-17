@@ -2,6 +2,8 @@ package com.example.ui.screens
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
 
 import android.content.Context
 import android.content.Intent
@@ -65,7 +67,9 @@ fun sendExchangeActivationWhatsApp(
     context: Context,
     postId: String,
     userId: String,
-    userEmail: String
+    userEmail: String,
+    wilaya: String = "",
+    moughataa: String = ""
 ) {
     if (postId.isBlank()) {
         Toast.makeText(context, "لم يكتمل نشر الإعلان بعد. انتظر لحظات ثم أعد المحاولة.", Toast.LENGTH_LONG).show()
@@ -84,13 +88,16 @@ fun sendExchangeActivationWhatsApp(
         db.collection("exchange_activation_requests").document(requestId).set(requestDoc)
 
         val adminPhone = "22237786585"
-        val emailText = userEmail.ifBlank { "غير مسجل" }
+        val whoLine = buildString {
+            append("أنا معلم")
+            if (moughataa.isNotBlank()) append(" بمقاطعة $moughataa")
+            if (wilaya.isNotBlank()) append(" ولاية $wilaya")
+        }
         val fullMessage = """
-$emailText
-أريد نشر وتفعيل إعلان تبادل بين جمهور المعلمين.
+السلام عليكم،
+$whoLine
+أريد تفعيل طلب إعلان تبادل.
 
-🔑 رقم الإعلان (كود الإعلان):
-$postId
 ---------------------------------
 رابط طلب التفعيل:
 https://diftar-almoaalim.web.app/exchange-approve/$requestId
@@ -108,6 +115,8 @@ fun PostActivationDialog(
     postId: String,
     userId: String,
     userEmail: String,
+    wilaya: String = "",
+    moughataa: String = "",
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -121,7 +130,9 @@ fun PostActivationDialog(
                         context = context,
                         postId = postId,
                         userId = userId,
-                        userEmail = userEmail
+                        userEmail = userEmail,
+                        wilaya = wilaya,
+                        moughataa = moughataa
                     )
                     onDismiss()
                 },
@@ -132,13 +143,13 @@ fun PostActivationDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("💬 تواصل عبر واتساب الإدارة", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(uiT("💬 تواصل عبر واتساب الإدارة"), fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("إغلاق", color = Color.Gray, fontWeight = FontWeight.Bold)
+                Text(uiT("إغلاق"), color = Color.Gray, fontWeight = FontWeight.Bold)
             }
         },
         title = {
@@ -148,7 +159,7 @@ fun PostActivationDialog(
             ) {
                 Text("📢", fontSize = 24.sp)
                 Text(
-                    text = "تواصل مع الإدارة لنشر إعلانك",
+                    text = uiT("تواصل مع الإدارة لنشر إعلانك"),
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = Color(0xFF1B5E20)
@@ -165,13 +176,13 @@ fun PostActivationDialog(
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "🏷️ سعر نشر الإعلان: 200 أوقية جديدة",
+                            text = uiT("🏷️ سعر نشر الإعلان: 200 أوقية جديدة"),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 15.sp,
                             color = Color(0xFFE65100)
                         )
                         Text(
-                            text = "ملاحظة: تم حفظ إعلانك، ولن يظهر للعامة إلا بعد تفعيله من طرف مدير الأقسام.",
+                            text = uiT("ملاحظة: تم حفظ إعلانك، ولن يظهر للعامة إلا بعد تفعيله من طرف مدير الأقسام."),
                             fontSize = 12.sp,
                             color = Color(0xFF5D4037)
                         )
@@ -179,7 +190,7 @@ fun PostActivationDialog(
                 }
 
                 Text(
-                    text = "اضغط على الزر أدناه لإرسال طلب تفعيل الإعلان رقم (#$postId) مباشرة عبر واتساب الإدارة:",
+                    text = uiTf("اضغط على الزر أدناه لإرسال طلب تفعيل الإعلان رقم (#{0}) مباشرة عبر واتساب الإدارة:", postId),
                     fontSize = 13.sp,
                     color = Color.DarkGray
                 )
@@ -198,6 +209,7 @@ fun TeacherExchangeScreen(
     isInterMoughataaMode: Boolean = false
 ) {
     var selectedTab by remember { mutableStateOf(0) } // 0: All Offers, 1: Target View, 2: Create Post Form, 3: My Posts
+    androidx.activity.compose.BackHandler(enabled = selectedTab != 0) { selectedTab = 0 }
     var pendingActivationPostId by remember { mutableStateOf<String?>(null) }
     val posts by viewModel.exchangePosts.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
@@ -221,6 +233,8 @@ fun TeacherExchangeScreen(
                 postId = pendingActivationPostId!!,
                 userId = currentUser?.uid ?: "",
                 userEmail = currentUser?.email ?: "",
+                wilaya = targetPost?.currentWilaya ?: "",
+                moughataa = targetPost?.currentMoughataa ?: "",
                 onDismiss = { pendingActivationPostId = null }
             )
         }
@@ -429,7 +443,7 @@ fun AllOffersSubview(
                         }
                     }
                     Text(
-                        text = "إعلانك للتبادل يصل جمهور المعلمين المعنيين بإعلان تبادلك بعيدا عن جمهور التواصل الاجتماعي الغير معنى .أنشأ إعلانك وجد فرصة التبادل التى ترضى الطرفين",
+                        text = uiT("إعلانك للتبادل يصل جمهور المعلمين المعنيين بإعلان تبادلك بعيدا عن جمهور التواصل الاجتماعي الغير معنى .أنشأ إعلانك وجد فرصة التبادل التى ترضى الطرفين"),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = BentoText,
@@ -459,19 +473,19 @@ fun AllOffersSubview(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(Icons.Default.FilterList, contentDescription = null, tint = BentoPrimary, modifier = Modifier.size(20.dp))
-                        Text("تصفية وفلترة العروض", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = BentoText)
+                        Text(uiT("تصفية وفلترة العروض"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = BentoText)
                     }
 
                     // Specialty Filter Chips
                     Column {
-                        Text("التخصص:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
+                        Text(uiT("التخصص:"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
                         Spacer(modifier = Modifier.height(4.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             item {
                                 FilterChip(
                                     selected = selectedSpecialtyFilter == "الكل",
                                     onClick = { selectedSpecialtyFilter = "الكل" },
-                                    label = { Text("الكل", fontSize = 11.sp) }
+                                    label = { Text(uiT("الكل"), fontSize = 11.sp) }
                                 )
                             }
                             items(teacherSpecialties) { spec ->
@@ -486,14 +500,14 @@ fun AllOffersSubview(
 
                     // Offer Type Filter Chips
                     Column {
-                        Text("نوع العرض:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
+                        Text(uiT("نوع العرض:"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
                         Spacer(modifier = Modifier.height(4.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             item {
                                 FilterChip(
                                     selected = selectedOfferTypeFilter == "الكل",
                                     onClick = { selectedOfferTypeFilter = "الكل" },
-                                    label = { Text("الكل", fontSize = 11.sp) }
+                                    label = { Text(uiT("الكل"), fontSize = 11.sp) }
                                 )
                             }
                             items(offerTypes) { type ->
@@ -517,7 +531,7 @@ fun AllOffersSubview(
                                 value = selectedWilayaFilter,
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("الولاية الحالية أو المرغوبة", fontSize = 11.sp) },
+                                label = { Text(uiT("الولاية الحالية أو المرغوبة"), fontSize = 11.sp) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWilaya) },
                                 modifier = Modifier
                                     .menuAnchor()
@@ -529,7 +543,7 @@ fun AllOffersSubview(
                                 onDismissRequest = { expandedWilaya = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("جميع الولايات") },
+                                    text = { Text(uiT("جميع الولايات")) },
                                     onClick = {
                                         selectedWilayaFilter = "جميع الولايات"
                                         expandedWilaya = false
@@ -559,7 +573,7 @@ fun AllOffersSubview(
                                     value = selectedMoughataaFilter,
                                     onValueChange = {},
                                     readOnly = true,
-                                    label = { Text("المقاطعة المحددة (داخل $selectedWilayaFilter)", fontSize = 11.sp) },
+                                    label = { Text(uiTf("المقاطعة المحددة (داخل {0})", selectedWilayaFilter), fontSize = 11.sp) },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMoughataa) },
                                     modifier = Modifier
                                         .menuAnchor()
@@ -571,7 +585,7 @@ fun AllOffersSubview(
                                     onDismissRequest = { expandedMoughataa = false }
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("جميع المقاطعات") },
+                                        text = { Text(uiT("جميع المقاطعات")) },
                                         onClick = {
                                             selectedMoughataaFilter = "جميع المقاطعات"
                                             expandedMoughataa = false
@@ -746,7 +760,7 @@ fun AllOffersSubview(
                         Text("🔍", fontSize = 42.sp)
                         if (hasMorePosts) {
                             Text(
-                                "لا توجد نتائج في المنشورات المعروضة — اضغط عرض المزيد للبحث في منشورات أقدم",
+                                uiT("لا توجد نتائج في المنشورات المعروضة — اضغط عرض المزيد للبحث في منشورات أقدم"),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = BentoText,
@@ -761,11 +775,11 @@ fun AllOffersSubview(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                             ) {
-                                Text("عرض المزيد ⬇️", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                                Text(uiT("عرض المزيد ⬇️"), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
                             }
                         } else {
-                            Text("لا توجد عروض تبادل تطابق نتائج البحث", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = BentoText)
-                            Text("حاول تغيير شروط الفلترة أو استخدم خيار استمارة الإعلان لإضافة عرضك الخاص.", fontSize = 12.sp, color = BentoPrimaryDesc, textAlign = TextAlign.Center)
+                            Text(uiT("لا توجد عروض تبادل تطابق نتائج البحث"), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = BentoText)
+                            Text(uiT("حاول تغيير شروط الفلترة أو استخدم خيار استمارة الإعلان لإضافة عرضك الخاص."), fontSize = 12.sp, color = BentoPrimaryDesc, textAlign = TextAlign.Center)
                         }
                     }
                 }
@@ -788,7 +802,7 @@ fun AllOffersSubview(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "لا توجد إعلانات أخرى",
+                            uiT("لا توجد إعلانات أخرى"),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Gray
@@ -813,7 +827,7 @@ fun AllOffersSubview(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                         ) {
-                            Text("عرض المزيد ⬇️", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                            Text(uiT("عرض المزيد ⬇️"), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
                         }
                     }
                 }
@@ -934,7 +948,7 @@ fun TargetWilayaOffersSubview(
                                 value = "📍 $selectedTargetWilaya",
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("الولاية المطلوبة") },
+                                label = { Text(uiT("الولاية المطلوبة")) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTargetWilayaDropdown) },
                                 modifier = Modifier
                                     .menuAnchor()
@@ -965,7 +979,7 @@ fun TargetWilayaOffersSubview(
                         // If Inter-Moughataa Mode: Dropdown for selecting Target Moughataa inside Wilaya
                         if (isInterMoughataaMode) {
                             val availableMoughataas = moughataasByWilaya[selectedTargetWilaya] ?: emptyList()
-                            Text("اختر المقاطعة المستهدفة داخل $selectedTargetWilaya:", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                            Text(uiTf("اختر المقاطعة المستهدفة داخل {0}:", selectedTargetWilaya), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                             ExposedDropdownMenuBox(
                                 expanded = expandedTargetMoughataaDropdown,
                                 onExpandedChange = { expandedTargetMoughataaDropdown = !expandedTargetMoughataaDropdown }
@@ -974,7 +988,7 @@ fun TargetWilayaOffersSubview(
                                     value = "🏛️ $selectedTargetMoughataa",
                                     onValueChange = {},
                                     readOnly = true,
-                                    label = { Text("المقاطعة المستهدفة") },
+                                    label = { Text(uiT("المقاطعة المستهدفة")) },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTargetMoughataaDropdown) },
                                     modifier = Modifier
                                         .menuAnchor()
@@ -1069,14 +1083,14 @@ fun TargetWilayaOffersSubview(
 
                     // 2. Select Specialty Filter Chips
                     Column {
-                        Text("تصفية حسب تخصص المعلم:", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
+                        Text(uiT("تصفية حسب تخصص المعلم:"), fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
                         Spacer(modifier = Modifier.height(4.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             item {
                                 FilterChip(
                                     selected = selectedSpecialtyFilter == "الكل",
                                     onClick = { selectedSpecialtyFilter = "الكل" },
-                                    label = { Text("جميع التخصصات", fontSize = 11.sp) }
+                                    label = { Text(uiT("جميع التخصصات"), fontSize = 11.sp) }
                                 )
                             }
                             items(teacherSpecialties) { spec ->
@@ -1104,7 +1118,7 @@ fun TargetWilayaOffersSubview(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "عدد المعلمين الراغبين في التحويل إلى $selectedTargetWilaya: (${filteredPosts.size})",
+                    text = uiTf("عدد المعلمين الراغبين في التحويل إلى {0}: ({1})", selectedTargetWilaya, filteredPosts.size),
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.5.sp,
                     color = BentoPrimary
@@ -1131,14 +1145,14 @@ fun TargetWilayaOffersSubview(
                     ) {
                         Text("🏜️", fontSize = 40.sp)
                         Text(
-                            text = "لا يوجد معلمون يطلبون التحويل إلى $selectedTargetWilaya حالياً",
+                            text = uiTf("لا يوجد معلمون يطلبون التحويل إلى {0} حالياً", selectedTargetWilaya),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = BentoText,
                             textAlign = TextAlign.Center
                         )
                         Text(
-                            text = "جرب اختيار ولاية أخرى أو تغيير تخصص المعلم للتأكد، أو قم بإضافة منشورك في استمارة الإعلان.",
+                            text = uiT("جرب اختيار ولاية أخرى أو تغيير تخصص المعلم للتأكد، أو قم بإضافة منشورك في استمارة الإعلان."),
                             fontSize = 12.sp,
                             color = BentoPrimaryDesc,
                             textAlign = TextAlign.Center
@@ -1259,14 +1273,14 @@ fun ExchangeOfferCard(
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text("⏳", fontSize = 14.sp)
                                 Text(
-                                    text = "إعلان غير مفعل للعامة بعد",
+                                    text = uiT("إعلان غير مفعل للعامة بعد"),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color(0xFFE65100)
                                 )
                             }
                             Text(
-                                text = "سعر نشر الإعلان 200 أوقية جديدة. تواصل مع الإدارة لتفعيل المنشور.",
+                                text = uiT("سعر نشر الإعلان 200 أوقية جديدة. تواصل مع الإدارة لتفعيل المنشور."),
                                 fontSize = 11.sp,
                                 color = Color(0xFF5D4037)
                             )
@@ -1277,7 +1291,9 @@ fun ExchangeOfferCard(
                                     context = context,
                                     postId = post.id,
                                     userId = post.userId,
-                                    userEmail = post.authorEmail
+                                    userEmail = post.authorEmail,
+                                    wilaya = post.currentWilaya,
+                                    moughataa = post.currentMoughataa
                                 )
                             },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
@@ -1285,7 +1301,7 @@ fun ExchangeOfferCard(
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.height(32.dp)
                         ) {
-                            Text("تفعيل 💬", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(uiT("تفعيل 💬"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -1316,7 +1332,7 @@ fun ExchangeOfferCard(
                     }
                     Column {
                         Text(
-                            text = "التخصص: ${post.specialty}",
+                            text = uiTf("التخصص: {0}", post.specialty),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.5.sp,
                             color = BentoText
@@ -1334,7 +1350,7 @@ fun ExchangeOfferCard(
                                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFB74D))
                                     ) {
                                         Text(
-                                            text = "🏛️ معلم مقاطعي",
+                                            text = uiT("🏛️ معلم مقاطعي"),
                                             fontSize = 9.5.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFFE65100),
@@ -1350,7 +1366,7 @@ fun ExchangeOfferCard(
                                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF80CBC4))
                                     ) {
                                         Text(
-                                            text = "🏫 مدير مدرسة",
+                                            text = uiT("🏫 مدير مدرسة"),
                                             fontSize = 9.5.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color(0xFF00695C),
@@ -1408,7 +1424,7 @@ fun ExchangeOfferCard(
                                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                                 ) {
                                     Text("⏳", fontSize = 9.5.sp)
-                                    Text("لم يُنشر للعامة بعد (بانتظار النت)", color = Color(0xFFE65100), fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                                    Text(uiT("لم يُنشر للعامة بعد (بانتظار النت)"), color = Color(0xFFE65100), fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -1452,7 +1468,7 @@ fun ExchangeOfferCard(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = BentoPrimary, modifier = Modifier.size(18.dp))
-                    Text("مكان العمل الحالي:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoPrimary)
+                    Text(uiT("مكان العمل الحالي:"), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoPrimary)
                 }
                 Text(
                     text = "الولاية: ${post.currentWilaya}  |  المقاطعة: ${post.currentMoughataa} ${if (post.currentCommune.isNotBlank()) " | البلدية: ${post.currentCommune}" else ""}",
@@ -1474,7 +1490,7 @@ fun ExchangeOfferCard(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Default.Explore, contentDescription = null, tint = BentoSecondary, modifier = Modifier.size(18.dp))
-                        Text("الولايات والمقاطعات المرغوب العمل بها:", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoSecondary)
+                        Text(uiT("الولايات والمقاطعات المرغوب العمل بها:"), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = BentoSecondary)
                     }
 
                     val targetsList = post.targetWilayas.split(",").map { it.trim() }.filter { it.isNotBlank() }
@@ -1498,7 +1514,7 @@ fun ExchangeOfferCard(
 
                     if (post.targetMoughataas.isNotBlank()) {
                         Text(
-                            text = "تفاصيل المقاطعات: ${post.targetMoughataas}",
+                            text = uiTf("تفاصيل المقاطعات: {0}", post.targetMoughataas),
                             fontSize = 11.sp,
                             color = BentoPrimaryDesc
                         )
@@ -1534,7 +1550,7 @@ fun ExchangeOfferCard(
                             ) {
                                 Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("تعديل", fontSize = 11.sp)
+                                Text(uiT("تعديل"), fontSize = 11.sp)
                             }
                         }
                         Button(
@@ -1545,7 +1561,7 @@ fun ExchangeOfferCard(
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("حذف", color = Color.White, fontSize = 11.sp)
+                            Text(uiT("حذف"), color = Color.White, fontSize = 11.sp)
                         }
                     }
                 } else if (post.whatsappPhone.isNotBlank()) {
@@ -1555,7 +1571,7 @@ fun ExchangeOfferCard(
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text("💬 تواصل عبر الواتساب", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                        Text(uiT("💬 تواصل عبر الواتساب"), color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1638,13 +1654,13 @@ fun ContactTeacherDialog(
                 }
                 Column {
                     Text(
-                        text = "التواصل مع المعلم",
+                        text = uiT("التواصل مع المعلم"),
                         fontWeight = FontWeight.Black,
                         fontSize = 15.sp,
                         color = BentoPrimary
                     )
                     Text(
-                        text = "التخصص: ${post.specialty}",
+                        text = uiTf("التخصص: {0}", post.specialty),
                         fontSize = 11.5.sp,
                         color = BentoPrimaryDesc
                     )
@@ -1675,7 +1691,7 @@ fun ContactTeacherDialog(
                             ) {
                                 Text("✅", fontSize = 14.sp)
                                 Text(
-                                    text = "معلومات مكان عملك المسجلة حالياً:",
+                                    text = uiT("معلومات مكان عملك المسجلة حالياً:"),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.5.sp,
                                     color = Color(0xFF1B5E20)
@@ -1693,7 +1709,7 @@ fun ContactTeacherDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 TextButton(onClick = { showEditForm = true }) {
-                                    Text("تعديل البيانات ✏️", fontSize = 11.5.sp)
+                                    Text(uiT("تعديل البيانات ✏️"), fontSize = 11.5.sp)
                                 }
                                 Button(
                                     onClick = {
@@ -1709,7 +1725,7 @@ fun ContactTeacherDialog(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Text("موافقة والتواصل 🚀", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                    Text(uiT("موافقة والتواصل 🚀"), color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -1735,7 +1751,7 @@ fun ContactTeacherDialog(
 
                 // 1. Specialty Dropdown
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("تخصص المعلم:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BentoText)
+                    Text(uiT("تخصص المعلم:"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BentoText)
                     ExposedDropdownMenuBox(
                         expanded = expandedSpecialtyDropdown,
                         onExpandedChange = { expandedSpecialtyDropdown = !expandedSpecialtyDropdown }
@@ -1743,7 +1759,7 @@ fun ContactTeacherDialog(
                         OutlinedTextField(
                             value = userSpecialty,
                             onValueChange = { userSpecialty = it },
-                            label = { Text("اختر أو اكتب تخصصك") },
+                            label = { Text(uiT("اختر أو اكتب تخصصك")) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSpecialtyDropdown) },
                             modifier = Modifier
                                 .menuAnchor()
@@ -1783,7 +1799,7 @@ fun ContactTeacherDialog(
                             OutlinedTextField(
                                 value = userWilaya,
                                 onValueChange = { userWilaya = it },
-                                label = { Text("اختر الولاية الحالية") },
+                                label = { Text(uiT("اختر الولاية الحالية")) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedWilayaDropdown) },
                                 modifier = Modifier
                                     .menuAnchor()
@@ -1838,7 +1854,7 @@ fun ContactTeacherDialog(
                         OutlinedTextField(
                             value = userMoughataa,
                             onValueChange = { userMoughataa = it },
-                            label = { Text("اختر أو اكتب المقاطعة") },
+                            label = { Text(uiT("اختر أو اكتب المقاطعة")) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMoughataaDropdown) },
                             modifier = Modifier
                                 .menuAnchor()
@@ -1873,7 +1889,7 @@ fun ContactTeacherDialog(
                     OutlinedTextField(
                         value = userCommune,
                         onValueChange = { userCommune = it },
-                        placeholder = { Text("مثال: بلدية توجنين") },
+                        placeholder = { Text(uiT("مثال: بلدية توجنين")) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -1890,7 +1906,7 @@ fun ContactTeacherDialog(
                     OutlinedTextField(
                         value = userWorkPlace,
                         onValueChange = { userWorkPlace = it },
-                        placeholder = { Text("مثال: تعليم ابتدائي / معلم") },
+                        placeholder = { Text(uiT("مثال: تعليم ابتدائي / معلم")) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -1907,7 +1923,7 @@ fun ContactTeacherDialog(
                     OutlinedTextField(
                         value = userSchoolName,
                         onValueChange = { userSchoolName = it },
-                        placeholder = { Text("مثال: مدرسة الطلحاية 1") },
+                        placeholder = { Text(uiT("مثال: مدرسة الطلحاية 1")) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -1954,12 +1970,12 @@ fun ContactTeacherDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("حفظ ومتابعة للواتساب 💬", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(uiT("حفظ ومتابعة للواتساب 💬"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("إلغاء", fontSize = 12.sp)
+                Text(uiT("إلغاء"), fontSize = 12.sp)
             }
         }
     )
@@ -2044,7 +2060,7 @@ fun CreateExchangePostForm(
                     // 1. Offer Type Selection
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "1️⃣ حدد نوع العرض والمشاركة:",
+                            text = uiT("1️⃣ حدد نوع العرض والمشاركة:"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = BentoText
@@ -2083,7 +2099,7 @@ fun CreateExchangePostForm(
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
-                                        text = "💵 تحديد المقابل المالي (بالأوقية الموريتانية MRU):",
+                                        text = uiT("💵 تحديد المقابل المالي (بالأوقية الموريتانية MRU):"),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.5.sp,
                                         color = Color(0xFFE65100)
@@ -2104,7 +2120,7 @@ fun CreateExchangePostForm(
                                                 selected = !isNegotiable,
                                                 onClick = { isNegotiable = false }
                                             )
-                                            Text("تحديد المبلغ 💰", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BentoText)
+                                            Text(uiT("تحديد المبلغ 💰"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BentoText)
                                         }
 
                                         Row(
@@ -2123,7 +2139,7 @@ fun CreateExchangePostForm(
                                                     priceAmount = ""
                                                 }
                                             )
-                                            Text("للنقاش في الخاص 💬", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BentoText)
+                                            Text(uiT("للنقاش في الخاص 💬"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = BentoText)
                                         }
                                     }
 
@@ -2131,9 +2147,9 @@ fun CreateExchangePostForm(
                                         OutlinedTextField(
                                             value = priceAmount,
                                             onValueChange = { priceAmount = it.filter { char -> char.isDigit() } },
-                                            label = { Text("المبلغ بالأوقية") },
-                                            placeholder = { Text("مثال: 50000") },
-                                            suffix = { Text("أوقية", fontWeight = FontWeight.Bold, color = BentoPrimary) },
+                                            label = { Text(uiT("المبلغ بالأوقية")) },
+                                            placeholder = { Text(uiT("مثال: 50000")) },
+                                            suffix = { Text(uiT("أوقية"), fontWeight = FontWeight.Bold, color = BentoPrimary) },
                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth(),
@@ -2150,7 +2166,7 @@ fun CreateExchangePostForm(
                     // 2. Specialty Selection
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "2️⃣ تخصص المعلم / مقدم الخدمة:",
+                            text = uiT("2️⃣ تخصص المعلم / مقدم الخدمة:"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = BentoText
@@ -2164,7 +2180,7 @@ fun CreateExchangePostForm(
                                 value = specialty,
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("اختر التخصص") },
+                                label = { Text(uiT("اختر التخصص")) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSpec) },
                                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp)
@@ -2207,8 +2223,8 @@ fun CreateExchangePostForm(
                                     colors = CheckboxDefaults.colors(checkedColor = BentoPrimary)
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("معلم مقاطعي 🏛️", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = BentoText)
-                                    Text("بعض المعلمين مقاطعيون ولا يتم التبادل إلا بينهم", fontSize = 10.5.sp, color = BentoPrimaryDesc)
+                                    Text(uiT("معلم مقاطعي 🏛️"), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = BentoText)
+                                    Text(uiT("بعض المعلمين مقاطعيون ولا يتم التبادل إلا بينهم"), fontSize = 10.5.sp, color = BentoPrimaryDesc)
                                 }
                             }
                         }
@@ -2232,8 +2248,8 @@ fun CreateExchangePostForm(
                                     colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00897B))
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("مدير مدرسة 🏫", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = BentoText)
-                                    Text("مدير مدرسة في الريف (ميزة تشجع غير المدراء للتبادل معك)", fontSize = 10.5.sp, color = Color(0xFF00695C))
+                                    Text(uiT("مدير مدرسة 🏫"), fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = BentoText)
+                                    Text(uiT("مدير مدرسة في الريف (ميزة تشجع غير المدراء للتبادل معك)"), fontSize = 10.5.sp, color = Color(0xFF00695C))
                                 }
                             }
                         }
@@ -2244,7 +2260,7 @@ fun CreateExchangePostForm(
                     // 3. Current Work Location
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = "3️⃣ مكان العمل الحالي الكامل:",
+                            text = uiT("3️⃣ مكان العمل الحالي الكامل:"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = BentoText
@@ -2265,7 +2281,7 @@ fun CreateExchangePostForm(
                                         value = currentWilaya,
                                         onValueChange = {},
                                         readOnly = true,
-                                        label = { Text("الولاية") },
+                                        label = { Text(uiT("الولاية")) },
                                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedW) },
                                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                                         shape = RoundedCornerShape(12.dp)
@@ -2299,7 +2315,7 @@ fun CreateExchangePostForm(
                                         value = currentMoughataa,
                                         onValueChange = {},
                                         readOnly = true,
-                                        label = { Text("المقاطعة") },
+                                        label = { Text(uiT("المقاطعة")) },
                                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedM) },
                                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                                         shape = RoundedCornerShape(12.dp)
@@ -2325,8 +2341,8 @@ fun CreateExchangePostForm(
                         OutlinedTextField(
                             value = currentCommune,
                             onValueChange = { currentCommune = it },
-                            label = { Text("البلدية التابعة لها") },
-                            placeholder = { Text("مثال: بلدية كيفه") },
+                            label = { Text(uiT("البلدية التابعة لها")) },
+                            placeholder = { Text(uiT("مثال: بلدية كيفه")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2335,8 +2351,8 @@ fun CreateExchangePostForm(
                         OutlinedTextField(
                             value = currentWorkPlace,
                             onValueChange = { currentWorkPlace = it },
-                            label = { Text("مكان العمل / القرية / المنطقة") },
-                            placeholder = { Text("مثال: منطقة ميساح") },
+                            label = { Text(uiT("مكان العمل / القرية / المنطقة")) },
+                            placeholder = { Text(uiT("مثال: منطقة ميساح")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2345,8 +2361,8 @@ fun CreateExchangePostForm(
                         OutlinedTextField(
                             value = schoolName,
                             onValueChange = { schoolName = it },
-                            label = { Text("اسم المدرسة") },
-                            placeholder = { Text("مثال: مدرسة أبتكيرات") },
+                            label = { Text(uiT("اسم المدرسة")) },
+                            placeholder = { Text(uiT("مثال: مدرسة أبتكيرات")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2358,7 +2374,7 @@ fun CreateExchangePostForm(
                     // 4. Contact Info
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "4️⃣ معلومات التواصل مع المعلم:",
+                            text = uiT("4️⃣ معلومات التواصل مع المعلم:"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = BentoText
@@ -2366,8 +2382,8 @@ fun CreateExchangePostForm(
                         OutlinedTextField(
                             value = whatsappPhone,
                             onValueChange = { whatsappPhone = it },
-                            label = { Text("رقم الواتساب 💬") },
-                            placeholder = { Text("مثال: 46123456") },
+                            label = { Text(uiT("رقم الواتساب 💬")) },
+                            placeholder = { Text(uiT("مثال: 46123456")) },
                             leadingIcon = { Text("222+", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold, color = BentoPrimary) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                             modifier = Modifier.fillMaxWidth(),
@@ -2452,7 +2468,7 @@ fun CreateExchangePostForm(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text("المقاطعات المختارة للتحويل داخل $currentWilaya:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                                        Text(uiTf("المقاطعات المختارة للتحويل داخل {0}:", currentWilaya), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                                         Text(selectedTargetMoughataasInWilaya.joinToString(" ، "), fontSize = 11.5.sp, color = BentoText)
                                     }
                                 }
@@ -2515,7 +2531,7 @@ fun CreateExchangePostForm(
                                                             onClick = { showTargetMoughataaDialogForWilaya = w },
                                                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                                                         ) {
-                                                            Text("المقاطعات", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                                                            Text(uiT("المقاطعات"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                                                         }
                                                     }
                                                 }
@@ -2532,7 +2548,7 @@ fun CreateExchangePostForm(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text("الولايات والمقاطعات المختارة للتحويل:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                                        Text(uiT("الولايات والمقاطعات المختارة للتحويل:"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                                         val summaryText = selectedTargetWilayas.joinToString(", ") { wilaya ->
                                             val mList = targetMoughataasMap[wilaya]
                                             if (mList.isNullOrEmpty() || mList.contains("الكل")) {
@@ -2655,10 +2671,10 @@ fun CreateExchangePostForm(
 
         AlertDialog(
             onDismissRequest = { showTargetMoughataaDialogForWilaya = null },
-            title = { Text("اختر مقاطعات ولاية $wilaya 📍", fontWeight = FontWeight.Bold) },
+            title = { Text(uiTf("اختر مقاطعات ولاية {0} 📍", wilaya), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("يمكنك تحديد كافة المقاطعات (الكل) أو تخصيص مقاطعات معينة:", fontSize = 12.sp, color = BentoPrimaryDesc)
+                    Text(uiT("يمكنك تحديد كافة المقاطعات (الكل) أو تخصيص مقاطعات معينة:"), fontSize = 12.sp, color = BentoPrimaryDesc)
                     
                     // All Option
                     Row(
@@ -2668,7 +2684,7 @@ fun CreateExchangePostForm(
                             .clickable { currentSelections = listOf("الكل") }
                     ) {
                         RadioButton(selected = currentSelections.contains("الكل"), onClick = { currentSelections = listOf("الكل") })
-                        Text("الكل - جميع المقاطعات التابعة لولاية $wilaya", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(uiTf("الكل - جميع المقاطعات التابعة لولاية {0}", wilaya), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
                     HorizontalDivider(color = BentoGrayOutline)
@@ -2708,12 +2724,12 @@ fun CreateExchangePostForm(
                     targetMoughataasMap = targetMoughataasMap + (wilaya to currentSelections)
                     showTargetMoughataaDialogForWilaya = null
                 }) {
-                    Text("حفظ الاختيار")
+                    Text(uiT("حفظ الاختيار"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTargetMoughataaDialogForWilaya = null }) {
-                    Text("إلغاء")
+                    Text(uiT("إلغاء"))
                 }
             }
         )
@@ -2756,8 +2772,8 @@ fun MyExchangePostsSubview(
     if (deletingPostId != null) {
         AlertDialog(
             onDismissRequest = { deletingPostId = null },
-            title = { Text("حذف إعلان التبادل ⚠️", fontWeight = FontWeight.Bold) },
-            text = { Text("هل أنت متأكد من حذف هذا الإعلان نهائياً من المنصة؟") },
+            title = { Text(uiT("حذف إعلان التبادل ⚠️"), fontWeight = FontWeight.Bold) },
+            text = { Text(uiT("هل أنت متأكد من حذف هذا الإعلان نهائياً من المنصة؟")) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -2771,12 +2787,12 @@ fun MyExchangePostsSubview(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
                 ) {
-                    Text("نعم، احذف", color = Color.White)
+                    Text(uiT("نعم، احذف"), color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deletingPostId = null }) {
-                    Text("إلغاء")
+                    Text(uiT("إلغاء"))
                 }
             }
         )
@@ -2789,7 +2805,7 @@ fun MyExchangePostsSubview(
     ) {
         item {
             Text(
-                text = "الإعلانات التي قمت بنشرها على المنصة (${posts.size}):",
+                text = uiTf("الإعلانات التي قمت بنشرها على المنصة ({0}):", posts.size),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = BentoText

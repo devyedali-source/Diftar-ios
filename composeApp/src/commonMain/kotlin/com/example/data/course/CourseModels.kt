@@ -87,7 +87,18 @@ data class CourseExam(
     val msg: String = "",
     @kotlinx.serialization.SerialName("text_title") val textTitle: String? = null,
     val text: String? = null,
-    @kotlinx.serialization.SerialName("situation_text") val situationText: String? = null
+    @kotlinx.serialization.SerialName("situation_text") val situationText: String? = null,
+    // يُبنى وقت التشغيل للمحاكي الشامل فقط (لا يوجد في ملف البيانات)
+    val sections: List<CourseSimSection> = emptyList()
+)
+
+@kotlinx.serialization.Serializable
+data class CourseSimSection(
+    val title: String = "",
+    val start: Int = 0,
+    val textTitle: String? = null,
+    val text: String? = null,
+    val situationText: String? = null
 )
 
 @kotlinx.serialization.Serializable

@@ -2,14 +2,32 @@ package com.example.ui.utils
 
 import com.example.compat.*
 import kotlinx.coroutines.IO
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
+/** ترجمة نص واجهة (عربي ← فرنسي) حسب لغة التطبيق الحالية؛ تعيد النص العربي نفسه إن لم توجد ترجمة. */
+fun uiT(ar: String): String =
+    if (AppLocalization.lang == "fr") UiFrench.map[ar] ?: ar else ar
+
+/** نفس uiT لكن لنصوص فيها متغيّرات {0} {1} ... */
+fun uiTf(ar: String, vararg args: Any?): String {
+    val template = if (AppLocalization.lang == "fr") UiFrench.map[ar] ?: ar else ar
+    var out = template
+    args.forEachIndexed { i, a -> out = out.replace("{" + i + "}", a?.toString() ?: "") }
+    return out
+}
 
 object AppLocalization {
+    /** لغة الواجهة الحالية ("ar" أو "fr")؛ حالة Compose فيُعاد رسم الشاشات عند تغييرها. */
+    var lang by mutableStateOf("ar")
+
     private val frMap = mapOf(
         // Login & Auth
         "title" to "Connexion de l'Enseignant",
         "welcome" to "Bienvenue à nouveau ! Connectez-vous rapidement pour lier vos données, suivre et gérer les notes et les élèves de vos classes en toute sécurité.",
         "google_sign_in" to "Connexion rapide avec Google 🚀",
-        "footer" to "Tous droits réservés © Développeur : El Moctar Yedaly 🇲🇷 2026",
+        "footer" to "Tous droits réservés © Développeur : El Moctar Yedaly 🇲🇷",
         
         // Navigation & TopBar
         "app_title" to "Mon Application Scolaire 🏫",
@@ -223,7 +241,7 @@ object AppLocalization {
         "no_links_desc" to "Aucun lien utile ni référence n'a encore été ajouté par l'administration.",
 
         // Extra Dashboard & Common Elements
-        "app_footer_copyright" to "Cahier de l'Enseignant - v2.5\nTous droits réservés © Développeur : El Mokhtar Yedaly 2026",
+        "app_footer_copyright" to "Cahier de l'Enseignant - v2.5\nTous droits réservés © Développeur : El Mokhtar Yedaly",
         "teacher_id_prefix" to "ID : ",
         "total_registered_students" to "Total des élèves inscrits",
         "male_count_label" to "Garçons",

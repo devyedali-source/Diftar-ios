@@ -59,7 +59,7 @@ object HtmlReportHelper {
         return ctx as? android.app.Activity
     }
 
-    private fun getMauritanianSealImg(context: Context): String {
+    fun getMauritanianSealImg(context: Context): String {
         try {
             synchronized(this) {
                 if (cachedSealBase64 == null) {
@@ -735,7 +735,8 @@ object HtmlReportHelper {
         activeClass: ClassSection,
         viewModel: TeacherViewModel,
         targetStudentId: Long? = null,
-        onePerPortraitPage: Boolean = false
+        onePerPortraitPage: Boolean = false,
+        perPage: Int = 2
     ): String {
         val sortedSubjects = subjects.sortedByOfficialOrder()
         val alphabeticalPerformances = performances.sortedBy { it.student.id }
@@ -1017,13 +1018,13 @@ object HtmlReportHelper {
         val scaleMax = if (isOutOfTen) 10 else 20
         
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>كشوف الدرجات</title>$styles$portraitSingleStyles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>كشوف الدرجات</title>$styles$portraitSingleStyles${thirdCss(!onePerPortraitPage && perPage == 3, 0)}${PrintDesign.cardCss()}</head><body>")
 
         val teacherStampHtml = getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = if (onePerPortraitPage) 64 else 46)
         val principalStampHtml = getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = if (onePerPortraitPage) 64 else 46)
  
         // Group into chunks of 2, each representing an A4 landscape page
-        val pages = sortedPerformances.chunked(if (onePerPortraitPage) 1 else 2)
+        val pages = sortedPerformances.chunked(if (onePerPortraitPage) 1 else perPage)
         
         pages.forEachIndexed { pageIndex, pagePerformances ->
             html.append("<div class=\"a4-page cards-page-layout\">")
@@ -1247,8 +1248,10 @@ object HtmlReportHelper {
                 """)
             }
             
-            if (!onePerPortraitPage && pagePerformances.size == 1) {
-                html.append("<div class=\"report-card-container\" style=\"visibility: hidden; border: none;\"></div>")
+            if (!onePerPortraitPage) {
+                repeat((perPage - pagePerformances.size).coerceAtLeast(0)) {
+                    html.append("<div class=\"report-card-container\" style=\"visibility: hidden; border: none;\"></div>")
+                }
             }
             
             html.append("</div>") // Close a4-page
@@ -1258,13 +1261,42 @@ object HtmlReportHelper {
         return html.toString()
     }
 
+    /**
+     * ثلاثة كشوف في الورقة الأفقية: نصغّر البطاقة بنسبة 0.68 لتصير بعرض ثلث الورقة (88مم) وبطول 195مم،
+     * ثم نوزّع المحتوى: الجدول والمعلومات حتى ثلثي البطاقة، والثلث الأخير للتوقيعات والطابع والختم.
+     * kind: 0 كشف الفصل، 1 كشف النقاط السنوي (ثلاثة فصول).
+     */
+    private fun thirdCss(enabled: Boolean, kind: Int): String {
+        if (!enabled) return ""
+        val css = if (kind == 0) """
+            .report-card-container{zoom:0.68;width:129.4mm !important;height:286.8mm !important;max-height:286.8mm !important;}
+            .report-card-container .content-split{flex:0 0 auto;height:150mm;}
+            .report-card-container .grades-section,.report-card-container .remarks-section{height:100%;}
+            .report-card-container .grades-table{height:100%;}
+            .report-card-container .footer-signature-block{margin-top:auto;height:80mm;align-items:flex-start;padding-top:10mm;}
+            .report-card-container .footer-stamp-slot{height:48mm;}
+        """ else """
+            .three-term-card{zoom:0.68;width:129.4mm !important;height:286.8mm !important;max-height:286.8mm !important;}
+            .three-term-card .compact-table{height:140mm;}
+            .three-term-card .signatures-block{margin-top:auto;height:80mm;padding-top:10mm;}
+            .three-term-card .signature-stamp-slot{height:48mm;}
+        """
+        return "<style>$css</style>"
+    }
+
     // 2. Class Student List (Excluding parent phones)
     fun generateStudentDirectoryHtml(
         context: Context,
         className: String,
         students: List<Student>,
         activeClass: ClassSection,
-        viewModel: TeacherViewModel? = null
+        viewModel: TeacherViewModel? = null,
+        nameMode: String = "both", // "ar" أو "fr" أو "both"
+        showSchoolId: Boolean = true,
+        showNationalId: Boolean = true,
+        showPhone1: Boolean = false,
+        showPhone2: Boolean = false,
+        showHealth: Boolean = true
     ): String {
         val teacherStampHtml = if (viewModel != null) getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
         val principalStampHtml = if (viewModel != null) getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
@@ -1278,7 +1310,7 @@ object HtmlReportHelper {
         )
         
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>لائحة التلاميذ</title>$styles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>لائحة التلاميذ</title>$styles${PrintDesign.listCss()}</head><body>")
         
         html.append("<div class=\"sheet-card\">")
         
@@ -1305,34 +1337,38 @@ object HtmlReportHelper {
         <div class="sheet-title">اللائحة الرسمية لتلاميذ القسم</div>
         """)
         
-        html.append("""
-        <table class="sheet-table">
-            <thead>
-                <tr>
-                    <th style="width: 8%;">الرقم</th>
-                    <th style="width: 25%;">الاسم الكامل (عربي)</th>
-                    <th style="width: 25%;">الاسم بالفرنسية</th>
-                    <th style="width: 14%;">الرقم المدرسي</th>
-                    <th style="width: 14%;">الرقم الوطني</th>
-                    <th style="width: 14%;">الملاحظات الصحية</th>
-                </tr>
-            </thead>
-            <tbody>
-        """)
-        
-        sortedStudents.forEachIndexed { index, student ->
-            html.append("""
-                <tr class="${if (index % 2 == 1) "row-bg-accent" else ""}">
-                    <td>${index + 1}</td>
-                    <td style="text-align: right; font-weight: bold; padding-right: 6px;">${student.name}</td>
-                    <td style="text-align: left; padding-left: 6px;">${student.frenchName}</td>
-                    <td><span style="display: inline-block; min-width: 45px; text-align: center; ${if (student.schoolId.isBlank()) "border-bottom: 1px dotted #000000;" else ""}">${student.schoolId.ifBlank { "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" }}</span></td>
-                    <td>${student.nationalId}</td>
-                    <td>${student.healthNotes.ifBlank { "سليم" }}</td>
-                </tr>
-            """)
+        // الأعمدة حسب اختيار المستخدم قبل السحب
+        data class DirCol(val title: String, val weight: Int, val cell: (Student, Int) -> String)
+        val cols = mutableListOf<DirCol>()
+        cols.add(DirCol("الرقم", 6) { _, idx -> "${idx + 1}" })
+        if (nameMode == "ar" || nameMode == "both") {
+            cols.add(DirCol("الاسم الكامل (عربي)", 24) { st, _ ->
+                "<span style=\"display:block;text-align:right;font-weight:bold;padding-right:6px;\">${escCompHtml(st.name)}</span>"
+            })
         }
-        
+        if (nameMode == "fr" || nameMode == "both") {
+            cols.add(DirCol("الاسم بالفرنسية", 24) { st, _ ->
+                "<span style=\"display:block;text-align:left;padding-left:6px;\">${escCompHtml(st.frenchName)}</span>"
+            })
+        }
+        if (showSchoolId) cols.add(DirCol("الرقم المدرسي", 12) { st, _ ->
+            "<span style=\"display:inline-block;min-width:45px;text-align:center;${if (st.schoolId.isBlank()) "border-bottom:1px dotted #000000;" else ""}\">${escCompHtml(st.schoolId).ifBlank { "&nbsp;&nbsp;&nbsp;&nbsp;" }}</span>"
+        })
+        if (showNationalId) cols.add(DirCol("الرقم الوطني", 14) { st, _ -> escCompHtml(st.nationalId) })
+        if (showPhone1) cols.add(DirCol("هاتف الوكيل 1", 13) { st, _ -> escCompHtml(st.parentPhone1) })
+        if (showPhone2) cols.add(DirCol("هاتف الوكيل 2", 13) { st, _ -> escCompHtml(st.parentPhone2) })
+        if (showHealth) cols.add(DirCol("الملاحظات الصحية", 13) { st, _ -> escCompHtml(st.healthNotes.ifBlank { "سليم" }) })
+        val totalW = cols.sumOf { it.weight }.coerceAtLeast(1)
+
+        html.append("<table class=\"sheet-table\"><thead><tr>")
+        cols.forEach { c -> html.append("<th style=\"width: ${c.weight * 100 / totalW}%;\">${c.title}</th>") }
+        html.append("</tr></thead><tbody>")
+        sortedStudents.forEachIndexed { index, student ->
+            html.append("<tr class=\"${if (index % 2 == 1) "row-bg-accent" else ""}\">")
+            cols.forEach { c -> html.append("<td>${c.cell(student, index)}</td>") }
+            html.append("</tr>")
+        }
+
         html.append("""
             </tbody>
         </table>
@@ -1364,6 +1400,388 @@ object HtmlReportHelper {
         return html.toString()
     }
 
+    /** سطر أسفل الورقة: المستوى + اسم التطبيق */
+    private fun appLevelFooterHtml(activeClass: ClassSection): String {
+        val level = com.example.ui.screens.getLevelArabicName(activeClass.level)
+        return "<div style=\"text-align:center;font-size:9px;font-weight:700;color:#444;margin-top:6px;\">المستوى: $level &nbsp;|&nbsp; تطبيق دفتر المعلم</div>"
+    }
+
+    // الجدول الزمني الأسبوعي للقسم (الرسمي أو الشخصي) كملف PDF
+    fun generateTimetableHtml(
+        context: Context,
+        activeClass: ClassSection,
+        slots: List<com.example.data.planning.OfficialTimetableSlot>,
+        isPersonal: Boolean,
+        viewModel: TeacherViewModel? = null
+    ): String {
+        val teacherStampHtml = if (viewModel != null) getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
+        val principalStampHtml = if (viewModel != null) getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
+        val seal = getMauritanianSealImg(context)
+        val styles = getCommonStyles(
+            isLandscape = true,
+            isList = true,
+            schoolName = activeClass.schoolName,
+            fileTitle = "الجدول الزمني"
+        )
+        val days = com.example.data.planning.DayOfWeekAr.values().filter { d -> slots.any { it.day == d } }
+        val periods = listOf(
+            Triple(com.example.data.planning.TimetablePeriodType.MORNING_BEFORE_RECESS, "الفترة الصباحية الأولى", "08:00 - 10:00"),
+            Triple(com.example.data.planning.TimetablePeriodType.MORNING_AFTER_RECESS, "الفترة الصباحية الثانية", "بعد الاستراحة - 12:00"),
+            Triple(com.example.data.planning.TimetablePeriodType.AFTERNOON, "الفترة المسائية", "12:00 - 14:00")
+        )
+        fun esc(t: String) = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        fun slotText(x: com.example.data.planning.OfficialTimetableSlot): String {
+            val name = if (x.branch.isNotBlank() && x.branch != x.subject) "${x.subject} (${x.branch})" else x.subject
+            return "<div style=\"margin:2px 0;${if (x.isFrench) "direction:ltr;" else ""}\"><b>${esc(name)}</b> <span style=\"font-size:9px;\">— ${x.durationMinutes} د</span></div>"
+        }
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>الجدول الزمني</title>$styles${PrintDesign.listCss()}")
+        html.append("<style>.tt td, .tt th { font-size: 11px !important; padding: 5px 4px !important; vertical-align: top; } .tt .pn { background: #EEF2FF; font-weight: bold; width: 110px; }</style>")
+        html.append("</head><body><div class=\"sheet-card\">")
+        html.append("""
+        <div class="header-section">
+            <div class="header-column right">
+                الجمهورية الإسلامية الموريتانية<br>
+                وزارة التربية وإصلاح النظام التعليمي<br>
+                الإدارة الجهوية للتربية: ${activeClass.wilaya.ifBlank { "غوركل" }}<br>
+                مفتشية مقاطعة: ${activeClass.moughataa.ifBlank { "لكصيبه 1" }}<br>
+                مدرسة: ${activeClass.schoolName.ifBlank { "الطلحايه 1" }}
+            </div>
+            <div class="header-column center">
+                $seal
+                <div class="header-title-main" style="margin-top: 6px;">الجدول الزمني الأسبوعي</div>
+            </div>
+            <div class="header-column left">
+                شرف - إخاء - عدالة<br>
+                السنة الدراسية: ${activeClass.academicYear.ifBlank { "2025 - 2026" }}<br>
+                القسم: ${getDisplayClassName(activeClass)}<br>
+                ${if (isPersonal) "جدول شخصي" else "الجدول الرسمي"}
+            </div>
+        </div>
+        """)
+        html.append("<table class=\"sheet-table tt\" style=\"table-layout: fixed;\"><thead><tr><th class=\"pn\">الفترة</th>")
+        days.forEach { html.append("<th>${it.arabicName}</th>") }
+        html.append("</tr></thead><tbody>")
+        periods.forEachIndexed { idx, (type, title, range) ->
+            html.append("<tr><td class=\"pn\">$title<br><span style=\"font-size:9px;font-weight:normal;\">$range</span></td>")
+            days.forEach { d ->
+                val list = slots.filter { it.day == d && it.periodType == type }.sortedBy { it.slotIndex }
+                html.append("<td>${if (list.isEmpty()) "&nbsp;" else list.joinToString("") { slotText(it) }}</td>")
+            }
+            html.append("</tr>")
+            if (idx == 0) {
+                html.append("<tr><td colspan=\"${days.size + 1}\" style=\"text-align:center;background:#FFF3E0;font-weight:bold;\">استراحة</td></tr>")
+            }
+        }
+        html.append("</tbody></table>")
+        html.append("""
+        <div class="sheet-footer-signals" style="margin-top: 14px; page-break-inside: avoid; break-inside: avoid;">
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المعلم</div>
+                <div style="height: 46px; display: flex; align-items: center; justify-content: center;">$teacherStampHtml</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المدير</div>
+                <div style="height: 46px; display: flex; align-items: center; justify-content: center;">$principalStampHtml</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المفتش</div>
+                <div style="height: 46px;"></div>
+            </div>
+        </div>
+        """)
+        html.append(appLevelFooterHtml(activeClass))
+        html.append("</div></body></html>")
+        return html.toString()
+    }
+
+    /** يدمج عدة صفحات HTML كاملة في ملف واحد، كل واحدة في صفحة مستقلة. */
+    fun combineHtmlPages(parts: List<String>): String {
+        if (parts.isEmpty()) return "<html><body></body></html>"
+        val head = parts.first().substringBefore("<body>")
+        val bodies = StringBuilder()
+        parts.forEachIndexed { i, h ->
+            val last = i == parts.lastIndex
+            bodies.append(if (last) "<div>" else "<div style=\"page-break-after: always; break-after: page;\">")
+            bodies.append(h.substringAfter("<body>").substringBeforeLast("</body>"))
+            bodies.append("</div>")
+        }
+        return "$head<body>$bodies</body></html>"
+    }
+
+    // سجل النداء (الغياب) لشهر واحد
+    fun generateAttendanceMonthHtml(
+        context: Context,
+        activeClass: ClassSection,
+        students: List<Student>,
+        records: List<com.example.data.models.AttendanceRecord>,
+        days: List<java.time.LocalDate>,
+        monthLabel: String,
+        viewModel: TeacherViewModel? = null
+    ): String {
+        val teacherStampHtml = if (viewModel != null) getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
+        val principalStampHtml = if (viewModel != null) getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
+        val sorted = students.sortedBy { it.id }
+        val seal = getMauritanianSealImg(context)
+        val styles = getCommonStyles(
+            isLandscape = true,
+            isList = true,
+            schoolName = activeClass.schoolName,
+            fileTitle = "سجل النداء"
+        )
+        val byKey = records.associateBy { it.studentId to it.date }
+        val recordedDates = records.map { it.date }.toSet()
+        val counted = days.filter { it.toString() in recordedDates }
+        val expected = counted.size * 2
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>سجل النداء</title>$styles${PrintDesign.listCss()}")
+        html.append("<style>.att td, .att th { padding: 1px 0 !important; font-size: 8px !important; } .att .nm { text-align: right; padding-right: 4px !important; font-size: 9px !important; font-weight: bold; white-space: nowrap; }</style>")
+        html.append("</head><body><div class=\"sheet-card\">")
+        html.append("""
+        <div class="header-section">
+            <div class="header-column right">
+                الجمهورية الإسلامية الموريتانية<br>
+                وزارة التربية وإصلاح النظام التعليمي<br>
+                الإدارة الجهوية للتربية: ${activeClass.wilaya.ifBlank { "غوركل" }}<br>
+                مفتشية مقاطعة: ${activeClass.moughataa.ifBlank { "لكصيبه 1" }}<br>
+                مدرسة: ${activeClass.schoolName.ifBlank { "الطلحايه 1" }}
+            </div>
+            <div class="header-column center">
+                $seal
+                <div class="header-title-main" style="margin-top: 6px;">سجل النداء</div>
+            </div>
+            <div class="header-column left">
+                شرف - إخاء - عدالة<br>
+                السنة الدراسية: ${activeClass.academicYear.ifBlank { "2025 - 2026" }}<br>
+                القسم: ${getDisplayClassName(activeClass)}<br>
+                الشهر: $monthLabel
+            </div>
+        </div>
+        """)
+        html.append("<table class=\"sheet-table att\" style=\"table-layout: auto;\"><thead><tr>")
+        html.append("<th rowspan=\"2\">الرقم</th><th rowspan=\"2\">الاسم الكامل</th>")
+        days.forEach { d -> html.append("<th colspan=\"2\">${d.dayOfMonth}</th>") }
+        html.append("<th rowspan=\"2\">الحضور<br>المتوقع</th><th rowspan=\"2\">غياب<br>الشهر</th><th rowspan=\"2\">الحضور<br>الفعلي</th></tr><tr>")
+        days.forEach { _ -> html.append("<th>ص</th><th>م</th>") }
+        html.append("</tr></thead><tbody>")
+        sorted.forEachIndexed { index, st ->
+            var abs = 0
+            html.append("<tr class=\"${if (index % 2 == 1) "row-bg-accent" else ""}\"><td>${index + 1}</td><td class=\"nm\">${st.name}</td>")
+            days.forEach { d ->
+                val r = byKey[st.id to d.toString()]
+                val inCount = d.toString() in recordedDates
+                val m = r?.morningAbsent == true
+                val a = r?.afternoonAbsent == true
+                if (inCount) abs += (if (m) 1 else 0) + (if (a) 1 else 0)
+                html.append("<td>${if (m) "✗" else "&nbsp;"}</td><td>${if (a) "✗" else "&nbsp;"}</td>")
+            }
+            val actual = expected - abs
+            fun pct(n: Int) = if (expected > 0) Math.round(n * 100f / expected) else 0
+            if (expected == 0) {
+                // لائحة فارغة (لا نداء مسجّل): تُترك الإحصائيات فارغة ليكتبها المعلم يدوياً
+                html.append("<td>&nbsp;<br>&nbsp;</td><td>&nbsp;<br>&nbsp;</td><td>&nbsp;<br>&nbsp;</td></tr>")
+            } else {
+                html.append("<td>$expected<br>100%</td><td>$abs<br>${pct(abs)}%</td><td>$actual<br>${pct(actual)}%</td></tr>")
+            }
+        }
+        html.append("</tbody></table>")
+        html.append("""
+        <div class="sheet-footer-signals" style="margin-top: 14px; page-break-inside: avoid; break-inside: avoid;">
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المعلم</div>
+                <div style="height: 46px; display: flex; align-items: center; justify-content: center;">$teacherStampHtml</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المدير</div>
+                <div style="height: 46px; display: flex; align-items: center; justify-content: center;">$principalStampHtml</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المفتش</div>
+                <div style="height: 46px;"></div>
+            </div>
+        </div>
+        """)
+        html.append(appLevelFooterHtml(activeClass))
+        html.append("</div></body></html>")
+        return html.toString()
+    }
+
+    private fun escCompHtml(t: String) = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    /**
+     * دفتر متابعة القسم (تقييم الكفايات) + جدول دعم المجموعات، لمادة واحدة.
+     * marks: مفتاحها "studentId|المادة|المجال|k" وقيمتها 1 (+) أو -1 (−).
+     * notes: مفتاحها "SUP|المادة|k" وقيمتها نص خانة «الدعم المدرسي».
+     */
+    fun generateCompetencyHtml(
+        context: Context,
+        activeClass: ClassSection,
+        students: List<Student>,
+        discipline: com.example.data.planning.LessonPreparationRepository.CompDiscipline,
+        marks: Map<String, Int>,
+        notes: Map<String, String>,
+        viewModel: TeacherViewModel? = null
+    ): String {
+        val teacherStampHtml = if (viewModel != null) getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
+        val principalStampHtml = if (viewModel != null) getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = 46) else ""
+        val sorted = students.sortedBy { it.id }
+        val seal = getMauritanianSealImg(context)
+        val styles = getCommonStyles(isLandscape = true, isList = true, schoolName = activeClass.schoolName, fileTitle = "دفتر متابعة القسم")
+        val discLabel = escCompHtml(discipline.label)
+
+        fun header(title: String) = """
+        <div class="header-section">
+            <div class="header-column right">
+                الجمهورية الإسلامية الموريتانية<br>
+                وزارة التربية وإصلاح النظام التعليمي<br>
+                الإدارة الجهوية للتربية: ${escCompHtml(activeClass.wilaya.ifBlank { "غوركل" })}<br>
+                مفتشية مقاطعة: ${escCompHtml(activeClass.moughataa.ifBlank { "لكصيبه 1" })}<br>
+                مدرسة: ${escCompHtml(activeClass.schoolName.ifBlank { "الطلحايه 1" })}
+            </div>
+            <div class="header-column center">
+                $seal
+                <div class="header-title-main" style="margin-top: 6px;">$title</div>
+            </div>
+            <div class="header-column left">
+                شرف - إخاء - عدالة<br>
+                السنة الدراسية: ${escCompHtml(activeClass.academicYear.ifBlank { "2025 - 2026" })}<br>
+                القسم: ${escCompHtml(getDisplayClassName(activeClass))}<br>
+                المادة: $discLabel
+            </div>
+        </div>
+        """
+
+        val footer = """
+        <div class="sheet-footer-signals" style="margin-top: 14px; page-break-inside: avoid; break-inside: avoid;">
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المعلم</div>
+                <div style="height: 46px; display: flex; align-items: center; justify-content: center;">$teacherStampHtml</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المدير</div>
+                <div style="height: 46px; display: flex; align-items: center; justify-content: center;">$principalStampHtml</div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; min-width: 140px;">
+                <div style="font-weight: 800; font-size: 11px;">توقيع المفتش</div>
+                <div style="height: 46px;"></div>
+            </div>
+        </div>
+        """
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>دفتر متابعة القسم</title>$styles${PrintDesign.listCss()}")
+        html.append("<style>.cmp td, .cmp th { padding: 2px 3px !important; font-size: 9px !important; } .cmp .nm { text-align: right; padding-right: 5px !important; font-weight: bold; white-space: nowrap; } .cmp .mk { font-size: 12px !important; font-weight: 900; } .cmp .lg { font-size: 8px; text-align: right; margin-top: 6px; line-height: 1.5; } .pg { page-break-after: always; break-after: page; } .pg:last-child { page-break-after: auto; break-after: auto; }</style>")
+        if (sorted.size > 28) {
+            // أقسام كبيرة: نضغط الصفوف والتوقيعات حتى لا تنزل التواقيع وحدها في صفحة فارغة
+            html.append("<style>.cmp td, .cmp th { padding: 0px 3px !important; line-height: 1.05 !important; } .sheet-footer-signals { margin-top: 3px !important; } .sheet-footer-signals div[style*=\"height: 46px\"] { height: 22px !important; }</style>")
+        }
+        html.append("</head><body>")
+
+        val chunks = discipline.spheres.chunked(3).ifEmpty { listOf(emptyList()) }
+        chunks.forEachIndexed { ci, chunk ->
+            val isLast = ci == chunks.lastIndex
+            // ---------- الصفحة 1: دفتر متابعة القسم ----------
+            html.append("<div class=\"sheet-card pg\">")
+            html.append(header("دفتر متابعة القسم<br><span style=\"font-size:10px;font-weight:600;\">Cahier de suivi de classe</span>"))
+            html.append("<div style=\"font-size:10px;font-weight:700;margin:4px 0;\">نبيّن بإشارة (+) الكفايات التي امتلكها التلاميذ وبإشارة (−) الكفايات التي لم يمتلكوها.</div>")
+            val legend = StringBuilder()
+            chunk.forEach { sp ->
+                sp.cbs.forEach { (k, t) -> legend.append("<b>${escCompHtml(sp.label)} — الكفاية $k (CB$k):</b> ${escCompHtml(t)}<br>") }
+            }
+            if (legend.isNotEmpty()) html.append("<div class=\"cmp\"><div class=\"lg\" style=\"font-size:9px;border:1px solid #999;padding:3px 6px;margin-bottom:5px;\">$legend</div></div>")
+            html.append("<table class=\"sheet-table cmp\" style=\"table-layout: auto;\"><thead>")
+            html.append("<tr><th rowspan=\"2\">الرقم</th><th rowspan=\"2\">اسم التلميذ<br>Nom de l'élève</th>")
+            chunk.forEach { sp -> html.append("<th colspan=\"3\">المجال / Sphère<br>${escCompHtml(sp.label)}</th>") }
+            html.append("</tr><tr>")
+            chunk.forEach { _ -> for (k in 1..3) html.append("<th>الكفاية $k<br>CB$k</th>") }
+            html.append("</tr></thead><tbody>")
+            sorted.forEachIndexed { i, st ->
+                html.append("<tr class=\"${if (i % 2 == 1) "row-bg-accent" else ""}\"><td>${i + 1}</td><td class=\"nm\">${escCompHtml(compNameCell(st, discipline))}</td>")
+                chunk.forEach { sp ->
+                    for (k in 1..3) {
+                        val v = marks["${st.id}|${discipline.code}|${sp.code}|$k"] ?: 0
+                        val txt = when { v > 0 -> "+"; v < 0 -> "−"; else -> "&nbsp;" }
+                        html.append("<td class=\"mk\">$txt</td>")
+                    }
+                }
+                html.append("</tr>")
+            }
+            html.append("</tbody></table>")
+            html.append(footer)
+            html.append(appLevelFooterHtml(activeClass))
+            html.append("</div>")
+
+            // ---------- الصفحة 2: جدول دعم المجموعات ----------
+            html.append("<div class=\"sheet-card${if (isLast) "" else " pg"}\">")
+            html.append(header("جدول دعم مجموعات التلاميذ الذين لم يمتلكوا بعض الكفايات في مادة $discLabel<br><span style=\"font-size:10px;font-weight:600;\">Tableau de soutien des groupes des élèves n'ayant pas acquis certaines CB</span>"))
+            html.append("<div style=\"font-size:10px;font-weight:700;margin:4px 0;\">أفراد المجموعات (من لم يمتلك الكفاية) برقم التلميذ في اللائحة واسمه، مفصولين إلى بنات وأولاد.</div>")
+            html.append("<table class=\"sheet-table cmp\" style=\"table-layout: auto;\"><thead><tr>")
+            html.append("<th>الدعم المدرسي<br>Soutien scolaire</th><th>المجموعات<br>Groupes</th>")
+            chunk.forEach { sp -> html.append("<th>المجال / Sphère<br>${escCompHtml(sp.label)}</th>") }
+            html.append("</tr></thead><tbody>")
+            for (k in 1..3) {
+                val note = notes["SUP|${discipline.code}|$k"].orEmpty()
+                html.append("<tr style=\"height:44px;\"><td>${escCompHtml(note)}</td>")
+                html.append("<td style=\"font-weight:800;\">المجموعة التي لم تمتلك الكفاية $k<br>Le groupe n'ayant pas acquis la CB$k</td>")
+                chunk.forEach { sp ->
+                    // أعضاء المجموعة برقمهم واسمهم، مفصولين إلى بنات وأولاد (يسهّل اقتراح مجموعات الدعم)
+                    val members = sorted.mapIndexedNotNull { i, st ->
+                        if ((marks["${st.id}|${discipline.code}|${sp.code}|$k"] ?: 0) < 0) Triple(i + 1, st, compNameCell(st, discipline)) else null
+                    }
+                    fun line(label: String, list: List<Triple<Int, Student, String>>) =
+                        if (list.isEmpty()) "" else "<div style=\"text-align:right;margin-bottom:2px;\"><b>$label:</b> " +
+                            list.joinToString(" - ") { "${it.first} ${escCompHtml(it.third)}" } + "</div>"
+                    val girls = members.filter { it.second.gender == "أنثى" }
+                    val boys = members.filter { it.second.gender == "ذكر" }
+                    val others = members.filter { it.second.gender != "أنثى" && it.second.gender != "ذكر" }
+                    html.append("<td style=\"vertical-align:top;\">${line("بنات", girls)}${line("أولاد", boys)}${line("غير محدد", others)}</td>")
+                }
+                html.append("</tr>")
+            }
+            html.append("</tbody></table>")
+            html.append(footer)
+            html.append(appLevelFooterHtml(activeClass))
+            html.append("</div>")
+        }
+        html.append("</body></html>")
+        return html.toString()
+    }
+
+    /** في دفتر متابعة الفرنسية: الاسم بالعربية ثم « - » ثم الاسم بالفرنسية (إن وُجد). */
+    private fun compNameCell(
+        st: Student,
+        discipline: com.example.data.planning.LessonPreparationRepository.CompDiscipline
+    ): String {
+        val code = discipline.code.trim().uppercase()
+        val isFr = code == "FRN" || code == "FR" || discipline.label.contains("فرنس") ||
+            discipline.label.lowercase().contains("fran")
+        return if (isFr && st.frenchName.isNotBlank()) "${st.name} - ${st.frenchName}" else st.name
+    }
+
+    /** كل مواد القسم النشط في ملف واحد (بأسماء التلاميذ حتى لو كان التقييم فارغاً) */
+    fun generateCompetencyAllHtml(
+        context: Context,
+        activeClass: ClassSection,
+        students: List<Student>,
+        disciplines: List<com.example.data.planning.LessonPreparationRepository.CompDiscipline>,
+        marks: Map<String, Int>,
+        notes: Map<String, String>,
+        viewModel: TeacherViewModel? = null
+    ): String {
+        var head = ""
+        val bodies = StringBuilder()
+        disciplines.forEachIndexed { i, d ->
+            val h = generateCompetencyHtml(context, activeClass, students, d, marks, notes, viewModel)
+            if (i == 0) head = h.substringBefore("<body>")
+            bodies.append("<div style=\"page-break-after: always; break-after: page;\">")
+            bodies.append(h.substringAfter("<body>").substringBeforeLast("</body>"))
+            bodies.append("</div>")
+        }
+        return "$head<body>$bodies</body></html>"
+    }
+
     // French Grades Entry List
     fun generateFrenchGradesEntryHtml(
         context: Context,
@@ -1381,11 +1799,11 @@ object HtmlReportHelper {
             isLandscape = false,
             isList = true,
             schoolName = activeClass.schoolName,
-            fileTitle = "لائحة إدراج نتائج الفرنسية"
+            fileTitle = "سجل معلم الفرنسية"
         )
         
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>لائحة إدراج نتائج الفرنسية</title>${styles}</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>سجل معلم الفرنسية</title>${styles}</head><body>")
         
         html.append("<div class=\"sheet-card\">")
         
@@ -1401,7 +1819,7 @@ object HtmlReportHelper {
             </div>
             <div class="header-column center">
                 ${seal}
-                <div class="header-title-main" style="margin-top: 6px;">لائحة إدراج نتائج الفرنسية</div>
+                <div class="header-title-main" style="margin-top: 6px;">سجل معلم الفرنسية</div>
             </div>
             <div class="header-column left">
                 شرف - إخاء - عدالة<br>
@@ -1492,7 +1910,7 @@ object HtmlReportHelper {
         }
 
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>لائحة الأناشيد</title>$styles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>لائحة الأناشيد</title>$styles${PrintDesign.listCss()}</head><body>")
         html.append("<div class=\"a4-page\"><div class=\"sheet-card\">")
         
         html.append("""
@@ -1595,7 +2013,7 @@ object HtmlReportHelper {
         }
 
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>لائحة الكناسة والنظافة</title>$styles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>لائحة الكناسة والنظافة</title>$styles${PrintDesign.listCss()}</head><body>")
         html.append("<div class=\"a4-page\"><div class=\"sheet-card\">")
         
         html.append("""
@@ -1722,7 +2140,7 @@ object HtmlReportHelper {
         val scaleMax = if (isOutOfTen) 10 else 20
         
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>لائحة النتائج للقسم</title>$styles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>لائحة النتائج للقسم</title>$styles${PrintDesign.listCss()}</head><body>")
         
         // Pre-calculate statistics for the entire section
         val failBoundValue = viewModel.getFailBoundForClass(activeClass.id, activeClass.level)
@@ -1991,7 +2409,7 @@ object HtmlReportHelper {
         )
         
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>لائحة نتائج امتحان التجاوز</title>$styles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"format-detection\" content=\"telephone=no, date=no, address=no, email=no\"><title>لائحة نتائج امتحان التجاوز</title>$styles${PrintDesign.listCss()}</head><body>")
         
         html.append("<div class=\"sheet-card\">")
         
@@ -2393,7 +2811,7 @@ object HtmlReportHelper {
         """.trimIndent()
 
         val html = StringBuilder()
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>كشوف المعدلات الإجمالية</title>$styles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>كشوف المعدلات الإجمالية</title>$styles${PrintDesign.cardCss()}</head><body>")
 
         val teacherStampHtml = getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = 42)
         val principalStampHtml = getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = 42)
@@ -2532,7 +2950,8 @@ object HtmlReportHelper {
         activeClass: ClassSection,
         viewModel: TeacherViewModel,
         targetStudentId: Long? = null,
-        onePerPortraitPage: Boolean = false
+        onePerPortraitPage: Boolean = false,
+        perPage: Int = 2
     ): String {
         val sortedSubjects = subjects.sortedByOfficialOrder()
         val classStudents = students.filter { it.classId == activeClass.id }
@@ -2925,12 +3344,12 @@ object HtmlReportHelper {
             }
             </style>
         """ else ""
-        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>كشف النقاط السنوي</title>$styles$portraitSingleStyles</head><body>")
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>كشف النقاط السنوي</title>$styles$portraitSingleStyles${thirdCss(!onePerPortraitPage && perPage == 3, 1)}${PrintDesign.cardCss()}</head><body>")
 
         val teacherStampHtml = getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = if (onePerPortraitPage) 64 else 46)
         val principalStampHtml = getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = if (onePerPortraitPage) 64 else 46)
 
-        val chunks = classStudentsSorted.chunked(if (onePerPortraitPage) 1 else 2)
+        val chunks = classStudentsSorted.chunked(if (onePerPortraitPage) 1 else perPage)
         chunks.forEachIndexed { pageIdx, pageStudents ->
             html.append("<div class=\"a4-landscape-page\">")
             pageStudents.forEachIndexed { cardIdx, student ->
@@ -3157,7 +3576,7 @@ object HtmlReportHelper {
             
             if (!onePerPortraitPage) {
                 // Fill remaining space if page has fewer than 2 cards to keep consistent height/width of A4 landscape
-                val emptyCards = 2 - pageStudents.size
+                val emptyCards = perPage - pageStudents.size
                 for (i in 0 until emptyCards) {
                     html.append("<div style=\"width: 49%; height: 198mm; visibility: hidden;\"></div>")
                 }
@@ -3165,6 +3584,73 @@ object HtmlReportHelper {
             html.append("</div>") // Close a4-landscape-page
         }
 
+        html.append("</body></html>")
+        return html.toString()
+    }
+
+    /**
+     * شهادات تفوق وتكريم للتلاميذ الثلاثة الأوائل في القسم حسب المعدل السنوي.
+     * شهادة واحدة في كل صفحة أفقية. تُرجع "" إذا لا توجد معدلات مرصودة.
+     */
+    fun generateHonorCertificatesHtml(
+        context: Context,
+        activeClass: ClassSection,
+        students: List<Student>,
+        viewModel: TeacherViewModel
+    ): String {
+        val classStudents = students.filter { it.classId == activeClass.id }
+        val isOutOfTen = viewModel.isOutOfTen.value
+        val scaleFactor = if (isOutOfTen) 2.0 else 1.0
+        val scaleMax = if (isOutOfTen) 10 else 20
+        val isWeighted = viewModel.useFinalExamFormula.value
+
+        data class Row(val student: Student, val annual: Double)
+        val rows = classStudents.map { st ->
+            val a1 = viewModel.calculateStudentTermAverage(st.id, activeClass.id, 1)
+            val a2 = viewModel.calculateStudentTermAverage(st.id, activeClass.id, 2)
+            val a3 = viewModel.calculateStudentTermAverage(st.id, activeClass.id, 3)
+            val annual = if (isWeighted) (a1 * 1.0 + a2 * 2.0 + a3 * 3.0) / 6.0 else (a1 + a2 + a3) / 3.0
+            Row(st, annual)
+        }.filter { it.annual > 0.0 }.sortedByDescending { it.annual }
+        if (rows.isEmpty()) return ""
+
+        // الرتبة مع مراعاة التعادل (المتعادلان يأخذان الرتبة نفسها)
+        val ranks = IntArray(rows.size)
+        rows.forEachIndexed { i, r -> ranks[i] = if (i > 0 && r.annual == rows[i - 1].annual) ranks[i - 1] else i + 1 }
+        val top = rows.indices.take(3)
+
+        val design = PrintDesign.cert.coerceIn(1, PrintDesign.certNames.size)
+        val seal = getMauritanianSealImg(context)
+        val teacherStamp = getTeacherStampHtml(viewModel, activeClass.schoolName, sizePx = 58)
+        val principalStamp = getPrincipalStampHtml(viewModel, activeClass.schoolName, sizePx = 58)
+        fun esc(t: String) = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        val rankWordM = listOf("الأول", "الثاني", "الثالث")
+        val rankWordF = listOf("الأولى", "الثانية", "الثالثة")
+
+        val html = StringBuilder()
+        html.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>شهادات التفوق والتكريم</title>")
+        html.append(getCommonStyles(isLandscape = true))
+        html.append(PrintDesign.certificateCss(design))
+        html.append("</head><body>")
+        top.forEach { i ->
+            val r = rows[i]
+            val female = r.student.gender.contains("أنث") || r.student.gender.contains("بنت")
+            val who = if (female) "التلميذة" else "التلميذ"
+            val rk = ranks[i].coerceIn(1, 3)
+            val rankWord = if (female) rankWordF[rk - 1] else rankWordM[rk - 1]
+            val pron = if (female) "ها" else "ه"
+            val avg = formatCleanNumber(r.annual / scaleFactor)
+            html.append("<div class=\"cert\">")
+            html.append("<div class=\"top\"><div class=\"r\">الجمهورية الإسلامية الموريتانية<br>وزارة التربية وإصلاح النظام التعليمي<br>الإدارة الجهوية للتربية: ${esc(activeClass.wilaya.ifBlank { "غوركل" })}<br>مفتشية مقاطعة: ${esc(activeClass.moughataa.ifBlank { "لكصيبه 1" })}<br>مدرسة: ${esc(activeClass.schoolName.ifBlank { "الطلحايه 1" })}</div>")
+            html.append("<div class=\"c\">$seal</div>")
+            html.append("<div class=\"l\">شرف - إخاء - عدالة<br>السنة الدراسية: ${esc(activeClass.academicYear.ifBlank { "2025 - 2026" })}<br>القسم: ${esc(getDisplayClassName(activeClass))}</div></div>")
+            html.append("<h1>شهادة تفوق وتكريم</h1><div class=\"sub\">Certificat d'excellence et d'honneur</div>")
+            html.append("<div class=\"give\">تمنح إدارة المدرسة هذه الشهادة إلى $who:</div>")
+            html.append("<div class=\"nm\">${esc(r.student.name)}</div>")
+            html.append("<div class=\"txt\">تقديراً لتفوّق$pron وجدّ$pron واجتهاد$pron، وحصول$pron على <span class=\"rk\">المرتبة $rankWord</span> في القسم ${esc(getDisplayClassName(activeClass))} بمعدل سنوي قدره <span class=\"rk\">$avg / $scaleMax</span> في السنة الدراسية ${esc(activeClass.academicYear.ifBlank { "2025 - 2026" })}.<br>متمنّين ل$pron دوام التوفيق والنجاح.</div>")
+            html.append("<div class=\"sigs\"><div>المعلم<br>$teacherStamp</div><div>مدير المدرسة<br>$principalStamp</div></div>")
+            html.append("</div>")
+        }
         html.append("</body></html>")
         return html.toString()
     }

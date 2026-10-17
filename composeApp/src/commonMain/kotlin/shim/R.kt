@@ -10,6 +10,10 @@ import com.example.resources.ic_google
 import com.example.resources.ic_telegram
 import com.example.resources.ic_whatsapp
 import com.example.resources.ic_youtube
+import com.example.resources.img_login_promo
+import com.example.resources.img_login_promo_2
+import com.example.resources.img_login_promo_3
+import com.example.resources.img_login_promo_4
 import com.example.resources.img_mauritania_seal
 import com.example.resources.teacher_logo
 import org.jetbrains.compose.resources.DrawableResource
@@ -25,6 +29,10 @@ object R {
         const val ic_youtube = 1006
         const val teacher_logo = 1007
         const val img_mauritania_seal = 1008
+        const val img_login_promo = 1009
+        const val img_login_promo_2 = 1010
+        const val img_login_promo_3 = 1011
+        const val img_login_promo_4 = 1012
     }
 
     object raw {
@@ -48,6 +56,10 @@ object R {
         drawable.ic_whatsapp -> Res.drawable.ic_whatsapp
         drawable.ic_youtube -> Res.drawable.ic_youtube
         drawable.img_mauritania_seal -> Res.drawable.img_mauritania_seal
+        drawable.img_login_promo -> Res.drawable.img_login_promo
+        drawable.img_login_promo_2 -> Res.drawable.img_login_promo_2
+        drawable.img_login_promo_3 -> Res.drawable.img_login_promo_3
+        drawable.img_login_promo_4 -> Res.drawable.img_login_promo_4
         else -> Res.drawable.teacher_logo
     }
 

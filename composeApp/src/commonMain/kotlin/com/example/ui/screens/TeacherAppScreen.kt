@@ -3,6 +3,10 @@ package com.example.ui.screens
 import com.example.compat.*
 import kotlinx.coroutines.IO
 
+import com.example.ui.utils.uiT
+import com.example.ui.utils.uiTf
+
+import com.example.ui.utils.PdfGenerator
 import com.example.ui.utils.AppLocalization
 import com.example.ui.TeacherInfo
 import com.example.ui.components.OfficialStampSettingsSection
@@ -56,6 +60,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
@@ -441,7 +447,7 @@ fun TeacherAppScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
-                                        text = "إلغاء الخروج",
+                                        text = uiT("إلغاء الخروج"),
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.error
                                     )
@@ -567,7 +573,7 @@ fun UnifiedSyncProgressDialog(
                     if (syncSuccess) {
                         Text("🟢", fontSize = 44.sp)
                         Text(
-                            text = "100% - تمت المزامنة بنجاح!",
+                            text = uiT("100% - تمت المزامنة بنجاح!"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = Color(0xFF1B5E20),
@@ -589,7 +595,7 @@ fun UnifiedSyncProgressDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("إغلاق", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(uiT("إغلاق"), fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -635,6 +641,7 @@ fun InnerTeacherAppScreenContent(
             var activeActivationRequestId by remember { mutableStateOf<String?>(null) }
             var activeExchangeApprovalRequestId by remember { mutableStateOf<String?>(null) }
             var activeCourseActivationRequestId by remember { mutableStateOf<String?>(null) }
+            var activeClassInfoRequestKey by remember { mutableStateOf<String?>(null) }
             var currentOuterTab by remember {
                 mutableStateOf(
                     com.example.data.state.LastPlaceStore.getInt(context, "outer_tab")
@@ -716,7 +723,7 @@ fun InnerTeacherAppScreenContent(
                     onDismissRequest = { viewModel.clearLogoutConflictMessage() },
                     title = {
                         Text(
-                            text = "تعذّر حفظ نسختك ⚠️",
+                            text = uiT("تعذّر حفظ نسختك ⚠️"),
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFD32F2F)
                         )
@@ -728,7 +735,7 @@ fun InnerTeacherAppScreenContent(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                text = "إن خرجت الآن فستُمحى بيانات هذا الجهاز، وسيضيع منها كل ما لم يُرفع.",
+                                text = uiT("إن خرجت الآن فستُمحى بيانات هذا الجهاز، وسيضيع منها كل ما لم يُرفع."),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFD32F2F)
@@ -743,7 +750,7 @@ fun InnerTeacherAppScreenContent(
                             }
                         ) {
                             Text(
-                                text = "خروج على كل حال",
+                                text = uiT("خروج على كل حال"),
                                 color = Color(0xFFD32F2F),
                                 fontWeight = FontWeight.Bold
                             )
@@ -753,7 +760,7 @@ fun InnerTeacherAppScreenContent(
                         TextButton(
                             onClick = { viewModel.clearLogoutConflictMessage() }
                         ) {
-                            Text(text = "إلغاء", fontWeight = FontWeight.Bold)
+                            Text(text = uiT("إلغاء"), fontWeight = FontWeight.Bold)
                         }
                     }
                 )
@@ -793,6 +800,19 @@ fun InnerTeacherAppScreenContent(
                     val courseReqId = uri.lastPathSegment
                     if (!courseReqId.isNullOrBlank()) {
                         activeCourseActivationRequestId = courseReqId
+                        onDeepLinkConsumed?.invoke()
+                        return@LaunchedEffect
+                    }
+                }
+
+                if (uri.host == "diftar-almoaalim.web.app" && uri.path?.startsWith("/activate-class-info") == true) {
+                    val infoKey = uri.lastPathSegment
+                    if (!infoKey.isNullOrBlank()) {
+                        // ننتظر تحميل المستخدم؛ وغير المدير يُرفض فتحه بصمت دون أي رسالة
+                        if (currentUser == null) return@LaunchedEffect
+                        if (currentUser?.email?.trim()?.lowercase() == "elyedalimoctar@gmail.com") {
+                            activeClassInfoRequestKey = infoKey
+                        }
                         onDeepLinkConsumed?.invoke()
                         return@LaunchedEffect
                     }
@@ -893,7 +913,7 @@ fun InnerTeacherAppScreenContent(
                                         )
                                         Column {
                                             Text(
-                                                text = "تطبيقي المدرسي 🏫",
+                                                text = uiT("تطبيقي المدرسي 🏫"),
                                                 fontWeight = FontWeight.Black,
                                                 fontSize = 16.sp,
                                                 color = Color.White
@@ -984,7 +1004,7 @@ fun InnerTeacherAppScreenContent(
                             NavigationDrawerItem(
                                 label = {
                                     Text(
-                                        text = "دورة تحضير مسابقات المعلمين 🎓",
+                                        text = uiT("دورة تحضير مسابقات المعلمين 🎓"),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.5.sp
                                     )
@@ -1004,7 +1024,7 @@ fun InnerTeacherAppScreenContent(
                             NavigationDrawerItem(
                                 label = {
                                     Text(
-                                        text = "التشريع المدرسي ⚖️",
+                                        text = uiT("التشريع المدرسي ⚖️"),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.5.sp
                                     )
@@ -1019,6 +1039,25 @@ fun InnerTeacherAppScreenContent(
                                 icon = { Icon(Icons.Default.Assignment, contentDescription = null, tint = BentoPrimary) },
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                             )
+
+                            // تصميم اللوائح والكشوف وشهادات التفوق
+                            var showPrintDesignFromDrawer by remember { mutableStateOf(false) }
+                            NavigationDrawerItem(
+                                label = {
+                                    Text(
+                                        text = uiT("تصميم اللوائح والكشوف 🎨"),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.5.sp
+                                    )
+                                },
+                                selected = false,
+                                onClick = { showPrintDesignFromDrawer = true },
+                                icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = BentoPrimary) },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                            )
+                            if (showPrintDesignFromDrawer) {
+                                PrintDesignDialog(onDismiss = { showPrintDesignFromDrawer = false })
+                            }
 
                             // 4. About App (حول التطبيق)
                             NavigationDrawerItem(
@@ -1037,6 +1076,34 @@ fun InnerTeacherAppScreenContent(
                                     scope.launch { drawerState.close() }
                                 },
                                 icon = { Icon(Icons.Default.Info, contentDescription = null, tint = BentoPrimary) },
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                            )
+
+                            // كتبي: فتح موقع الكتب المدرسية في المتصفح
+                            val koutoubiContext = LocalContext.current
+                            NavigationDrawerItem(
+                                label = {
+                                    Text(
+                                        text = "كتبي 📚",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.5.sp
+                                    )
+                                },
+                                selected = false,
+                                onClick = {
+                                    scope.launch { drawerState.close() }
+                                    try {
+                                        val intent = android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse("https://koutoubi.mr/")
+                                        )
+                                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        koutoubiContext.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(koutoubiContext, "تعذر فتح الرابط", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                icon = { Icon(Icons.Default.Book, contentDescription = null, tint = BentoPrimary) },
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                             )
 
@@ -1103,14 +1170,14 @@ fun InnerTeacherAppScreenContent(
                                     ) {
                                         Text("☁️", fontSize = 16.sp)
                                         Text(
-                                            text = "مزامنة Google Drive المباشرة",
+                                            text = uiT("مزامنة Google Drive المباشرة"),
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 11.5.sp,
                                             color = Color(0xFF1B5E20)
                                         )
                                     }
                                     Text(
-                                        text = "آخر مزامنة: $formattedDriveTimeStr",
+                                        text = uiTf("آخر مزامنة: {0}", formattedDriveTimeStr),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFF33691E)
@@ -1119,7 +1186,7 @@ fun InnerTeacherAppScreenContent(
                                     if (connectedDevices.isNotEmpty()) {
                                         HorizontalDivider(color = Color(0xFF2E7D32).copy(alpha = 0.2f))
                                         Text(
-                                            text = "الأجهزة المتصلة بهذا الحساب:",
+                                            text = uiT("الأجهزة المتصلة بهذا الحساب:"),
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color(0xFF1B5E20)
@@ -1201,12 +1268,12 @@ fun InnerTeacherAppScreenContent(
                                     ) {
                                         Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("تسجيل الدخول 🔑", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text(uiT("تسجيل الدخول 🔑"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                     }
                                 }
 
                                 Text(
-                                    text = AppLocalization.tr("app_footer_copyright", "دفتر المعلم - v2.5\nجميع الحقوق محفوظة © المطور: المختار اليدالي 2026", appLanguage),
+                                    text = AppLocalization.tr("app_footer_copyright", "دفتر المعلم - v2.5\nجميع الحقوق محفوظة © المطور: المختار اليدالي", appLanguage),
                                     fontSize = 10.sp,
                                     color = Color.Gray,
                                     textAlign = TextAlign.Center,
@@ -1229,14 +1296,14 @@ fun InnerTeacherAppScreenContent(
                         Text("🔒", fontSize = 48.sp)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "هذه الصفحة مخصصة لمدير الأقسام فقط.",
+                            uiT("هذه الصفحة مخصصة لمدير الأقسام فقط."),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { activeCourseActivationRequestId = null }) {
-                            Text("إغلاق والعودة")
+                            Text(uiT("إغلاق والعودة"))
                         }
                     }
                 } else {
@@ -1245,6 +1312,14 @@ fun InnerTeacherAppScreenContent(
                         onClose = { activeCourseActivationRequestId = null }
                     )
                 }
+            } else
+            if (activeClassInfoRequestKey != null) {
+                ClassInfoRequestLinkView(
+                    requestKey = activeClassInfoRequestKey!!,
+                    viewModel = viewModel,
+                    currentUser = currentUser,
+                    onClose = { activeClassInfoRequestKey = null }
+                )
             } else
             if (activeActivationRequestId != null || activeExchangeApprovalRequestId != null) {
                 val isLinkOwner = currentUser?.email?.trim()?.lowercase() == "elyedalimoctar@gmail.com"
@@ -1257,7 +1332,7 @@ fun InnerTeacherAppScreenContent(
                         Text("🔒", fontSize = 48.sp)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "هذه الصفحة مخصصة لمدير الأقسام فقط.",
+                            uiT("هذه الصفحة مخصصة لمدير الأقسام فقط."),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
                             textAlign = TextAlign.Center
@@ -1267,7 +1342,7 @@ fun InnerTeacherAppScreenContent(
                             activeActivationRequestId = null
                             activeExchangeApprovalRequestId = null
                         }) {
-                            Text("إغلاق والعودة")
+                            Text(uiT("إغلاق والعودة"))
                         }
                     }
                 } else if (activeActivationRequestId != null) {
@@ -1332,6 +1407,36 @@ fun InnerTeacherAppScreenContent(
             // Outer selections state
             var selectedYear by remember { mutableStateOf<String?>(null) }
             var showCreateClassDialogOuter by remember { mutableStateOf(false) }
+
+            // زر الرجوع في الهاتف: يتراجع خطوة واحدة بدل الخروج من التطبيق.
+            // الترتيب من الأعمق إلى الأعم؛ والشاشات الداخلية تسجّل معالجها بعد هذا فتأخذ الأولوية عليه.
+            androidx.activity.compose.BackHandler(
+                enabled = drawerState.currentValue == DrawerValue.Open ||
+                    activeCourseActivationRequestId != null ||
+                    activeClassInfoRequestKey != null ||
+                    activeActivationRequestId != null ||
+                    activeExchangeApprovalRequestId != null ||
+                    isNotificationsOpen ||
+                    showClassManagerInside ||
+                    selectedClassId != null ||
+                    currentOuterTab != 0 ||
+                    selectedYear != null
+            ) {
+                when {
+                    drawerState.currentValue == DrawerValue.Open -> scope.launch { drawerState.close() }
+                    activeCourseActivationRequestId != null -> activeCourseActivationRequestId = null
+                    activeClassInfoRequestKey != null -> activeClassInfoRequestKey = null
+                    activeActivationRequestId != null || activeExchangeApprovalRequestId != null -> {
+                        activeActivationRequestId = null
+                        activeExchangeApprovalRequestId = null
+                    }
+                    isNotificationsOpen -> isNotificationsOpen = false
+                    showClassManagerInside -> showClassManagerInside = false
+                    selectedClassId != null -> viewModel.selectClass(null)
+                    currentOuterTab != 0 -> currentOuterTab = 0
+                    selectedYear != null -> selectedYear = null
+                }
+            }
 
             if (selectedClassId == null) {
                 // Outer Layout: Year & Section Selection stage
@@ -1492,13 +1597,13 @@ fun InnerTeacherAppScreenContent(
                                                 }
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
-                                                        text = "لوحة تسيير مدير الأقسام 🛠️",
+                                                        text = uiT("لوحة تسيير مدير الأقسام 🛠️"),
                                                         style = MaterialTheme.typography.titleMedium,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Color(0xFF1B5E20)
                                                     )
                                                     Text(
-                                                        text = "مرحباً بك يا مدير الأقسام! اضغط هنا لإدارة الأقسام وتسيير المواد.",
+                                                        text = uiT("مرحباً بك يا مدير الأقسام! اضغط هنا لإدارة الأقسام وتسيير المواد."),
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = Color(0xFF2E7D32)
                                                     )
@@ -1549,6 +1654,7 @@ fun InnerTeacherAppScreenContent(
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
                                                 Row(
+                                                    modifier = Modifier.weight(1f),
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                                                 ) {
@@ -1561,7 +1667,7 @@ fun InnerTeacherAppScreenContent(
                                                     ) {
                                                         Icon(Icons.Default.Book, contentDescription = null, tint = BentoSecondary)
                                                     }
-                                                    Column {
+                                                    Column(modifier = Modifier.weight(1f)) {
                                                         Row(
                                                             verticalAlignment = Alignment.CenterVertically,
                                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1569,7 +1675,8 @@ fun InnerTeacherAppScreenContent(
                                                             Text(
                                                                 text = "${AppLocalization.tr("academic_year_prefix", "العام الدراسي:", appLanguage)} $year",
                                                                 fontWeight = FontWeight.Bold,
-                                                                color = BentoText
+                                                                color = BentoText,
+                                                                modifier = Modifier.weight(1f, fill = false)
                                                             )
                                                             if (year == viewModel.getAutomaticAcademicYear()) {
                                                                 Box(
@@ -1592,7 +1699,9 @@ fun InnerTeacherAppScreenContent(
                                                                             text = AppLocalization.tr("ongoing_year_badge", "جارية", appLanguage),
                                                                             color = Color(0xFF2E7D32),
                                                                             fontSize = 10.sp,
-                                                                            fontWeight = FontWeight.Bold
+                                                                            fontWeight = FontWeight.Bold,
+                                                                            maxLines = 1,
+                                                                            softWrap = false
                                                                         )
                                                                     }
                                                                 }
@@ -1644,7 +1753,7 @@ fun InnerTeacherAppScreenContent(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "الأقسام المسجلة لعام $selectedYear (${yearClasses.size})",
+                                            text = uiTf("الأقسام المسجلة لعام {0} ({1})", selectedYear, yearClasses.size),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = BentoText
@@ -1666,16 +1775,24 @@ fun InnerTeacherAppScreenContent(
                                         // Confirm Dialog of Class deletion state
                                         var showDeleteClassConfirmDialog by remember { mutableStateOf(false) }
                                         var confirmDeleteCode by remember { mutableStateOf("") }
+                                        var showEditClassInfoDialog by remember { mutableStateOf(false) }
+                                        if (showEditClassInfoDialog) {
+                                            EditClassInfoDialog(
+                                                section = section,
+                                                viewModel = viewModel,
+                                                onDismiss = { showEditClassInfoDialog = false }
+                                            )
+                                        }
                                         if (showDeleteClassConfirmDialog) {
                                             AlertDialog(
                                                 onDismissRequest = { showDeleteClassConfirmDialog = false },
-                                                title = { Text("تأكيد حذف القسم ⚠️", fontWeight = FontWeight.Bold) },
+                                                title = { Text(uiT("تأكيد حذف القسم ⚠️"), fontWeight = FontWeight.Bold) },
                                                 text = {
                                                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                                        Text("هل أنت متأكد من حذف هذا القسم الدراسي (${section.name}) بالكامل؟ سيؤدي ذلك أيضاً إلى حذف جميع بيانات الطلاب المرتبطين ودرجاتهم من هذا الجهاز بشكل نهائي ولا يمكن التراجع عنها!")
+                                                        Text(uiTf("هل أنت متأكد من حذف هذا القسم الدراسي ({0}) بالكامل؟ سيؤدي ذلك أيضاً إلى حذف جميع بيانات الطلاب المرتبطين ودرجاتهم من هذا الجهاز بشكل نهائي ولا يمكن التراجع عنها!", section.name))
                                                         Spacer(modifier = Modifier.height(4.dp))
                                                         Text(
-                                                            text = "ادخل الرقم 9999 لحذف القسم فى الخانة:",
+                                                            text = uiT("ادخل الرقم 9999 لحذف القسم فى الخانة:"),
                                                             fontWeight = FontWeight.Bold,
                                                             style = MaterialTheme.typography.bodyMedium,
                                                             color = Color(0xFFD32F2F)
@@ -1683,7 +1800,7 @@ fun InnerTeacherAppScreenContent(
                                                         OutlinedTextField(
                                                             value = confirmDeleteCode,
                                                             onValueChange = { confirmDeleteCode = it },
-                                                            placeholder = { Text("أدخل 9999 هنا") },
+                                                            placeholder = { Text(uiT("أدخل 9999 هنا")) },
                                                             singleLine = true,
                                                             modifier = Modifier.fillMaxWidth(),
                                                             keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
@@ -1700,13 +1817,13 @@ fun InnerTeacherAppScreenContent(
                                                                 showDeleteClassConfirmDialog = false
                                                             }
                                                         ) {
-                                                            Text("نعم، احذف القسم", color = Color.Red, fontWeight = FontWeight.Bold)
+                                                            Text(uiT("نعم، احذف القسم"), color = Color.Red, fontWeight = FontWeight.Bold)
                                                         }
                                                     }
                                                 },
                                                 dismissButton = {
                                                     TextButton(onClick = { showDeleteClassConfirmDialog = false }) {
-                                                        Text("إلغاء")
+                                                        Text(uiT("إلغاء"))
                                                     }
                                                 }
                                             )
@@ -1769,7 +1886,7 @@ fun InnerTeacherAppScreenContent(
                                                                     contentAlignment = Alignment.Center
                                                                 ) {
                                                                     Text(
-                                                                        text = "✅ موثّق",
+                                                                        text = uiT("✅ موثّق"),
                                                                         color = Color(0xFF2E7D32),
                                                                         fontSize = 9.sp,
                                                                         fontWeight = FontWeight.Bold
@@ -1832,11 +1949,20 @@ fun InnerTeacherAppScreenContent(
                                                         Spacer(modifier = Modifier.height(4.dp))
 
                                                         Text(
-                                                            text = "${getLevelArabicName(section.level)}  |  المدرسة: ${section.schoolName}  |  $studentCount تلميذ وتلميذة",
+                                                            text = uiTf("{0}  |  المدرسة: {1}  |  {2} تلميذ وتلميذة", getLevelArabicName(section.level), section.schoolName, studentCount),
                                                             style = MaterialTheme.typography.bodySmall,
                                                             color = BentoPrimaryDesc
                                                         )
                                                     }
+                                                }
+                                                IconButton(
+                                                    onClick = { showEditClassInfoDialog = true }
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = "تصحيح بيانات القسم",
+                                                        tint = BentoPrimary
+                                                    )
                                                 }
                                                 IconButton(
                                                     onClick = {
@@ -1880,7 +2006,7 @@ fun InnerTeacherAppScreenContent(
                                     Icon(Icons.Default.Add, contentDescription = "إنشاء قسم", modifier = Modifier.size(24.dp))
                                 },
                                 text = {
-                                    Text("إنشاء قسم", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text(uiT("إنشاء قسم"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                 }
                             )
                         }
@@ -2005,31 +2131,31 @@ fun InnerTeacherAppScreenContent(
                                 selected = insideTab == 0,
                                 onClick = { insideTab = 0 },
                                 icon = { Icon(Icons.Default.Person, contentDescription = "تسيير الطلاب") },
-                                label = { Text(AppLocalization.tr("tab_students", "الطلاب", appLanguage), fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+                                label = { Text(if (appLanguage == "fr") "Élèves" else "الطلاب", fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 1,
                                 onClick = { insideTab = 1 },
                                 icon = { Icon(Icons.Default.EditCalendar, contentDescription = "تسيير النتائج") },
-                                label = { Text(AppLocalization.tr("tab_grades", "النتائج", appLanguage), fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+                                label = { Text(if (appLanguage == "fr") "Résultats" else "النتائج", fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 2,
                                 onClick = { insideTab = 2 },
                                 icon = { Icon(Icons.Default.Print, contentDescription = "سحب اللوائح والكشوف") },
-                                label = { Text(AppLocalization.tr("tab_reports", "الكشوف", appLanguage), fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+                                label = { Text(if (appLanguage == "fr") "Relevés" else "الكشوف", fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 4,
                                 onClick = { insideTab = 4 },
                                 icon = { Icon(Icons.Default.EditCalendar, contentDescription = "التخطيط السنوي") },
-                                label = { Text(AppLocalization.tr("tab_annual_planning", "التخطيط السنوي", appLanguage), fontSize = 8.5.sp, fontWeight = FontWeight.Bold) }
+                                label = { Text(if (appLanguage == "fr") "Planification annuelle" else "التخطيط السنوي", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 5,
                                 onClick = { insideTab = 5 },
                                 icon = { Icon(Icons.Default.ListAlt, contentDescription = "الجدول الزمني") },
-                                label = { Text(AppLocalization.tr("tab_timetable", "الجدول الزمني", appLanguage), fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+                                label = { Text(if (appLanguage == "fr") "Emploi du temps" else "الجدول الزمني", fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                             )
                         }
                     }
@@ -2093,6 +2219,21 @@ fun InnerTeacherAppScreenContent(
 
 
 @Composable
+private fun PullListButton(label: String, onDismiss: () -> Unit, onClick: () -> Unit) {
+    Button(
+        onClick = {
+            onDismiss()
+            onClick()
+        },
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
+    ) {
+        Text(uiT(label), fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
+
+@Composable
 fun ClassStudentsSubview(
     viewModel: TeacherViewModel,
     activeSection: ClassSection,
@@ -2120,6 +2261,7 @@ fun ClassStudentsSubview(
 
     // Dialog state for Viewing a Student's details
     var viewingStudent by remember { mutableStateOf<Student?>(null) }
+    androidx.activity.compose.BackHandler(enabled = viewingStudent != null) { viewingStudent = null }
 
     // Dialog state for confirming student deletion
     var studentToDelete by remember { mutableStateOf<Student?>(null) }
@@ -2141,6 +2283,180 @@ fun ClassStudentsSubview(
         }
     }
 
+    var showAttendance by remember { mutableStateOf(false) }
+    if (showAttendance) {
+        AttendanceScreen(
+            viewModel = viewModel,
+            section = activeSection,
+            students = classStudents,
+            onClose = { showAttendance = false }
+        )
+        return
+    }
+
+    var showCompetency by remember { mutableStateOf(false) }
+    if (showCompetency) {
+        CompetencyAssessmentScreen(
+            viewModel = viewModel,
+            section = activeSection,
+            students = classStudents,
+            onClose = { showCompetency = false }
+        )
+        return
+    }
+
+    var showPullMenu by remember { mutableStateOf(false) }
+    // خيارات لائحة الطلاب قبل السحب
+    var showStudentListOptions by remember { mutableStateOf(false) }
+    var optNameMode by remember { mutableStateOf("both") }
+    var optSchoolId by remember { mutableStateOf(true) }
+    var optNationalId by remember { mutableStateOf(true) }
+    var optPhone1 by remember { mutableStateOf(true) }
+    var optPhone2 by remember { mutableStateOf(true) }
+    var optHealth by remember { mutableStateOf(true) }
+    if (showStudentListOptions) {
+        val optPdfName = activeSection.name.replace(" ", "_")
+        AlertDialog(
+            onDismissRequest = { showStudentListOptions = false },
+            title = { Text("ما الذي تريد إظهاره في اللائحة؟", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    Text("الرقم (التسلسلي) يظهر دائماً. الاسم:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    listOf("ar" to "الاسم بالعربية", "fr" to "الاسم بالفرنسية", "both" to "الاسم بالعربية والفرنسية معاً").forEach { (key, label) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { optNameMode = key },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = optNameMode == key, onClick = { optNameMode = key })
+                            Text(label, fontSize = 14.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text("باقي الأعمدة:", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Row(Modifier.fillMaxWidth().clickable { optNationalId = !optNationalId }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = optNationalId, onCheckedChange = { optNationalId = it }); Text("الرقم الوطني", fontSize = 14.sp)
+                    }
+                    Row(Modifier.fillMaxWidth().clickable { optSchoolId = !optSchoolId }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = optSchoolId, onCheckedChange = { optSchoolId = it }); Text("الرقم المدرسي", fontSize = 14.sp)
+                    }
+                    Row(Modifier.fillMaxWidth().clickable { optPhone1 = !optPhone1 }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = optPhone1, onCheckedChange = { optPhone1 = it }); Text("هاتف الوكيل 1", fontSize = 14.sp)
+                    }
+                    Row(Modifier.fillMaxWidth().clickable { optPhone2 = !optPhone2 }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = optPhone2, onCheckedChange = { optPhone2 = it }); Text("هاتف الوكيل 2", fontSize = 14.sp)
+                    }
+                    Row(Modifier.fillMaxWidth().clickable { optHealth = !optHealth }, verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = optHealth, onCheckedChange = { optHealth = it }); Text("الملاحظات الصحية", fontSize = 14.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showStudentListOptions = false
+                    viewModel.runWithLoading("جاري سحب وتصدير لائحة تلاميذ القسم...") {
+                        val html = HtmlReportHelper.generateStudentDirectoryHtml(
+                            context = context,
+                            className = activeSection.name,
+                            students = classStudents,
+                            activeClass = activeSection,
+                            viewModel = viewModel,
+                            nameMode = optNameMode,
+                            showSchoolId = optSchoolId,
+                            showNationalId = optNationalId,
+                            showPhone1 = optPhone1,
+                            showPhone2 = optPhone2,
+                            showHealth = optHealth
+                        )
+                        HtmlReportHelper.shareHtmlAsPdf(context, html, "لائحة_تلاميذ_قسم_$optPdfName.pdf")
+                    }
+                }) { Text("سحب اللائحة") }
+            },
+            dismissButton = { TextButton(onClick = { showStudentListOptions = false }) { Text("إلغاء") } }
+        )
+    }
+    val allSubjectsForPull by viewModel.subjects.collectAsState()
+    val allCustomForPull by viewModel.customizations.collectAsState()
+    if (showPullMenu) {
+        val pullClassName = activeSection.name.replace(" ", "_")
+        val needStudents: (String) -> Boolean = { msg ->
+            if (classStudents.isEmpty()) {
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                true
+            } else {
+                false
+            }
+        }
+        AlertDialog(
+            onDismissRequest = { showPullMenu = false },
+            title = { Text(uiT("سحب اللوائح"), fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    PullListButton("👥 لائحة الطلاب 📥", onDismiss = { showPullMenu = false }) {
+                        if (!needStudents("الرجاء تسجيل الطلاب للقسم أولاً لسحب اللائحة")) {
+                            showStudentListOptions = true
+                        }
+                    }
+                    PullListButton("دفتر الغياب", onDismiss = { showPullMenu = false }) { showAttendance = true }
+                    PullListButton("دفتر المتابعة", onDismiss = { showPullMenu = false }) { showCompetency = true }
+                    PullListButton("🎤 المنشدين 📥", onDismiss = { showPullMenu = false }) {
+                        if (!needStudents("الرجاء تسجيل الطلاب للقسم أولاً للتقسيم")) {
+                            viewModel.runWithLoading("جاري سحب وتصدير لائحة مجموعات المنشدين...") {
+                                val html = HtmlReportHelper.generateHymnsGroupsHtml(
+                                    context = context,
+                                    className = activeSection.name,
+                                    students = classStudents,
+                                    activeClass = activeSection,
+                                    viewModel = viewModel
+                                )
+                                HtmlReportHelper.shareHtmlAsPdf(context, html, "لائحة_مجموعات_المنشدين_قسم_$pullClassName.pdf")
+                            }
+                        }
+                    }
+                    PullListButton("🧹 الكناسة 📥", onDismiss = { showPullMenu = false }) {
+                        if (!needStudents("لا توجد أسماء بالقسم لبناء جدول النظافة")) {
+                            viewModel.runWithLoading("جاري سحب وتصدير جدول النظافة والكناسة...") {
+                                val html = HtmlReportHelper.generateCleaningGroupsHtml(
+                                    context = context,
+                                    className = activeSection.name,
+                                    students = classStudents,
+                                    activeClass = activeSection,
+                                    viewModel = viewModel
+                                )
+                                HtmlReportHelper.shareHtmlAsPdf(context, html, "جدول_النظافة_والكناسة_قسم_$pullClassName.pdf")
+                            }
+                        }
+                    }
+                    PullListButton("📝 سجل معلم الفرنسية 📥", onDismiss = { showPullMenu = false }) {
+                        if (!needStudents("الرجاء تسجيل الطلاب للقسم أولاً لسحب الورقة")) {
+                            val frenchSub = viewModel.buildClassSubjects(activeSection.id, activeSection.level, allSubjectsForPull, allCustomForPull)
+                                .find { it.name.contains("فرنسية") || it.name.lowercase().contains("french") }
+                            val frenchMaxPoints = frenchSub?.maxPoints ?: 20
+                            viewModel.runWithLoading("جاري سحب وتصدير لائحة رصد الفرنسية...") {
+                                val html = HtmlReportHelper.generateFrenchGradesEntryHtml(
+                                    context = context,
+                                    className = activeSection.name,
+                                    students = classStudents,
+                                    activeClass = activeSection,
+                                    frenchMaxPoints = frenchMaxPoints,
+                                    viewModel = viewModel
+                                )
+                                HtmlReportHelper.shareHtmlAsPdf(context, html, "لائحة_رصد_الفرنسية_قسم_$pullClassName.pdf")
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showPullMenu = false }) { Text(uiT("إلغاء")) } }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -2148,6 +2464,14 @@ fun ClassStudentsSubview(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
+            OutlinedButton(
+                onClick = { showPullMenu = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(uiT("سحب اللوائح"), fontWeight = FontWeight.Bold)
+            }
         }
 
         // Smaller Add Student Button and Search Toggle in a Row
@@ -2181,7 +2505,7 @@ fun ClassStudentsSubview(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "تسجيل طالب جديد",
+                            text = uiT("تسجيل طالب جديد"),
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimary,
                             fontSize = 12.5.sp
@@ -2223,7 +2547,7 @@ fun ClassStudentsSubview(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("student_search_input"),
-                    placeholder = { Text("ابحث عن تلميذ بالاسم أو الرقم المدرسي...", color = BentoPrimaryDesc) },
+                    placeholder = { Text(uiT("ابحث عن تلميذ بالاسم أو الرقم المدرسي..."), color = BentoPrimaryDesc) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -2272,7 +2596,7 @@ fun ClassStudentsSubview(
                     color = BentoText
                 )
                 Text(
-                    text = "👦 عدد الأولاد: $boysCount | 👧 عدد البنات: $girlsCount",
+                    text = uiTf("👦 عدد الأولاد: {0} | 👧 عدد البنات: {1}", boysCount, girlsCount),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = BentoPrimaryDesc
@@ -2301,7 +2625,7 @@ fun ClassStudentsSubview(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8E24AA))
                     ) {
-                        Text("🧪 ملء القسم ببيانات تجريبية", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(uiT("🧪 ملء القسم ببيانات تجريبية"), color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -2375,7 +2699,7 @@ fun ClassStudentsSubview(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("عرض", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            Text(uiT("عرض"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
                     }
                 }
@@ -2391,8 +2715,8 @@ fun ClassStudentsSubview(
         val student = studentToDelete!!
         AlertDialog(
             onDismissRequest = { studentToDelete = null },
-            title = { Text("تأكيد حذف التلميذ ⚠️", fontWeight = FontWeight.Bold) },
-            text = { Text("هل أنت متأكد من حذف التلميذ (${student.name}) نهائياً من هذا القسم؟ سيتم حذف جميع درجاته بشكل كامل ولا يمكن استرجاع البيانات!") },
+            title = { Text(uiT("تأكيد حذف التلميذ ⚠️"), fontWeight = FontWeight.Bold) },
+            text = { Text(uiTf("هل أنت متأكد من حذف التلميذ ({0}) نهائياً من هذا القسم؟ سيتم حذف جميع درجاته بشكل كامل ولا يمكن استرجاع البيانات!", student.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -2403,12 +2727,12 @@ fun ClassStudentsSubview(
                         }
                     }
                 ) {
-                    Text("نعم، احذف الطالب", color = Color.Red, fontWeight = FontWeight.Bold)
+                    Text(uiT("نعم، احذف الطالب"), color = Color.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { studentToDelete = null }) {
-                    Text("إلغاء")
+                    Text(uiT("إلغاء"))
                 }
             }
         )
@@ -2442,7 +2766,7 @@ fun ClassStudentsSubview(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "بطاقة التلميذ 👤",
+                                text = uiT("بطاقة التلميذ 👤"),
                                 fontWeight = FontWeight.Black,
                                 fontSize = 16.sp,
                                 color = BentoText
@@ -2467,7 +2791,7 @@ fun ClassStudentsSubview(
                                 ) {
                                     Icon(Icons.Default.Edit, contentDescription = "تعديل", modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("تعديل", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    Text(uiT("تعديل"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                                 }
 
                                 IconButton(
@@ -2555,7 +2879,7 @@ fun ClassStudentsSubview(
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = "حذف", modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("حذف", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(uiT("حذف"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
 
                             Button(
@@ -2564,7 +2888,7 @@ fun ClassStudentsSubview(
                                 modifier = Modifier.weight(0.65f),
                                 colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                             ) {
-                                Text("رجوع للائحة الطلاب ↩️", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
+                                Text(uiT("رجوع للائحة الطلاب ↩️"), fontWeight = FontWeight.Bold, color = Color.White, fontSize = 12.sp)
                             }
                         }
                     }
@@ -2616,7 +2940,7 @@ fun ClassStudentsSubview(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(Icons.Default.EditCalendar, contentDescription = null, tint = BentoPrimary)
-                            Text("تعديل معلومات الطالب ✏️", fontWeight = FontWeight.Bold, color = BentoText)
+                            Text(uiT("تعديل معلومات الطالب ✏️"), fontWeight = FontWeight.Bold, color = BentoText)
                         }
                         IconButton(onClick = { editingStudent = null }) {
                             Icon(Icons.Default.Close, contentDescription = null, tint = BentoPrimaryDesc)
@@ -2636,7 +2960,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = editName,
                             onValueChange = { editName = it },
-                            label = { Text("الاسم الكامل") },
+                            label = { Text(uiT("الاسم الكامل")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2645,7 +2969,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = editFrenchName,
                             onValueChange = { editFrenchName = it },
-                            label = { Text("الاسم بالفرنسية") },
+                            label = { Text(uiT("الاسم بالفرنسية")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2660,7 +2984,7 @@ fun ClassStudentsSubview(
                                 onValueChange = { input ->
                                     editSchoolId = input
                                 },
-                                label = { Text("الرقم المدرسي") },
+                                label = { Text(uiT("الرقم المدرسي")) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -2671,7 +2995,7 @@ fun ClassStudentsSubview(
                                 onValueChange = { input ->
                                     editNationalId = input
                                 },
-                                label = { Text("الرقم الوطني") },
+                                label = { Text(uiT("الرقم الوطني")) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -2684,7 +3008,7 @@ fun ClassStudentsSubview(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text("الجنس:", fontWeight = FontWeight.Bold, color = BentoText, fontSize = 13.sp)
+                            Text(uiT("الجنس:"), fontWeight = FontWeight.Bold, color = BentoText, fontSize = 13.sp)
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
@@ -2715,7 +3039,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = editParentPhone1,
                             onValueChange = { editParentPhone1 = it },
-                            label = { Text("هاتف ولي الأمر الأول") },
+                            label = { Text(uiT("هاتف ولي الأمر الأول")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2724,7 +3048,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = editParentPhone2,
                             onValueChange = { editParentPhone2 = it },
-                            label = { Text("هاتف ولي الأمر الثاني") },
+                            label = { Text(uiT("هاتف ولي الأمر الثاني")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2733,7 +3057,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = editHealthNotes,
                             onValueChange = { editHealthNotes = it },
-                            label = { Text("ملاحظات صحية") },
+                            label = { Text(uiT("ملاحظات صحية")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -2764,7 +3088,7 @@ fun ClassStudentsSubview(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                     ) {
-                        Text("حفظ التعديلات", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(uiT("حفظ التعديلات"), fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -2824,7 +3148,7 @@ fun ClassStudentsSubview(
                             Icon(Icons.Default.Close, contentDescription = null, tint = BentoPrimaryDesc)
                         }
                         Text(
-                            text = "طالب جديد ➕",
+                            text = uiT("طالب جديد ➕"),
                             fontWeight = FontWeight.Bold,
                             color = BentoText,
                             style = MaterialTheme.typography.titleMedium
@@ -2838,7 +3162,7 @@ fun ClassStudentsSubview(
                                 disabledContainerColor = BentoGrayOutline.copy(alpha = 0.5f)
                             )
                         ) {
-                            Text("حفظ", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(uiT("حفظ"), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
 
@@ -2855,7 +3179,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = studentName,
                             onValueChange = { studentName = it },
-                            label = { Text("الاسم الكامل للتلميذ (بالعربية)") },
+                            label = { Text(uiT("الاسم الكامل للتلميذ (بالعربية)")) },
                             modifier = Modifier.fillMaxWidth().testTag("add_student_name_input"),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2864,7 +3188,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = studentFrenchName,
                             onValueChange = { studentFrenchName = it },
-                            label = { Text("الاسم بالفرنسية (اختياري)") },
+                            label = { Text(uiT("الاسم بالفرنسية (اختياري)")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -2879,7 +3203,7 @@ fun ClassStudentsSubview(
                                 onValueChange = { input ->
                                     studentSchoolId = input
                                 },
-                                label = { Text("الرقم المدرسي") },
+                                label = { Text(uiT("الرقم المدرسي")) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -2890,7 +3214,7 @@ fun ClassStudentsSubview(
                                 onValueChange = { input ->
                                     studentNationalId = input
                                 },
-                                label = { Text("الرقم الوطني") },
+                                label = { Text(uiT("الرقم الوطني")) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -2904,7 +3228,7 @@ fun ClassStudentsSubview(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text("الجنس:", fontWeight = FontWeight.Bold, color = BentoText, fontSize = 13.sp)
+                            Text(uiT("الجنس:"), fontWeight = FontWeight.Bold, color = BentoText, fontSize = 13.sp)
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
@@ -2935,7 +3259,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = studentParentPhone1,
                             onValueChange = { studentParentPhone1 = it },
-                            label = { Text("هاتف ولي الأمر الأول") },
+                            label = { Text(uiT("هاتف ولي الأمر الأول")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true,
@@ -2945,7 +3269,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = studentParentPhone2,
                             onValueChange = { studentParentPhone2 = it },
-                            label = { Text("هاتف ولي الأمر الثاني (اختياري)") },
+                            label = { Text(uiT("هاتف ولي الأمر الثاني (اختياري)")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true,
@@ -2955,7 +3279,7 @@ fun ClassStudentsSubview(
                         OutlinedTextField(
                             value = studentHealthNotes,
                             onValueChange = { studentHealthNotes = it },
-                            label = { Text("ملاحظات صحية أو صعوبات تعلم (اختياري)") },
+                            label = { Text(uiT("ملاحظات صحية أو صعوبات تعلم (اختياري)")) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         )
@@ -2979,7 +3303,7 @@ fun ClassStudentsSubview(
                                 disabledContainerColor = BentoGrayOutline.copy(alpha = 0.5f)
                             )
                         ) {
-                            Text("حفظ وتسجيل الطالب", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(uiT("حفظ وتسجيل الطالب"), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -3008,6 +3332,10 @@ private fun DetailItem(icon: androidx.compose.ui.graphics.vector.ImageVector, la
 }
 
 
+
+/** نص الإشراف على التطبيق، يظهر في واجهة الدخول وواجهة اختيار السنة الدراسية. */
+private const val APP_SUPERVISION_TEXT =
+    "تَطْبِيقُ دَفْتَرِ الْمُعَلِّمِ مِنْ إِشْرَافِ مَجْمُوعَةٍ مِنْ مُفَتِّشِي التَّعْلِيمِ الْأَسَاسِيِّ، وَمُكَوِّنِي مَدَارِسِ تَكْوِينِ الْمُعَلِّمِينَ، وَالْمُهَنْدِسِينَ، لِتَسْهِيلِ عَمَلِ الْمُعَلِّمِ."
 
 @Composable
 fun BentoDashboard(
@@ -3047,7 +3375,7 @@ fun BentoDashboard(
                         )
                     }
                     Text(
-                        text = "معلوماتي الشخصية والحساب 👤",
+                        text = uiT("معلوماتي الشخصية والحساب 👤"),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium,
                         color = com.example.ui.theme.BentoText
@@ -3073,28 +3401,10 @@ fun BentoDashboard(
                                 .padding(14.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Name
-                            Column {
-                                Text(
-                                    text = "الاسم الكامل للمعلم 📝",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = com.example.ui.theme.BentoPrimaryDesc,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = if (currentUser?.displayName.isNullOrBlank()) "غير محدد" else currentUser?.displayName ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = com.example.ui.theme.BentoText
-                                )
-                            }
-                            
-                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-
                             // Email
                             Column {
                                 Text(
-                                    text = "البريد الإلكتروني 📧",
+                                    text = uiT("البريد الإلكتروني 📧"),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = com.example.ui.theme.BentoPrimaryDesc,
                                     fontWeight = FontWeight.Bold
@@ -3111,7 +3421,7 @@ fun BentoDashboard(
                             // UID
                             Column {
                                 Text(
-                                    text = "معرف المعلم الفريد (UID) 🔑",
+                                    text = uiT("معرف المعلم الفريد (UID) 🔑"),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = com.example.ui.theme.BentoPrimaryDesc,
                                     fontWeight = FontWeight.Bold
@@ -3170,7 +3480,7 @@ fun BentoDashboard(
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("تسجيل الخروج من الحساب", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(uiT("تسجيل الخروج من الحساب"), color = Color.White, fontWeight = FontWeight.Bold)
                     }
 
                     // Delete Account Button
@@ -3185,13 +3495,13 @@ fun BentoDashboard(
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("حذف الحساب نهائياً ⚠️", fontWeight = FontWeight.Bold)
+                        Text(uiT("حذف الحساب نهائياً ⚠️"), fontWeight = FontWeight.Bold)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showProfileDialog = false }) {
-                    Text("إغلاق", fontWeight = FontWeight.Bold)
+                    Text(uiT("إغلاق"), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -3208,7 +3518,7 @@ fun BentoDashboard(
                 ) {
                     Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD32F2F))
                     Text(
-                        text = "تحذير أمني هام جداً! ⚠️",
+                        text = uiT("تحذير أمني هام جداً! ⚠️"),
                         fontWeight = FontWeight.Black,
                         color = Color(0xFFD32F2F)
                     )
@@ -3219,7 +3529,7 @@ fun BentoDashboard(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "هل أنت متأكد تماماً من رغبتك في حذف حسابك الدراسي بالكامل؟",
+                        text = uiT("هل أنت متأكد تماماً من رغبتك في حذف حسابك الدراسي بالكامل؟"),
                         fontWeight = FontWeight.Bold,
                         color = com.example.ui.theme.BentoText
                     )
@@ -3234,33 +3544,33 @@ fun BentoDashboard(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "ما يترتب على حذف الحساب 🔴:",
+                                text = uiT("ما يترتب على حذف الحساب 🔴:"),
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFC62828),
                                 fontSize = 13.sp
                             )
                             Text(
-                                text = "• سيتم حذف كافة الأقسام الدراسية المسجلة باسمك.",
+                                text = uiT("• سيتم حذف كافة الأقسام الدراسية المسجلة باسمك."),
                                 fontSize = 12.sp,
                                 color = Color(0xFFD32F2F)
                             )
                             Text(
-                                text = "• سيتم مسح جميع الطلاب المسجلين ودرجاتهم وتفاصيلهم.",
+                                text = uiT("• سيتم مسح جميع الطلاب المسجلين ودرجاتهم وتفاصيلهم."),
                                 fontSize = 12.sp,
                                 color = Color(0xFFD32F2F)
                             )
                             Text(
-                                text = "• سيتم حذف أقسامك وحالة تفعيلها وإعلاناتك من الخادم نهائياً.",
+                                text = uiT("• سيتم حذف أقسامك وحالة تفعيلها وإعلاناتك من الخادم نهائياً."),
                                 fontSize = 12.sp,
                                 color = Color(0xFFD32F2F)
                             )
                             Text(
-                                text = "• سيتم مسح الذاكرة المحلية والملفات من هذا الهاتف بالكامل.",
+                                text = uiT("• سيتم مسح الذاكرة المحلية والملفات من هذا الهاتف بالكامل."),
                                 fontSize = 12.sp,
                                 color = Color(0xFFD32F2F)
                             )
                             Text(
-                                text = "• لن تتمكن من استرجاع أي بيانات أو تراجع عن هذا الإجراء أبداً.",
+                                text = uiT("• لن تتمكن من استرجاع أي بيانات أو تراجع عن هذا الإجراء أبداً."),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = Color(0xFFC62828)
@@ -3269,7 +3579,7 @@ fun BentoDashboard(
                     }
                     
                     Text(
-                        text = "عند التأكيد، سيتم مسح كافة ملفاتك وصورك وحسابك نهائياً من النظام.",
+                        text = uiT("عند التأكيد، سيتم مسح كافة ملفاتك وصورك وحسابك نهائياً من النظام."),
                         style = MaterialTheme.typography.bodySmall,
                         color = com.example.ui.theme.BentoPrimaryDesc
                     )
@@ -3286,12 +3596,12 @@ fun BentoDashboard(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
                 ) {
-                    Text("نعم، احذف حسابي وبياناتي نهائياً", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(uiT("نعم، احذف حسابي وبياناتي نهائياً"), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteAccountConfirmDialog = false }) {
-                    Text("إلغاء والتراجع", fontWeight = FontWeight.Bold)
+                    Text(uiT("إلغاء والتراجع"), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -3339,7 +3649,7 @@ fun BentoDashboard(
                 ) {
                     val currentUserState by viewModel.currentUser.collectAsState()
                     Text(
-                        text = if (currentUserState?.displayName.isNullOrBlank()) "دفتر المعلم" else "دفتر المعلم - ${currentUserState?.displayName}",
+                        text = "دفتر المعلم",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = com.example.ui.theme.BentoText,
@@ -3348,52 +3658,17 @@ fun BentoDashboard(
                     )
                 }
             }
-            
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Display UID dynamically in a small pill, copy to clipboard when clicked
-                val currentUserState by viewModel.currentUser.collectAsState()
-                val contextVal = LocalContext.current
-                currentUserState?.uid?.let { uid ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFE8F5E9))
-                            .clickable {
-                                val clipboard = contextVal.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                val clip = android.content.ClipData.newPlainText("UID", uid)
-                                clipboard.setPrimaryClip(clip)
-                                android.widget.Toast.makeText(contextVal, "تم نسخ معرف المعلم (UID)", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "${AppLocalization.tr("teacher_id_prefix", "معرف: ", appLanguage)}${uid.take(5)}...",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1B5E20)
-                        )
-                    }
-                }
-                
-                IconButton(
-                    onClick = { showProfileDialog = true },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(com.example.ui.theme.BentoLightLavender)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "إعدادات الحساب ومعلوماتي",
-                        tint = com.example.ui.theme.BentoPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
         }
+
+        // نص الإشراف أسفل عنوان «دفتر المعلم»
+        Text(
+            text = APP_SUPERVISION_TEXT,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold,
+            color = com.example.ui.theme.BentoText.copy(alpha = 0.75f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+        )
 
         if (showStats) {
             StudentAndClassesStatsCard(
@@ -3869,14 +4144,14 @@ fun CreateClassDialog(
             onDismissRequest = { showDuplicateConfirmDialog = false },
             title = {
                 Text(
-                    text = "تنبيه: قسم مكرر ⚠️",
+                    text = uiT("تنبيه: قسم مكرر ⚠️"),
                     fontWeight = FontWeight.Bold,
                     color = BentoText
                 )
             },
             text = {
                 Text(
-                    text = "يوجد لديك قسم بهذا المستوى !! هل تريد اضافة قسم آخر من هذا المستوى ؟",
+                    text = uiT("يوجد لديك قسم بهذا المستوى !! هل تريد اضافة قسم آخر من هذا المستوى ؟"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = BentoText
                 )
@@ -3899,14 +4174,14 @@ fun CreateClassDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                 ) {
-                    Text("نعم", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(uiT("نعم"), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 OutlinedButton(
                     onClick = { showDuplicateConfirmDialog = false }
                 ) {
-                    Text("إلغاء", fontWeight = FontWeight.Bold)
+                    Text(uiT("إلغاء"), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -3954,7 +4229,7 @@ fun CreateClassDialog(
                             )
                         }
                         Text(
-                            text = "إنشاء قسم دراسي جديد",
+                            text = uiT("إنشاء قسم دراسي جديد"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = BentoText
@@ -4004,8 +4279,8 @@ fun CreateClassDialog(
                     OutlinedTextField(
                         value = schoolName,
                         onValueChange = { schoolName = it },
-                        label = { Text("إسم المدرسة") },
-                        placeholder = { Text("مثال: مدرسة الجمهورية") },
+                        label = { Text(uiT("إسم المدرسة")) },
+                        placeholder = { Text(uiT("مثال: مدرسة الجمهورية")) },
                         modifier = Modifier.fillMaxWidth().testTag("dialog_school_name_input"),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
@@ -4014,7 +4289,7 @@ fun CreateClassDialog(
                     if (existingSchools.isNotEmpty()) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "💡 المدارس المسجلة لديك (اضغط للاختيار السريع):",
+                                text = uiT("💡 المدارس المسجلة لديك (اضغط للاختيار السريع):"),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = BentoPrimaryDesc
@@ -4048,7 +4323,7 @@ fun CreateClassDialog(
                 // 3. Level selection row (1 to 6)
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "المستوى الدراسي من 1 إلى 6",
+                        text = uiT("المستوى الدراسي من 1 إلى 6"),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimaryDesc,
@@ -4112,7 +4387,7 @@ fun CreateClassDialog(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "إنشاء القسم", modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("إنشاء القسم الدراسي الجديد", fontWeight = FontWeight.Bold)
+                    Text(uiT("إنشاء القسم الدراسي الجديد"), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -4231,12 +4506,10 @@ fun AcademicYearSelectorDropdown(
     }
 
     val currentAcademicYear = "$baseStartYear-${baseStartYear + 1}"
-    val nextAcademicYear = "${baseStartYear + 1}-${baseStartYear + 2}"
     val prevAcademicYear = "${baseStartYear - 1}-$baseStartYear"
 
     val options = listOf(
         currentAcademicYear to "العام الدراسي الحالي ($currentAcademicYear)",
-        nextAcademicYear to "العام الدراسي المقبل ($nextAcademicYear)",
         prevAcademicYear to "العام الدراسي السابق ($prevAcademicYear)"
     )
 
@@ -4389,6 +4662,7 @@ fun GradesEntryTab(
         mutableStateOf(com.example.data.state.LastPlaceStore.getBoolean(context, gradingPlaceKey + "active"))
     }
     var gradingPlaceRestored by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = isGradingActive) { isGradingActive = false }
     LaunchedEffect(availableSubjects, classStudents) {
         if (gradingPlaceRestored) return@LaunchedEffect
         if (availableSubjects.isEmpty() && classStudents.isEmpty()) return@LaunchedEffect
@@ -4723,10 +4997,11 @@ fun GradesEntryTab(
                                         Toast.LENGTH_LONG
                                     ).show()
                                 } else {
-                                    viewModel.saveGrades(parseList)
-                                    val now = System.currentTimeMillis()
-                                    savedNow.forEach { id -> recentlySavedSubjectStudentIds[id] = now }
-                                    Toast.makeText(context, "تم حفظ درجات المادة بنجاح!", Toast.LENGTH_SHORT).show()
+                                    if (viewModel.saveGrades(parseList)) {
+                                        val now = System.currentTimeMillis()
+                                        savedNow.forEach { id -> recentlySavedSubjectStudentIds[id] = now }
+                                        Toast.makeText(context, "تم حفظ درجات المادة بنجاح!", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                         }
@@ -4761,13 +5036,13 @@ fun GradesEntryTab(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "شريط تقدم رصد المادة للقسم 📊",
+                                    text = uiT("شريط تقدم رصد المادة للقسم 📊"),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.secondary
                                 )
                                 Text(
-                                    text = "تم رصد $activeProgressCompleted من $activeProgressTotal طالب (${(activeProgressPercent * 100).toInt()}%)",
+                                    text = uiTf("تم رصد {0} من {1} طالب ({2}%)", activeProgressCompleted, activeProgressTotal, (activeProgressPercent * 100).toInt()),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.secondary
@@ -5057,10 +5332,11 @@ fun GradesEntryTab(
                                     Toast.LENGTH_LONG
                                 ).show()
                             } else {
-                                viewModel.saveGrades(parseList)
-                                val now = System.currentTimeMillis()
-                                savedNow.forEach { id -> recentlySavedSubjectIds[id] = now }
-                                Toast.makeText(context, "تم حفظ درجات الطالب بنجاح!", Toast.LENGTH_SHORT).show()
+                                if (viewModel.saveGrades(parseList)) {
+                                    val now = System.currentTimeMillis()
+                                    savedNow.forEach { id -> recentlySavedSubjectIds[id] = now }
+                                    Toast.makeText(context, "تم حفظ درجات الطالب بنجاح!", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }
@@ -5093,13 +5369,13 @@ fun GradesEntryTab(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "شريط تقدم رصد الطالب للمواد 📊",
+                                        text = uiT("شريط تقدم رصد الطالب للمواد 📊"),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.secondary
                                     )
                                     Text(
-                                        text = "تم رصد $activeProgressCompleted من $activeProgressTotal مادة (${(activeProgressPercent * 100).toInt()}%)",
+                                        text = uiTf("تم رصد {0} من {1} مادة ({2}%)", activeProgressCompleted, activeProgressTotal, (activeProgressPercent * 100).toInt()),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Black,
                                         color = MaterialTheme.colorScheme.secondary
@@ -5141,7 +5417,7 @@ fun GradesEntryTab(
                                                 Text("⭐", fontSize = 15.sp)
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
-                                                    text = "معدلات الفصول السابقة (تُجلب تلقائياً أو تُدخل يدوياً)",
+                                                    text = uiT("معدلات الفصول السابقة (تُجلب تلقائياً أو تُدخل يدوياً)"),
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 13.sp,
                                                     color = MaterialTheme.colorScheme.primary
@@ -5152,7 +5428,7 @@ fun GradesEntryTab(
                                             if (hasT1 || hasT2) {
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
-                                                    text = "✨ ملاحظة: المعدلات المحسوبة من درجات فصولك السابقة بالتطبيق تم اعتمادها تلقائياً لتوحيد النتائج.",
+                                                    text = uiT("✨ ملاحظة: المعدلات المحسوبة من درجات فصولك السابقة بالتطبيق تم اعتمادها تلقائياً لتوحيد النتائج."),
                                                     fontSize = 10.5.sp,
                                                     color = Color(0xFF2E7D32),
                                                     fontWeight = FontWeight.Medium
@@ -5350,7 +5626,7 @@ fun GradesEntryTab(
                                 Text("📈", fontSize = 16.sp)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "شريط تقدم تسجيل النتائج 📊",
+                                    text = uiT("شريط تقدم تسجيل النتائج 📊"),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Black,
                                     color = BentoText
@@ -5430,6 +5706,18 @@ fun GradesEntryTab(
                 if (terms.none { it.first == activeTermId }) {
                     terms.firstOrNull()?.first?.let { firstTermId ->
                         viewModel.selectTerm(firstTermId)
+                    }
+                }
+            }
+
+            // صفحة إدراج النتائج لا تُفتح على فصل مقفول: إن جاء الفصل المختار من صفحة الكشوف
+            // (أو من حفظ سابق) ولم يكن مفعّلًا، نعيد الاختيار إلى أول فصل مفعّل.
+            LaunchedEffect(activeTermId, activeClass?.id, activeClass?.isTerm2Activated, activeClass?.isTerm3Activated, activeClass?.isTerm4Activated, terms) {
+                val cls = activeClass
+                if (cls != null && !cls.isTermUnlocked(activeTermId)) {
+                    val firstOpen = terms.firstOrNull { cls.isTermUnlocked(it.first) }
+                    if (firstOpen != null && firstOpen.first != activeTermId) {
+                        viewModel.selectTerm(firstOpen.first)
                     }
                 }
             }
@@ -5541,7 +5829,7 @@ fun GradesEntryTab(
                                                 if (isTerm4) {
                                                     Spacer(modifier = Modifier.height(2.dp))
                                                     Text(
-                                                        text = "مخصص للوافدين الجدد الذين لم يدرجو نتائج الفصل الأول والثانى",
+                                                        text = uiT("مخصص للوافدين الجدد الذين لم يدرجو نتائج الفصل الأول والثانى"),
                                                         fontSize = 10.5.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Color(0xFFC62828),
@@ -5552,25 +5840,31 @@ fun GradesEntryTab(
                                         },
                                         onClick = {
                                             expandedGradeTermDropdown = false
-                                            viewModel.checkTermLockAndSelect(termId, activeClass?.id) { isUnlocked ->
-                                                if (!isUnlocked) {
-                                                    if (activeClass != null && !activeClass.isSyncedToServer) {
-                                                        viewModel.resendUnsyncedClasses()
-                                                        Toast.makeText(
-                                                            context,
-                                                            "لم يصل قسمك إلى الخادم بعد. تأكد من اتصالك بالإنترنت وأعد المحاولة بعد لحظات.",
-                                                            Toast.LENGTH_LONG
-                                                        ).show()
-                                                    } else if (activeClass != null && activeClass.isActivationExpired()) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            "هذا القسم من سنة دراسية منتهية (${activeClass.academicYear})، والتفعيل يخصّ السنة الجارية فقط. أما كشوف هذا القسم فهي متاحة لك بدون تفعيل من صفحة الكشوف.",
-                                                            Toast.LENGTH_LONG
-                                                        ).show()
-                                                    } else {
+                                            // الفصل المقفول محليًا: نُظهر النتيجة فورًا دون انتظار الخادم (حتى لا يظنّ المستخدم أن التطبيق تعطّل)،
+                                            // ويستمر التحقق من الخادم في الخلفية، فإن كان الفصل مفعّلًا هناك فُتح وأُغلقت النافذة تلقائيًا.
+                                            val lockedLocally = activeClass != null && !activeClass.isTermUnlocked(termId)
+                                            if (lockedLocally && activeClass != null) {
+                                                if (!activeClass.isSyncedToServer) {
+                                                    viewModel.resendUnsyncedClasses()
+                                                    Toast.makeText(
+                                                        context,
+                                                        "لم يصل قسمك إلى الخادم بعد. تأكد من اتصالك بالإنترنت وأعد المحاولة بعد لحظات.",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                } else if (activeClass.isActivationExpired()) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "هذا القسم من سنة دراسية منتهية (${activeClass.academicYear})، والتفعيل يخصّ السنة الجارية فقط. أما كشوف هذا القسم فهي متاحة لك بدون تفعيل من صفحة الكشوف.",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                } else {
                                                     targetTermNameForActivation = termName
                                                     showActivationPromoDialog = true
-                                                    }
+                                                }
+                                            }
+                                            viewModel.checkTermLockAndSelect(termId, activeClass?.id) { isUnlocked ->
+                                                if (isUnlocked && lockedLocally) {
+                                                    showActivationPromoDialog = false
                                                 }
                                             }
                                         }
@@ -5790,7 +6084,7 @@ fun GradesEntryTab(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        text = "سحب الكشوف والتقارير 📋",
+                        text = uiT("سحب الكشوف والتقارير 📋"),
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.primary
@@ -5805,21 +6099,21 @@ fun GradesEntryTab(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        text = "القسم: ${activeClass.name} | الفصل الدراسي: الفصل $activeTermId",
+                        text = uiTf("القسم: {0} | الفصل الدراسي: الفصل {1}", activeClass.name, activeTermId),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
                     Text(
-                        text = "تم رصد جميع النتائج بنجاح! اختر نوع الكشف الذي ترغب في طباعته أو تصديره بصيغة PDF:",
+                        text = uiT("تم رصد جميع النتائج بنجاح! اختر نوع الكشف الذي ترغب في طباعته أو تصديره بصيغة PDF:"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
 
                     // Option 1: سحب كشوف درجات القسم
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("🗒️ كشوف درجات طلاب القسم للفصل المحدد (كشفين بالصفحة)", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
+                        Text(uiT("🗒️ كشوف درجات طلاب القسم للفصل المحدد (كشفين بالصفحة)"), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
                         Button(
                             onClick = {
                                 if (performanceList.isEmpty()) {
@@ -5845,19 +6139,19 @@ fun GradesEntryTab(
                                     }
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("📥 سحب ومشاركة كشوف الدرجات (PDF)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                            Text(uiT("📥 سحب ومشاركة كشوف الدرجات (PDF)"), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                         }
                     }
 
                     // Option 2: سحب لائحة نتائج القسم التفصيلية
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("📊 لائحة النتائج وجدول علامات الفصل التفصيلي للقسم", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
+                        Text(uiT("📊 لائحة النتائج وجدول علامات الفصل التفصيلي للقسم"), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
                         Button(
                             onClick = {
                                 if (performanceList.isEmpty()) {
@@ -5883,13 +6177,13 @@ fun GradesEntryTab(
                                     }
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                         ) {
                             Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("📥 سحب ومشاركة كشف النتائج التفصيلي (PDF)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                            Text(uiT("📥 سحب ومشاركة كشف النتائج التفصيلي (PDF)"), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                         }
                     }
 
@@ -5926,7 +6220,7 @@ fun GradesEntryTab(
                                         }
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                             ) {
@@ -5938,7 +6232,7 @@ fun GradesEntryTab(
 
                         // 2. سحب كشوف الدرجات للمعدلات و الرتبه
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("📑 كشف درجات المعدلات والرتبة السنوية فقط (3 بالورقة عمودياً)", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
+                            Text(uiT("📑 كشف درجات المعدلات والرتبة السنوية فقط (3 بالورقة عمودياً)"), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
                             Button(
                                 onClick = {
                                     if (classStudents.isEmpty()) {
@@ -5956,19 +6250,19 @@ fun GradesEntryTab(
                                         }
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                             ) {
                                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("📥 سحب ومشاركة كشوف المعدلات السنوية (PDF)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                                Text(uiT("📥 سحب ومشاركة كشوف المعدلات السنوية (PDF)"), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                             }
                         }
 
                         // 3. سحب كشوف الدرجات للمواد فى جميع الفصول مع المعدل العام و الرتبه
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("📊 كشوف نقاط المواد في جميع الفصول مع المعدل العام والرتبة السنوية (كشفان بالصفحة)", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
+                            Text(uiT("📊 كشوف نقاط المواد في جميع الفصول مع المعدل العام والرتبة السنوية (كشفان بالصفحة)"), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = BentoText)
                             Button(
                                 onClick = {
                                     if (classStudents.isEmpty()) {
@@ -5987,13 +6281,13 @@ fun GradesEntryTab(
                                         }
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                             ) {
                                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("📥 سحب ومشاركة كشوف النقاط السنوية (PDF)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+                                Text(uiT("📥 سحب ومشاركة كشوف النقاط السنوية (PDF)"), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                             }
                         }
                     }
@@ -6001,7 +6295,7 @@ fun GradesEntryTab(
             },
             confirmButton = {
                 TextButton(onClick = { showPullOptionsDialog = false }) {
-                    Text("إغلاق", fontWeight = FontWeight.Bold)
+                    Text(uiT("إغلاق"), fontWeight = FontWeight.Bold)
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -6075,13 +6369,13 @@ fun ReportsTab(
             .padding(16.dp)
     ) {
         Text(
-            text = "استخراج التقارير وسحب الكشوف 📊",
+            text = uiT("استخراج التقارير وسحب الكشوف 📊"),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "شاهد كشوف درجات الطلاب مع احتساب المعدل والرتبة، أو اسحب اللائحة التفصيلية للقسم للفصل المحدد.",
+            text = uiT("شاهد كشوف درجات الطلاب مع احتساب المعدل والرتبة، أو اسحب اللائحة التفصيلية للقسم للفصل المحدد."),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -6098,7 +6392,7 @@ fun ReportsTab(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("المجموعة والصف", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                Text(uiT("المجموعة والصف"), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                 Text(
                     text = activeClass?.name ?: "الرجاء اختيار مجموعة معينة...",
                     fontWeight = FontWeight.Bold,
@@ -6149,7 +6443,7 @@ fun ReportsTab(
         val isCardTerm3Active = activeClass?.isTerm3Activated == true
 
         Text(
-            text = "تحديد الفصل الدراسي للاستعراض والرصد 📅",
+            text = uiT("تحديد الفصل الدراسي للاستعراض والرصد 📅"),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 6.dp),
@@ -6166,7 +6460,7 @@ fun ReportsTab(
             ) {
                 Column(modifier = Modifier.padding(10.dp)) {
                     Text(
-                        text = "فصول السنة العادية 🟢",
+                        text = uiT("فصول السنة العادية 🟢"),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1B5E20),
@@ -6245,7 +6539,7 @@ fun ReportsTab(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "الفصل الأخير فقط ⭐",
+                                text = uiT("الفصل الأخير فقط ⭐"),
                                 color = if (isFinalSelected) Color.White else Color(0xFFC62828),
                                 fontWeight = FontWeight.Black,
                                 fontSize = 13.sp
@@ -6255,7 +6549,7 @@ fun ReportsTab(
 
                     // الرسالة الصغيرة أسفل خيار الفصل الأخير فقط في مستطيله الأحمر
                     Text(
-                        text = "💡 مخصص للوافدين الجدد الذين لم يدرجو نتائج الفصل الأول والثانى",
+                        text = uiT("💡 مخصص للوافدين الجدد الذين لم يدرجو نتائج الفصل الأول والثانى"),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFC62828),
@@ -6292,7 +6586,7 @@ fun ReportsTab(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "كشف درجات طالب فردي",
+                        text = uiT("كشف درجات طالب فردي"),
                         color = if (reportMode == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -6308,7 +6602,7 @@ fun ReportsTab(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "التقرير التفصيلي العام",
+                        text = uiT("التقرير التفصيلي العام"),
                         color = if (reportMode == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -6330,7 +6624,7 @@ fun ReportsTab(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("طالب كشف النقاط", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(uiT("طالب كشف النقاط"), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                         Text(
                             text = activeStudentPerf?.student?.name ?: "اختر طالباً...",
                             fontWeight = FontWeight.Bold,
@@ -6398,8 +6692,8 @@ fun ReportsTab(
                                     modifier = Modifier.weight(1.2f),
                                     horizontalAlignment = Alignment.Start
                                 ) {
-                                    Text("الجمهورية الإسلامية الموريتانية", fontSize = 8.5.sp, fontWeight = FontWeight.Black, color = Color.Black)
-                                    Text("وزارة التربية وإصلاح النظام التعليمي", fontSize = 7.5.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                    Text(uiT("الجمهورية الإسلامية الموريتانية"), fontSize = 8.5.sp, fontWeight = FontWeight.Black, color = Color.Black)
+                                    Text(uiT("وزارة التربية وإصلاح النظام التعليمي"), fontSize = 7.5.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                                     Text("الإدارة الجهوية للتربية: ${activeClass.wilaya.ifBlank { "غوركل" }}", fontSize = 7.5.sp, color = Color.Black)
                                     Text("مفتشية مقاطعة: ${activeClass.moughataa.ifBlank { "لكصيبه 1" }}", fontSize = 7.5.sp, color = Color.Black)
                                     Text("مدرسة: ${activeClass.schoolName.ifBlank { "الطلحايه 1" }}", fontSize = 7.5.sp, color = Color.Black)
@@ -6434,9 +6728,9 @@ fun ReportsTab(
                                     modifier = Modifier.weight(1.0f),
                                     horizontalAlignment = Alignment.End
                                 ) {
-                                    Text("شرف - إخاء - عدالة", fontSize = 8.5.sp, fontWeight = FontWeight.Black, color = Color.Black)
+                                    Text(uiT("شرف - إخاء - عدالة"), fontSize = 8.5.sp, fontWeight = FontWeight.Black, color = Color.Black)
                                     Text("السنة الدراسية: ${activeClass.academicYear.ifBlank { "2025 - 2026" }}", fontSize = 7.5.sp, color = Color.Black)
-                                    Text("القسم: ${HtmlReportHelper.getDisplayClassName(activeClass)}", fontSize = 7.5.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                    Text(uiTf("القسم: {0}", HtmlReportHelper.getDisplayClassName(activeClass)), fontSize = 7.5.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                                     Text("الفصل: ${when(activeTermId) { 1 -> "الأول" 2 -> "الثاني" else -> "الثالث" }}", fontSize = 7.5.sp, color = Color.Black)
                                 }
                             }
@@ -6449,13 +6743,13 @@ fun ReportsTab(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "الاسم الكامل: ${activeStudentPerf.student.name}",
+                                    text = uiTf("الاسم الكامل: {0}", activeStudentPerf.student.name),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
                                 Text(
-                                    text = "رقم النداء: $callNumber",
+                                    text = uiTf("رقم النداء: {0}", callNumber),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
@@ -6465,7 +6759,7 @@ fun ReportsTab(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "الرقم المدرسي: ${activeStudentPerf.student.schoolId}",
+                                    text = uiTf("الرقم المدرسي: {0}", activeStudentPerf.student.schoolId),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
@@ -6494,7 +6788,7 @@ fun ReportsTab(
                                                 .padding(vertical = 4.dp, horizontal = 6.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text("المادة", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                            Text(uiT("المادة"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                                         }
                                         Box(
                                             modifier = Modifier
@@ -6503,7 +6797,7 @@ fun ReportsTab(
                                                 .padding(vertical = 4.dp, horizontal = 6.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text("النقاط", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                            Text(uiT("النقاط"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                                         }
                                     }
 
@@ -6547,7 +6841,7 @@ fun ReportsTab(
                                                 .padding(vertical = 4.dp, horizontal = 6.dp),
                                             contentAlignment = Alignment.CenterStart
                                         ) {
-                                            Text("المجموع", fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                            Text(uiT("المجموع"), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                         }
                                         Box(
                                             modifier = Modifier
@@ -6571,7 +6865,7 @@ fun ReportsTab(
                                         // Exam 1 Avg
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("معدل الامتحان الأول", fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("معدل الامتحان الأول"), fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text("20 / ${HtmlReportHelper.formatCleanNumber(avg1)}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6580,7 +6874,7 @@ fun ReportsTab(
                                         // Exam 2 Avg
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("معدل الامتحان الثاني", fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("معدل الامتحان الثاني"), fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text("20 / ${HtmlReportHelper.formatCleanNumber(avg2)}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6589,7 +6883,7 @@ fun ReportsTab(
                                         // Exam 3 Avg
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("معدل الامتحان الثالث", fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("معدل الامتحان الثالث"), fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text("20 / ${HtmlReportHelper.formatCleanNumber(avg3)}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6598,7 +6892,7 @@ fun ReportsTab(
                                         // General Average (المعدل العام)
                                         Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFE8F5E9))) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("المعدل العام", fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("المعدل العام"), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text("20 / ${HtmlReportHelper.formatCleanNumber(generalAverage)}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6607,7 +6901,7 @@ fun ReportsTab(
                                         // Final status
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("القرار أو الملاحظة", fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("القرار أو الملاحظة"), fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text(if (generalAverage >= 10.0) "ناجح" else "راسب", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6616,7 +6910,7 @@ fun ReportsTab(
                                         // Rank (الرتبة)
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("الرتبة", fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("الرتبة"), fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text(if (generalRank > 0) "$generalRank" else "-", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6629,7 +6923,7 @@ fun ReportsTab(
                                         // Average
                                         Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFE8F5E9))) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("المعدل", fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("المعدل"), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text("20 / ${HtmlReportHelper.formatCleanNumber(avg)}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6638,7 +6932,7 @@ fun ReportsTab(
                                         // Final status
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("النتيجة النهائية", fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("النتيجة النهائية"), fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text(if (avg >= 10.0) "ناجح" else "راسب", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6647,7 +6941,7 @@ fun ReportsTab(
                                         // Rank (الرتبة)
                                         Row(modifier = Modifier.fillMaxWidth()) {
                                             Box(modifier = Modifier.weight(2f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text("الرتبة", fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
+                                                Text(uiT("الرتبة"), fontSize = 10.sp, modifier = Modifier.padding(start = 4.dp), color = Color.Black)
                                             }
                                             Box(modifier = Modifier.weight(1f).border(0.5.dp, Color.Black).padding(vertical = 4.dp, horizontal = 6.dp), contentAlignment = Alignment.Center) {
                                                 Text(if (rank > 0) "$rank" else "-", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
@@ -6672,7 +6966,7 @@ fun ReportsTab(
                                             .padding(vertical = 4.dp, horizontal = 6.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text("الملاحظات", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                        Text(uiT("الملاحظات"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                                     }
                                     // Value
                                     Box(
@@ -6702,8 +6996,8 @@ fun ReportsTab(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("المدير", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                                Text("المعلم", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text(uiT("المدير"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text(uiT("المعلم"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             }
                         }
                     }
@@ -6736,7 +7030,7 @@ fun ReportsTab(
                                 ) {
                                     Icon(Icons.Default.ContentCopy, contentDescription = "نسخ")
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("نسخ الكشف", fontWeight = FontWeight.Bold)
+                                    Text(uiT("نسخ الكشف"), fontWeight = FontWeight.Bold)
                                 }
 
                                 Button(
@@ -6760,7 +7054,7 @@ fun ReportsTab(
                                 ) {
                                     Icon(Icons.Default.Share, contentDescription = "مشاركة")
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("مشاركة الكشف", fontWeight = FontWeight.Bold)
+                                    Text(uiT("مشاركة الكشف"), fontWeight = FontWeight.Bold)
                                 }
                             }
                 }
@@ -6788,7 +7082,7 @@ fun ReportsTab(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = "مشاركة")
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("مشاركة كشف تفصيلي", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(uiT("مشاركة كشف تفصيلي"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
 
                     Button(
@@ -6825,7 +7119,7 @@ fun ReportsTab(
                     ) {
                         Icon(Icons.Default.Assignment, contentDescription = "CSV Excel")
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("مشاركة كملف CSV", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(uiT("مشاركة كملف CSV"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
 
@@ -6838,7 +7132,7 @@ fun ReportsTab(
                 ) {
                     item {
                         Text(
-                            text = "لائحة النتائج والترتيب للطلاب (${performanceList.size})",
+                            text = uiTf("لائحة النتائج والترتيب للطلاب ({0})", performanceList.size),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -6923,7 +7217,7 @@ fun ReportsTab(
                                                 )
                                             } else {
                                                 Text(
-                                                    text = "لا توجد درجات مسجلة بعد",
+                                                    text = uiT("لا توجد درجات مسجلة بعد"),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.outline
                                                 )
@@ -6935,13 +7229,13 @@ fun ReportsTab(
                                         val totalMaxPoints = subjects.sumOf { it.maxPoints }
                                         val totalAchievedPoints = perf.gradesMap.values.sum()
                                         Text(
-                                            text = "المجموع: ${HtmlReportHelper.formatCleanNumber(totalAchievedPoints)} / $totalMaxPoints",
+                                            text = uiTf("المجموع: {0} / {1}", HtmlReportHelper.formatCleanNumber(totalAchievedPoints), totalMaxPoints),
                                             fontSize = 9.5.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            text = "المعدل: ${HtmlReportHelper.formatCleanNumber(perf.averageScore)}",
+                                            text = uiTf("المعدل: {0}", HtmlReportHelper.formatCleanNumber(perf.averageScore)),
                                             fontWeight = FontWeight.Black,
                                             fontSize = 14.sp,
                                             color = MaterialTheme.colorScheme.primary
@@ -7016,14 +7310,14 @@ fun SubjectsTab(
             if (onClose != null) {
                 OutlinedButton(
                     onClick = onClose,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = BentoPrimary),
                     border = BorderStroke(1.dp, BentoPrimary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("العودة إلى بوابة تسجيل المعلمين 🏫", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(uiT("العودة إلى بوابة تسجيل المعلمين 🏫"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -7057,14 +7351,14 @@ fun SubjectsTab(
                     }
 
                     Text(
-                        text = "مدير الأقسام",
+                        text = uiT("مدير الأقسام"),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Black,
                         color = BentoPrimary
                     )
 
                     Text(
-                        text = "هذه الصفحة محمية وخاصة بمدير الأقسام فقط. الرجاء إدخال اسم المستخدم وكلمة السر.",
+                        text = uiT("هذه الصفحة محمية وخاصة بمدير الأقسام فقط. الرجاء إدخال اسم المستخدم وكلمة السر."),
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
                         color = BentoPrimaryDesc
@@ -7076,7 +7370,7 @@ fun SubjectsTab(
                             username = it
                             loginError = false
                         },
-                        label = { Text("اسم المستخدم") },
+                        label = { Text(uiT("اسم المستخدم")) },
                         placeholder = { Text("") },
                         modifier = Modifier.fillMaxWidth().testTag("admin_login_username"),
                         shape = RoundedCornerShape(12.dp),
@@ -7092,7 +7386,7 @@ fun SubjectsTab(
                             password = it
                             loginError = false
                         },
-                        label = { Text("كلمة السر") },
+                        label = { Text(uiT("كلمة السر")) },
                         modifier = Modifier.fillMaxWidth().testTag("admin_login_password"),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -7113,7 +7407,7 @@ fun SubjectsTab(
 
                     if (loginError) {
                         Text(
-                            text = "اسم المستخدم أو كلمة السر غير صحيحة!",
+                            text = uiT("اسم المستخدم أو كلمة السر غير صحيحة!"),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Red,
                             fontWeight = FontWeight.Bold
@@ -7140,7 +7434,7 @@ fun SubjectsTab(
                             contentColor = Color.White
                         )
                     ) {
-                        Text("تسجيل الدخول الآمن", fontWeight = FontWeight.Black)
+                        Text(uiT("تسجيل الدخول الآمن"), fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -7186,13 +7480,13 @@ fun SubjectsTab(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "صفحة مدير الأقسام 🛠️",
+                            text = uiT("صفحة مدير الأقسام 🛠️"),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Black,
                             color = BentoPrimary
                         )
                         Text(
-                            text = "إضافة وتعديل كل مواد الأقسام ومجموع نقاطها.",
+                            text = uiT("إضافة وتعديل كل مواد الأقسام ومجموع نقاطها."),
                             style = MaterialTheme.typography.bodySmall,
                             color = BentoPrimaryDesc
                         )
@@ -7210,7 +7504,7 @@ fun SubjectsTab(
                             contentColor = Color.Red
                         )
                     ) {
-                        Text("خروج", fontWeight = FontWeight.Bold)
+                        Text(uiT("خروج"), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -7225,7 +7519,11 @@ fun SubjectsTab(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        listOf("الإحصائيات 📊" to 2).forEach { (title, idx) ->
+                        val pendingInfoRequestsCount = viewModel.classInfoRequests.collectAsState().value.size
+                        listOf(
+                            "الإحصائيات 📊" to 2,
+                            (if (pendingInfoRequestsCount > 0) "طلبات التصحيح ✏️ ($pendingInfoRequestsCount)" else "طلبات التصحيح ✏️") to 5
+                        ).forEach { (title, idx) ->
                             val isSel = adminTab == idx
                             Box(
                                 modifier = Modifier
@@ -7254,6 +7552,12 @@ fun SubjectsTab(
             if (adminTab == 2) {
                 item {
                     AdminStatsTabContent(viewModel = viewModel)
+                }
+            }
+
+            if (adminTab == 5) {
+                item {
+                    AdminClassInfoRequestsTab(viewModel = viewModel)
                 }
             }
 
@@ -7342,14 +7646,14 @@ fun PersonalClassSubjectsEditor(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "تعديل مواد القسم: ${activeClass.getFormattedName()} 📚",
+                        text = uiTf("تعديل مواد القسم: {0} 📚", activeClass.getFormattedName()),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Black,
                         color = BentoPrimary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "يمكنك تعديل أسماء المواد والدرجات القصوى لقسمك بشكل شخصي لتظهر في الكشوف والتقارير.",
+                        text = uiT("يمكنك تعديل أسماء المواد والدرجات القصوى لقسمك بشكل شخصي لتظهر في الكشوف والتقارير."),
                         style = MaterialTheme.typography.bodySmall,
                         color = BentoPrimaryDesc
                     )
@@ -7377,11 +7681,11 @@ fun PersonalClassSubjectsEditor(
             },
             colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
             shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth().height(50.dp)
+            modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
         ) {
             Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("إضافة مادة جديدة لهذا القسم فقط ➕", fontWeight = FontWeight.Bold, color = Color.White)
+            Text(uiT("إضافة مادة جديدة لهذا القسم فقط ➕"), fontWeight = FontWeight.Bold, color = Color.White)
         }
         
         if (levelSubjects.isEmpty()) {
@@ -7441,7 +7745,7 @@ fun PersonalClassSubjectsEditor(
                                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
                                             Text(
-                                                text = "مادة مخصصة جديدة",
+                                                text = uiT("مادة مخصصة جديدة"),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = Color.White,
                                                 fontWeight = FontWeight.Bold
@@ -7454,7 +7758,7 @@ fun PersonalClassSubjectsEditor(
                                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
                                             Text(
-                                                text = "تم تعديلها",
+                                                text = uiT("تم تعديلها"),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = Color.White,
                                                 fontWeight = FontWeight.Bold
@@ -7464,7 +7768,7 @@ fun PersonalClassSubjectsEditor(
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "الدرجة القصوى: $currentMaxPoints",
+                                    text = uiTf("الدرجة القصوى: {0}", currentMaxPoints),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = BentoPrimaryDesc
                                 )
@@ -7575,7 +7879,7 @@ fun PersonalClassSubjectsEditor(
                         ) {
                             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = "مواد مخفية في هذا القسم (${hiddenSubjects.size})",
+                                    text = uiTf("مواد مخفية في هذا القسم ({0})", hiddenSubjects.size),
                                     fontWeight = FontWeight.Bold,
                                     color = Color.DarkGray,
                                     fontSize = 14.sp
@@ -7592,7 +7896,7 @@ fun PersonalClassSubjectsEditor(
                                                 Toast.makeText(context, "تمت إعادة المادة إلى هذا القسم", Toast.LENGTH_SHORT).show()
                                             }
                                         }) {
-                                            Text("إرجاع", color = BentoPrimary, fontWeight = FontWeight.Bold)
+                                            Text(uiT("إرجاع"), color = BentoPrimary, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -7607,19 +7911,19 @@ fun PersonalClassSubjectsEditor(
     if (showAddSubjectDialog) {
         AlertDialog(
             onDismissRequest = { showAddSubjectDialog = false },
-            title = { Text("إضافة مادة جديدة لقسمك 📚", fontWeight = FontWeight.Bold, color = BentoPrimary) },
+            title = { Text(uiT("إضافة مادة جديدة لقسمك 📚"), fontWeight = FontWeight.Bold, color = BentoPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     OutlinedTextField(
                         value = newSubjectName,
                         onValueChange = { newSubjectName = it },
-                        label = { Text("اسم المادة") },
+                        label = { Text(uiT("اسم المادة")) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = newSubjectMaxPoints,
                         onValueChange = { newSubjectMaxPoints = it },
-                        label = { Text("الدرجة القصوى (مثال: 20)") },
+                        label = { Text(uiT("الدرجة القصوى (مثال: 20)")) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -7652,12 +7956,12 @@ fun PersonalClassSubjectsEditor(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                 ) {
-                    Text("إضافة وحفظ", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(uiT("إضافة وحفظ"), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddSubjectDialog = false }) {
-                    Text("إلغاء", color = Color.Gray)
+                    Text(uiT("إلغاء"), color = Color.Gray)
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -7670,19 +7974,19 @@ fun PersonalClassSubjectsEditor(
         
         AlertDialog(
             onDismissRequest = { showEditDialog = null },
-            title = { Text("تعديل معلومات المادة ✏️", fontWeight = FontWeight.Bold, color = BentoPrimary) },
+            title = { Text(uiT("تعديل معلومات المادة ✏️"), fontWeight = FontWeight.Bold, color = BentoPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
-                        label = { Text("اسم المادة") },
+                        label = { Text(uiT("اسم المادة")) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = editMaxPoints,
                         onValueChange = { editMaxPoints = it },
-                        label = { Text("الدرجة القصوى") },
+                        label = { Text(uiT("الدرجة القصوى")) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
@@ -7762,12 +8066,12 @@ fun PersonalClassSubjectsEditor(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                 ) {
-                    Text("حفظ التعديلات", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(uiT("حفظ التعديلات"), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = null }) {
-                    Text("إلغاء", color = Color.Gray)
+                    Text(uiT("إلغاء"), color = Color.Gray)
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -7779,12 +8083,12 @@ fun PersonalClassSubjectsEditor(
         val rIsPersonal = rSubject.classId != 0L
         AlertDialog(
             onDismissRequest = { rescaleSubject = null },
-            title = { Text("تنبيه: ستتحوّل الدرجات ⚠️", fontWeight = FontWeight.Bold) },
+            title = { Text(uiT("تنبيه: ستتحوّل الدرجات ⚠️"), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("غيّرت الدرجة القصوى لمادة (${rSubject.name}) من $rescaleOldPoints إلى $rescaleNewPoints.")
-                    Text("سيؤدي هذا إلى تحويل $rescaleAffectedCount درجة مرصودة لتلاميذ هذا القسم إلى السلم الجديد.")
-                    Text("يمكنك الرجوع لاحقاً بإعادة الدرجة القصوى إلى $rescaleOldPoints، فتعود الدرجات كما كانت.")
+                    Text(uiTf("غيّرت الدرجة القصوى لمادة ({0}) من {1} إلى {2}.", rSubject.name, rescaleOldPoints, rescaleNewPoints))
+                    Text(uiTf("سيؤدي هذا إلى تحويل {0} درجة مرصودة لتلاميذ هذا القسم إلى السلم الجديد.", rescaleAffectedCount))
+                    Text(uiTf("يمكنك الرجوع لاحقاً بإعادة الدرجة القصوى إلى {0}، فتعود الدرجات كما كانت.", rescaleOldPoints))
                 }
             },
             confirmButton = {
@@ -7834,12 +8138,12 @@ fun PersonalClassSubjectsEditor(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                 ) {
-                    Text("متابعة التحويل", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(uiT("متابعة التحويل"), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { rescaleSubject = null }) {
-                    Text("إلغاء", color = Color.Gray)
+                    Text(uiT("إلغاء"), color = Color.Gray)
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -7850,12 +8154,12 @@ fun PersonalClassSubjectsEditor(
         val resSubject = resetSubject!!
         AlertDialog(
             onDismissRequest = { resetSubject = null },
-            title = { Text("تنبيه: ستتحوّل الدرجات ⚠️", fontWeight = FontWeight.Bold) },
+            title = { Text(uiT("تنبيه: ستتحوّل الدرجات ⚠️"), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("ستعود مادة (${resSubject.name}) إلى اسمها ودرجتها الافتراضية، فتتغير الدرجة القصوى من $resetOldPoints إلى $resetNewPoints.")
-                    Text("وسيتم تحويل $resetAffectedCount درجة مرصودة لتلاميذ هذا القسم إلى السلم الجديد حتى تبقى النتائج صحيحة.")
-                    Text("يمكنك الرجوع لاحقاً بتعديل المادة وإعادة الدرجة القصوى إلى $resetOldPoints.")
+                    Text(uiTf("ستعود مادة ({0}) إلى اسمها ودرجتها الافتراضية، فتتغير الدرجة القصوى من {1} إلى {2}.", resSubject.name, resetOldPoints, resetNewPoints))
+                    Text(uiTf("وسيتم تحويل {0} درجة مرصودة لتلاميذ هذا القسم إلى السلم الجديد حتى تبقى النتائج صحيحة.", resetAffectedCount))
+                    Text(uiTf("يمكنك الرجوع لاحقاً بتعديل المادة وإعادة الدرجة القصوى إلى {0}.", resetOldPoints))
                 }
             },
             confirmButton = {
@@ -7877,12 +8181,12 @@ fun PersonalClassSubjectsEditor(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
                 ) {
-                    Text("متابعة الاستعادة", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(uiT("متابعة الاستعادة"), color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { resetSubject = null }) {
-                    Text("إلغاء", color = Color.Gray)
+                    Text(uiT("إلغاء"), color = Color.Gray)
                 }
             },
             shape = RoundedCornerShape(24.dp)
@@ -7896,13 +8200,13 @@ fun PersonalClassSubjectsEditor(
                 subjectToDeleteFor9999 = null
                 confirmDeleteSubjectCode = ""
             },
-            title = { Text("تأكيد حذف المادة ⚠️", fontWeight = FontWeight.Bold) },
+            title = { Text(uiT("تأكيد حذف المادة ⚠️"), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("هل أنت متأكد من حذف المادة (${subject.name}) نهائياً؟ سيؤدي هذا الإجراء إلى حذف كافة الدرجات المسجلة للتلاميذ في هذه المادة بشكل كامل ونهائي ولا يمكن استرجاعها!")
+                    Text(uiTf("هل أنت متأكد من حذف المادة ({0}) نهائياً؟ سيؤدي هذا الإجراء إلى حذف كافة الدرجات المسجلة للتلاميذ في هذه المادة بشكل كامل ونهائي ولا يمكن استرجاعها!", subject.name))
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "ادخل الرقم 9999 لحذف المادة في الخانة أدناه:",
+                        text = uiT("ادخل الرقم 9999 لحذف المادة في الخانة أدناه:"),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFFD32F2F)
@@ -7910,7 +8214,7 @@ fun PersonalClassSubjectsEditor(
                     OutlinedTextField(
                         value = confirmDeleteSubjectCode,
                         onValueChange = { confirmDeleteSubjectCode = it },
-                        placeholder = { Text("أدخل 9999 هنا") },
+                        placeholder = { Text(uiT("أدخل 9999 هنا")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
@@ -7936,7 +8240,7 @@ fun PersonalClassSubjectsEditor(
                             confirmDeleteSubjectCode = ""
                         }
                     ) {
-                        Text("نعم، احذف المادة", color = Color.Red, fontWeight = FontWeight.Bold)
+                        Text(uiT("نعم، احذف المادة"), color = Color.Red, fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -7947,7 +8251,7 @@ fun PersonalClassSubjectsEditor(
                         confirmDeleteSubjectCode = ""
                     }
                 ) {
-                    Text("إلغاء")
+                    Text(uiT("إلغاء"))
                 }
             }
         )
@@ -7956,9 +8260,9 @@ fun PersonalClassSubjectsEditor(
     subjectToHideConfirm?.let { sub ->
         AlertDialog(
             onDismissRequest = { subjectToHideConfirm = null },
-            title = { Text("إخفاء المادة من هذا القسم", fontWeight = FontWeight.Bold) },
+            title = { Text(uiT("إخفاء المادة من هذا القسم"), fontWeight = FontWeight.Bold) },
             text = {
-                Text("هذه المادة فيها $subjectToHideCount درجة مسجلة في هذا القسم. الإخفاء لا يحذف الدرجات، وتعود كما هي إذا أرجعت المادة.")
+                Text(uiTf("هذه المادة فيها {0} درجة مسجلة في هذا القسم. الإخفاء لا يحذف الدرجات، وتعود كما هي إذا أرجعت المادة.", subjectToHideCount))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -7967,12 +8271,12 @@ fun PersonalClassSubjectsEditor(
                     }
                     subjectToHideConfirm = null
                 }) {
-                    Text("إخفاء", color = Color.Red, fontWeight = FontWeight.Bold)
+                    Text(uiT("إخفاء"), color = Color.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { subjectToHideConfirm = null }) {
-                    Text("إلغاء")
+                    Text(uiT("إلغاء"))
                 }
             }
         )
@@ -8062,7 +8366,7 @@ fun <T> DialogSelection(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("بحث...") },
+                        placeholder = { Text(uiT("بحث...")) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
@@ -8079,7 +8383,7 @@ fun <T> DialogSelection(
                     if (filteredItems.isEmpty()) {
                         item {
                             Text(
-                                text = "لا توجد نتائج مطابقة.",
+                                text = uiT("لا توجد نتائج مطابقة."),
                                 color = MaterialTheme.colorScheme.outline,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier
@@ -8278,6 +8582,7 @@ fun EnhancedReportsTab(
     val veryGoodBoundT3 by viewModel.veryGoodBoundT3.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showPrintDesignDialog by remember { mutableStateOf(false) }
     var settingsTermId by remember { mutableStateOf(if (activeTermId in 1..3) activeTermId else 3) }
 
     var reportMode by remember { mutableStateOf(-1) } // -1: لا شيء مختار بعد
@@ -8332,6 +8637,25 @@ fun EnhancedReportsTab(
 
     var showSubjectsManagerInsideSettings by remember { mutableStateOf(false) }
     var showStampSettingsDialog by remember { mutableStateOf(false) }
+    var showSubjectsNotice by remember { mutableStateOf(false) }
+
+    if (showSubjectsNotice) {
+        AlertDialog(
+            onDismissRequest = { showSubjectsNotice = false },
+            title = { Text(uiT("تنبيه"), fontWeight = FontWeight.ExtraBold) },
+            text = { Text(uiT("ℹ️ تنبيه: هذه الإعدادات خاصة فقط بمن يعمل بنظام نتائج مختلف عن النظام الرسمي للوزارة. إذا كنت تعتمد النظام الرسمي فلا تغيّر شيئاً هنا.")) },
+            confirmButton = {
+                Button(onClick = {
+                    showSubjectsNotice = false
+                    showSettingsDialog = false
+                    showSubjectsManagerInsideSettings = true
+                }) { Text(uiT("متابعة")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSubjectsNotice = false }) { Text(uiT("إلغاء")) }
+            }
+        )
+    }
 
     if (showSubjectsManagerInsideSettings) {
         if (activeClass != null) {
@@ -8408,9 +8732,23 @@ fun EnhancedReportsTab(
                         tint = Color(0xFF153E90)
                     )
                 }
+                IconButton(
+                    onClick = { showPrintDesignDialog = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFF3EFFF))
+                        .border(1.dp, Color(0xFF534AB7), RoundedCornerShape(10.dp))
+                ) {
+                    Text("🎨", fontSize = 20.sp)
+                }
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+
+        if (showPrintDesignDialog) {
+            PrintDesignDialog(onDismiss = { showPrintDesignDialog = false })
+        }
 
         // Settings Dialog implementation
         if (showSettingsDialog) {
@@ -8446,7 +8784,7 @@ fun EnhancedReportsTab(
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "إعدادات القسم والملاحظات",
+                                text = uiT("إعدادات القسم والملاحظات"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onBackground
@@ -8466,8 +8804,7 @@ fun EnhancedReportsTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        showSettingsDialog = false
-                                        showSubjectsManagerInsideSettings = true
+                                        showSubjectsNotice = true
                                     },
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
                                 shape = RoundedCornerShape(16.dp),
@@ -8496,13 +8833,13 @@ fun EnhancedReportsTab(
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "تعديل مواد القسم 📚",
+                                            text = uiT("تعديل مواد القسم 📚"),
                                             fontWeight = FontWeight.ExtraBold,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                         Text(
-                                            text = "إضافة، تعديل أو حذف المواد والدرجات القصوى ومعاملاتها مباشرة للأقسام.",
+                                            text = uiT("إضافة، تعديل أو حذف المواد والدرجات القصوى ومعاملاتها مباشرة للأقسام."),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -8539,13 +8876,13 @@ fun EnhancedReportsTab(
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "هل تريد الدرجات من 10؟",
+                                            text = uiT("هل تريد الدرجات من 10؟"),
                                             fontWeight = FontWeight.Bold,
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "عند تفعيل هذا الخيار، سيتم عرض كشوف النقاط والمعدلات من 10 نقاط بدلاً من 20.",
+                                            text = uiT("عند تفعيل هذا الخيار، سيتم عرض كشوف النقاط والمعدلات من 10 نقاط بدلاً من 20."),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -8559,7 +8896,7 @@ fun EnhancedReportsTab(
 
                             // Sliding Ranges Title
                             Text(
-                                text = "تعديل مجالات التقييم والملاحظات لكل فصل 🎚️",
+                                text = uiT("تعديل مجالات التقييم والملاحظات لكل فصل 🎚️"),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.primary,
@@ -8703,14 +9040,14 @@ fun EnhancedReportsTab(
                                             .background(Color(0xFF00ACC1).copy(alpha = 0.15f))
                                             .padding(horizontal = 10.dp, vertical = 4.dp)
                                     ) {
-                                        Text("تلقائي", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00ACC1))
+                                        Text(uiT("تلقائي"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00ACC1))
                                     }
                                 }
                             }
 
                             // Section: إعدادات الفصل الثالث والامتحان النهائي
                             Text(
-                                text = "إعدادات الفصل الثالث والامتحانات 📋",
+                                text = uiT("إعدادات الفصل الثالث والامتحانات 📋"),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.primary,
@@ -8731,12 +9068,12 @@ fun EnhancedReportsTab(
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "استخدام صيغة الامتحان النهائي",
+                                                text = uiT("استخدام صيغة الامتحان النهائي"),
                                                 fontWeight = FontWeight.Bold,
                                                 style = MaterialTheme.typography.bodyMedium
                                             )
                                             Text(
-                                                text = "في الامتحان الثالث، سيتم ضرب الامتحان الأول في 1، والثاني في 2، والثالث في 3.",
+                                                text = uiT("في الامتحان الثالث، سيتم ضرب الامتحان الأول في 1، والثاني في 2، والثالث في 3."),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -8752,12 +9089,12 @@ fun EnhancedReportsTab(
                                     // Select note for failure in exam 1/2
                                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                         Text(
-                                            text = "ملاحظة الرسوب في الامتحان الأول والثاني:",
+                                            text = uiT("ملاحظة الرسوب في الامتحان الأول والثاني:"),
                                             fontWeight = FontWeight.Bold,
                                             style = MaterialTheme.typography.bodyMedium
                                         )
                                         Text(
-                                            text = "اختر الملاحظة الافتراضية المناسبة للراسبين في الفترات الأولى والثانية قبل الامتحان النهائي.",
+                                            text = uiT("اختر الملاحظة الافتراضية المناسبة للراسبين في الفترات الأولى والثانية قبل الامتحان النهائي."),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(bottom = 4.dp)
@@ -8798,7 +9135,7 @@ fun EnhancedReportsTab(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("تم وحفظ الإعدادات", fontWeight = FontWeight.Bold)
+                            Text(uiT("تم وحفظ الإعدادات"), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -8839,7 +9176,7 @@ fun EnhancedReportsTab(
                             }
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "إنشاء وختم الطابع الرسمي",
+                                text = uiT("إنشاء وختم الطابع الرسمي"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onBackground
@@ -8867,7 +9204,7 @@ fun EnhancedReportsTab(
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F4396))
                         ) {
-                            Text("إغلاق والعودة", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(uiT("إغلاق والعودة"), fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -8918,178 +9255,6 @@ fun EnhancedReportsTab(
                 AppLocalization.tr("select_term_prompt", "اختر الفصل الدراسي...", appLanguage)
             } else {
                 currentReportTermTuple?.second ?: ""
-            }
-
-            // General Class Lists quick access card (لائحة الطلاب، المنشدين، الكناسة، إدراج الفرنسية)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = AppLocalization.tr("general_class_lists", "📋 لوائح وقوائم القسم العامة (سحب فوري)", appLanguage),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // 1. Students List
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .clickable {
-                                        if (activeClass == null) {
-                                            Toast.makeText(context, "الرجاء اختيار القسم أولاً من الأعلى", Toast.LENGTH_SHORT).show()
-                                        } else if (classStudents.isEmpty()) {
-                                            Toast.makeText(context, "الرجاء تسجيل الطلاب للقسم أولاً لسحب اللائحة", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            viewModel.runWithLoading("جاري سحب وتصدير لائحة تلاميذ القسم...") {
-                                                val html = HtmlReportHelper.generateStudentDirectoryHtml(
-                                                    context = context,
-                                                    className = activeClass.name,
-                                                    students = classStudents,
-                                                    activeClass = activeClass,
-                                                    viewModel = viewModel
-                                                )
-                                                HtmlReportHelper.shareHtmlAsPdf(context, html, "لائحة_تلاميذ_قسم_${activeClass.name.replace(" ", "_")}.pdf")
-                                            }
-                                        }
-                                    }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "👥 لائحة الطلاب 📥",
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-
-                            // 2. French Insertion Sheet
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .clickable {
-                                        if (activeClass == null) {
-                                            Toast.makeText(context, "الرجاء اختيار القسم أولاً من الأعلى", Toast.LENGTH_SHORT).show()
-                                        } else if (classStudents.isEmpty()) {
-                                            Toast.makeText(context, "الرجاء تسجيل الطلاب للقسم أولاً لسحب الورقة", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            val frenchSub = resolvedSubjects.find { it.name.contains("فرنسية") || it.name.lowercase().contains("french") }
-                                            val frenchMaxPoints = frenchSub?.maxPoints ?: 20
-                                            viewModel.runWithLoading("جاري سحب وتصدير لائحة رصد الفرنسية...") {
-                                                val html = HtmlReportHelper.generateFrenchGradesEntryHtml(
-                                                    context = context,
-                                                    className = activeClass.name,
-                                                    students = classStudents,
-                                                    activeClass = activeClass,
-                                                    frenchMaxPoints = frenchMaxPoints,
-                                                    viewModel = viewModel
-                                                )
-                                                HtmlReportHelper.shareHtmlAsPdf(context, html, "لائحة_رصد_الفرنسية_قسم_${activeClass.name.replace(" ", "_")}.pdf")
-                                            }
-                                        }
-                                    }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "📝 إدراج الفرنسية 📥",
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // 3. Hymns/Singers List
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .clickable {
-                                        if (activeClass == null) {
-                                            Toast.makeText(context, "الرجاء اختيار القسم أولاً من الأعلى", Toast.LENGTH_SHORT).show()
-                                        } else if (classStudents.isEmpty()) {
-                                            Toast.makeText(context, "الرجاء تسجيل الطلاب للقسم أولاً للتقسيم", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            viewModel.runWithLoading("جاري سحب وتصدير لائحة مجموعات المنشدين...") {
-                                                val html = HtmlReportHelper.generateHymnsGroupsHtml(
-                                                    context = context,
-                                                    className = activeClass.name,
-                                                    students = classStudents,
-                                                    activeClass = activeClass,
-                                                    viewModel = viewModel
-                                                )
-                                                HtmlReportHelper.shareHtmlAsPdf(context, html, "لائحة_مجموعات_المنشدين_قسم_${activeClass.name.replace(" ", "_")}.pdf")
-                                            }
-                                        }
-                                    }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "🎤 المنشدين 📥",
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-
-                            // 4. Sweeping/Cleaning List
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .clickable {
-                                        if (activeClass == null) {
-                                            Toast.makeText(context, "الرجاء اختيار القسم أولاً من الأعلى", Toast.LENGTH_SHORT).show()
-                                        } else if (classStudents.isEmpty()) {
-                                            Toast.makeText(context, "لا توجد أسماء بالقسم لبناء جدول النظافة", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            viewModel.runWithLoading("جاري سحب وتصدير جدول النظافة والكناسة...") {
-                                                val html = HtmlReportHelper.generateCleaningGroupsHtml(
-                                                    context = context,
-                                                    className = activeClass.name,
-                                                    students = classStudents,
-                                                    activeClass = activeClass,
-                                                    viewModel = viewModel
-                                                )
-                                                HtmlReportHelper.shareHtmlAsPdf(context, html, "جدول_النظافة_والكناسة_قسم_${activeClass.name.replace(" ", "_")}.pdf")
-                                            }
-                                        }
-                                    }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "🧹 الكناسة 📥",
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -9197,7 +9362,7 @@ fun EnhancedReportsTab(
                                                 if (isTerm4) {
                                                     Spacer(modifier = Modifier.height(2.dp))
                                                     Text(
-                                                        text = "مخصص للوافدين الجدد الذين لم يدرجو نتائج الفصل الأول والثانى",
+                                                        text = uiT("مخصص للوافدين الجدد الذين لم يدرجو نتائج الفصل الأول والثانى"),
                                                         fontSize = 10.5.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Color(0xFFC62828),
@@ -9260,13 +9425,13 @@ fun EnhancedReportsTab(
                     Text("👆", fontSize = 24.sp)
                     Column {
                         Text(
-                            text = "الرجاء تحديد الفصل الدراسي أولاً",
+                            text = uiT("الرجاء تحديد الفصل الدراسي أولاً"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "اضغط على قائمة «الفصل الدراسي» أعلاه واختبر الفصل المطلوب لإظهار أزرار الكشوف والنتائج التفصيلية.",
+                            text = uiT("اضغط على قائمة «الفصل الدراسي» أعلاه واختبر الفصل المطلوب لإظهار أزرار الكشوف والنتائج التفصيلية."),
                             fontSize = 11.5.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -9346,7 +9511,7 @@ fun EnhancedReportsTab(
                         ) {
                             Text("⚠️", fontSize = 18.sp)
                             Text(
-                                text = "تنبيه: الكشوف غير متاحة لعدم اكتمال النتائج!",
+                                text = uiT("تنبيه: الكشوف غير متاحة لعدم اكتمال النتائج!"),
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFC62828),
                                 fontSize = 13.sp
@@ -9361,7 +9526,7 @@ fun EnhancedReportsTab(
                         ) {
                             studentMissingItems.forEach { (student, missingType) ->
                                 Text(
-                                    text = "• الطالب «${student.name}» لم يدرج $missingType",
+                                    text = uiTf("• الطالب «{0}» لم يدرج {1}", student.name, missingType),
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFB71C1C)
@@ -9496,6 +9661,62 @@ fun EnhancedReportsTab(
                             HtmlReportHelper.shareHtmlAsPdf(context, html, "لائحة_النتائج_التفصيلية_قسم_${activeClass.name}_الفصل_${termName}.pdf", isLandscape = true)
                         }
                     }
+                    13 -> {
+                        if (performanceList.isEmpty()) {
+                            Toast.makeText(context, "لا توجد علامات مرصودة بالقسم بعد للمشاركة", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val html = HtmlReportHelper.generateReportCardsHtml(
+                                context = context,
+                                className = activeClass.name,
+                                performances = performanceList,
+                                subjects = resolvedSubjects,
+                                activeTermId = activeTermId,
+                                activeClass = activeClass,
+                                viewModel = viewModel,
+                                perPage = 3
+                            )
+                            val termName = when (activeTermId) {
+                                1 -> "الأول"
+                                2 -> "الثاني"
+                                4 -> "الأخير_فقط"
+                                else -> "الثالث"
+                            }
+                            HtmlReportHelper.shareHtmlAsPdf(context, html, "كشوف_درجات_قسم_${activeClass.name}_الفصل_${termName}_ثلاثة_في_الورقة.pdf", isLandscape = true)
+                        }
+                    }
+                    14 -> {
+                        if (classStudents.isEmpty()) {
+                            Toast.makeText(context, "القسم فارغ لا يمكن سحب الكشوف", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val html = HtmlReportHelper.generateThreeTermGradesReportCardsHtml(
+                                context = context,
+                                className = activeClass.name,
+                                students = classStudents,
+                                subjects = resolvedSubjects,
+                                activeClass = activeClass,
+                                viewModel = viewModel,
+                                perPage = 3
+                            )
+                            HtmlReportHelper.shareHtmlAsPdf(context, html, "كشف_الدرجات_السنوي_قسم_${activeClass.name}_ثلاثة_في_الورقة.pdf", isLandscape = true)
+                        }
+                    }
+                    12 -> {
+                        if (classStudents.isEmpty()) {
+                            Toast.makeText(context, "القسم فارغ لا يمكن سحب الشهادات", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val html = HtmlReportHelper.generateHonorCertificatesHtml(
+                                context = context,
+                                activeClass = activeClass,
+                                students = classStudents,
+                                viewModel = viewModel
+                            )
+                            if (html.isBlank()) {
+                                Toast.makeText(context, "لا توجد معدلات مرصودة بعد لاستخراج الشهادات", Toast.LENGTH_LONG).show()
+                            } else {
+                                HtmlReportHelper.shareHtmlAsPdf(context, html, "شهادات_التفوق_قسم_${activeClass.name}.pdf", isLandscape = true)
+                            }
+                        }
+                    }
                     6 -> {
                         if (classStudents.isEmpty()) {
                             Toast.makeText(context, "القسم فارغ لا يمكن سحب المعدلات", Toast.LENGTH_SHORT).show()
@@ -9519,7 +9740,8 @@ fun EnhancedReportsTab(
                 1, 2 -> listOf(
                     ReportGroup("🖨️ كشوف", listOf(
                         10 to "كشف لكل ورقة 📄",
-                        1 to "كشفان في الورقة 🖨️"
+                        1 to "كشفان في الورقة 🖨️",
+                        13 to "ثلاثة كشوف في الورقة ✂️"
                     )),
                     ReportGroup("📊 لائحة النتائج التفصيلية", listOf(5 to "")),
                     ReportGroup("👤 كشف فردي", listOf(0 to ""))
@@ -9528,20 +9750,24 @@ fun EnhancedReportsTab(
                     ReportGroup("🖨️ كشوف", listOf(
                         10 to "كشف لكل ورقة 📄",
                         1 to "كشفان في الورقة 🖨️",
+                        13 to "ثلاثة كشوف في الورقة ✂️",
                         7 to "كشوف المعدلات السنوية 📑"
                     )),
                     ReportGroup("📊 لائحة النتائج التفصيلية", listOf(5 to "")),
                     ReportGroup("🏆 لائحة المعدلات السنوية للسراج", listOf(6 to "")),
+                    ReportGroup("🎖️ شهادات التفوق والتكريم (الثلاثة الأوائل)", listOf(12 to "")),
                     ReportGroup("👤 كشف فردي", listOf(0 to ""))
                 )
                 else -> listOf(
                     ReportGroup("🖨️ كشوف", listOf(
                         11 to "كشف لكل ورقة 📄",
                         8 to "كشفان في الورقة 🖨️",
+                        14 to "ثلاثة كشوف في الورقة ✂️",
                         7 to "كشوف المعدلات السنوية 📑"
                     )),
                     ReportGroup("📊 لائحة النتائج التفصيلية", listOf(5 to "")),
                     ReportGroup("🏆 لائحة المعدلات السنوية للسراج", listOf(6 to "")),
+                    ReportGroup("🎖️ شهادات التفوق والتكريم (الثلاثة الأوائل)", listOf(12 to "")),
                     ReportGroup("👤 كشف فردي", listOf(0 to ""))
                 )
             }
@@ -9644,7 +9870,7 @@ fun EnhancedReportsTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("طالب كشف النقاط", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(uiT("طالب كشف النقاط"), fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                             Text(
                                 text = activeStudentPerf?.student?.name ?: "اختر طالباً...",
                                 fontWeight = FontWeight.Bold,
@@ -9700,14 +9926,14 @@ fun EnhancedReportsTab(
                                 )
                                 Spacer(modifier = Modifier.height(10.dp))
                                 Text(
-                                    text = "كشف درجات الطالب جاهز للتحميل والمشاركة",
+                                    text = uiT("كشف درجات الطالب جاهز للتحميل والمشاركة"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "اختر صورة الكشف المطلوبة ليتم تجهيزها كملف PDF عالي الجودة ومصمم بشكل رسمي، جاهز للمشاركة أو الحفظ.",
+                                    text = uiT("اختر صورة الكشف المطلوبة ليتم تجهيزها كملف PDF عالي الجودة ومصمم بشكل رسمي، جاهز للمشاركة أو الحفظ."),
                                     style = MaterialTheme.typography.bodySmall,
                                     textAlign = TextAlign.Center,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -9724,11 +9950,11 @@ fun EnhancedReportsTab(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(horizontalAlignment = Alignment.Start) {
-                                        Text("اسم الطالب:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                        Text(uiT("اسم الطالب:"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                         Text(activeStudentPerf.student.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("المعدل الحالي:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                        Text(uiT("المعدل الحالي:"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                         val displayAvg = if (activeTermId == 3 || activeTermId == 4) {
                                             viewModel.calculateStudentGeneralAverage(activeStudentPerf.student.id, activeClass.id)
                                         } else {
@@ -9745,11 +9971,11 @@ fun EnhancedReportsTab(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(horizontalAlignment = Alignment.Start) {
-                                        Text("الرقم المدرسي:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                        Text(uiT("الرقم المدرسي:"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                         Text(activeStudentPerf.student.schoolId.ifBlank { "غير مسجل" }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("الرتبة:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                        Text(uiT("الرتبة:"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                         val displayRank = if (activeTermId == 3 || activeTermId == 4) {
                                             viewModel.calculateStudentGeneralRank(activeStudentPerf.student.id, activeClass.id)
                                         } else {
@@ -9769,7 +9995,7 @@ fun EnhancedReportsTab(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(horizontalAlignment = Alignment.Start) {
-                                        Text("النتيجة:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                        Text(uiT("النتيجة:"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                         val displayAvg = if (activeTermId == 3 || activeTermId == 4) {
                                             viewModel.calculateStudentGeneralAverage(activeStudentPerf.student.id, activeClass.id)
                                         } else {
@@ -9781,7 +10007,7 @@ fun EnhancedReportsTab(
                                         Text(resultText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = resultColor)
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("الملاحظة السلوكية:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                        Text(uiT("الملاحظة السلوكية:"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                         Text(remarkText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                                     }
                                 }
@@ -10036,7 +10262,7 @@ fun EnhancedReportsTab(
                     val frenchMaxPoints = frenchSub?.maxPoints ?: 20
 
                     ReportExportActionCard(
-                        title = "📝 لائحة إدراج نتائج مادة اللغة الفرنسية يدوياً",
+                        title = "📝 سجل معلم الفرنسية",
                         description = "توليد ورقة رصد درجات اللغة الفرنسية للقسم فارغة وتحتوي على رقم النداء والاسم بالعربية والفرنسية، ليقوم معلم الفرنسية بتسجيل العلامات عليها يدوياً وإعادتها لإدارجها في التطبيق (مجموع نقاط المادة لهذا المستوى: $frenchMaxPoints ن)",
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         onPrintClick = {
@@ -10164,9 +10390,9 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
         if (appLanguage == "fr") {
             mapOf(
                 "title" to "Connexion de l'Enseignant",
-                "welcome" to "Bienvenue à nouveau ! Connectez-vous rapidement pour lier vos données, suivre et gérer les notes et les élèves de vos classes en toute sécurité.",
+                "welcome" to "Bienvenue à nouveau ! Connectez-vous rapidement pour lier vos données, suivre et gérer les notes et les élèves de vos classes.",
                 "google_sign_in" to "Connexion rapide avec Google 🚀",
-                "footer" to "Tous droits réservés © Développeur : El Moctar Yedaly 🇲🇷 2026",
+                "footer" to "Tous droits réservés © Développeur : El Moctar Yedaly 🇲🇷",
                 "web_client_title" to "Configuration de la connexion Google",
                 "web_client_desc" to "Pour activer la connexion directe et rapide avec Google, veuillez lier l'application à votre Web Client ID Firebase (sous les paramètres Google Sign-In).\n\n💡 Comment l'obtenir ?\n1. Allez sur la console Firebase -> Authentication -> Sign-in method -> Google.\n2. Cliquez sur Modifier pour voir le 'Web client ID'.\n3. Copiez et collez-le ci-dessous pour le sauvegarder sur l'appareil.",
                 "web_client_label" to "Google Web Client ID",
@@ -10179,9 +10405,9 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
         } else {
             mapOf(
                 "title" to "تسجيل دخول المعلم",
-                "welcome" to "مرحباً بك مجدداً! قم بتسجيل الدخول السريع لربط بياناتك، للرصد وإدارة درجات وتلاميذ أقسامك بأمان ونظام.",
+                "welcome" to "مرحباً بك مجدداً! قم بتسجيل الدخول السريع لربط بياناتك، للرصد وإدارة درجات وتلاميذ أقسامك.",
                 "google_sign_in" to "الدخول السريع بحساب Google 🚀",
-                "footer" to "جميع الحقوق محفوظة © المطور: المختار اليدالى 🇲🇷 2026",
+                "footer" to "جميع الحقوق محفوظة © المطور: المختار اليدالى 🇲🇷",
                 "web_client_title" to "إعداد الدخول بحساب Google",
                 "web_client_desc" to "لتفعيل ميزة تسجيل الدخول المباشر والسريع بحساب جوجل، يجب ربط التطبيق بـ Web Client ID الخاص بك من لوحة تحكم Firebase (تحت إعدادات Google Sign-In).\n\n" +
                         "💡 كيف تحصل عليه؟\n" +
@@ -10447,6 +10673,16 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
+                // 2. نص الإشراف أعلى عنوان تسجيل الدخول
+                Text(
+                    text = APP_SUPERVISION_TEXT,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E7D32),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
                 // 2. App Title
                 Text(
                     text = tr["title"] ?: "تسجيل دخول المعلم",
@@ -10457,14 +10693,50 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
                 )
 
                 Text(
-                    text = tr["welcome"] ?: "مرحباً بك مجدداً! قم بتسجيل الدخول السريع لربط بياناتك، للرصد وإدارة درجات وتلاميذ أقسامك بأمان ونظام.",
+                    text = tr["welcome"] ?: "مرحباً بك مجدداً! قم بتسجيل الدخول السريع لربط بياناتك، للرصد وإدارة درجات وتلاميذ أقسامك.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                // صورة تعريفية بالتطبيق أعلى زر الدخول
+                // الصور التعريفية تتبدّل تلقائياً بالتتابع مع انتقال ناعم
+                val promoImages = remember {
+                    listOf(
+                        com.example.R.drawable.img_login_promo,
+                        com.example.R.drawable.img_login_promo_2,
+                        com.example.R.drawable.img_login_promo_3,
+                        com.example.R.drawable.img_login_promo_4
+                    )
+                }
+                var promoIndex by remember { mutableStateOf(0) }
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        delay(2000)
+                        promoIndex = (promoIndex + 1) % promoImages.size
+                    }
+                }
+                androidx.compose.animation.Crossfade(
+                    targetState = promoIndex,
+                    animationSpec = androidx.compose.animation.core.tween(500),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1080f / 720f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White)
+                        .border(1.dp, Color(0xFF1B5E20).copy(alpha = 0.25f), RoundedCornerShape(16.dp)),
+                    label = "loginPromo"
+                ) { idx ->
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = promoImages[idx]),
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Beautifully designed Google Sign-In button as the primary mechanism
                 Button(
@@ -10611,7 +10883,7 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
                 
                 // Footer details
                 Text(
-                    text = tr["footer"] ?: "جميع الحقوق محفوظة © المطور: المختار اليدالى 🇲🇷 2026",
+                    text = tr["footer"] ?: "جميع الحقوق محفوظة © المطور: المختار اليدالى 🇲🇷",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
@@ -10631,7 +10903,7 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
                 ) {
                     Text("🔑", fontSize = 20.sp)
                     Text(
-                        text = "استعادة كلمة المرور 🔐",
+                        text = uiT("استعادة كلمة المرور 🔐"),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
                         color = Color(0xFF1B5E20)
@@ -10644,14 +10916,14 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "أدخل عنوان البريد الإلكتروني المسجل وسنقوم بإرسال رابط آمن لإعادة تعيين كلمة المرور الخاصة بك.",
+                        text = uiT("أدخل عنوان البريد الإلكتروني المسجل وسنقوم بإرسال رابط آمن لإعادة تعيين كلمة المرور الخاصة بك."),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedTextField(
                         value = resetEmailInput,
                         onValueChange = { resetEmailInput = it },
-                        label = { Text("البريد الإلكتروني") },
+                        label = { Text(uiT("البريد الإلكتروني")) },
                         placeholder = { Text("email@example.com") },
                         modifier = Modifier.fillMaxWidth().testTag("reset_email_input"),
                         shape = RoundedCornerShape(12.dp),
@@ -10691,12 +10963,12 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("إرسال الرابط", fontWeight = FontWeight.Bold)
+                    Text(uiT("إرسال الرابط"), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showForgotPasswordDialog = false }) {
-                    Text("إلغاء", color = Color.Gray)
+                    Text(uiT("إلغاء"), color = Color.Gray)
                 }
             },
             shape = RoundedCornerShape(20.dp)
@@ -10838,13 +11110,13 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                     Text("📊", fontSize = 24.sp)
                     Column {
                         Text(
-                            text = "إحصائيات المستخدمين والنشاط",
+                            text = uiT("إحصائيات المستخدمين والنشاط"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = BentoText
                         )
                         Text(
-                            text = "نظرة عامة على المعلمين والصفوف وإعلانات التبادل.",
+                            text = uiT("نظرة عامة على المعلمين والصفوف وإعلانات التبادل."),
                             style = MaterialTheme.typography.bodySmall,
                             color = BentoPrimaryDesc
                         )
@@ -10866,7 +11138,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = "تحديث", modifier = Modifier.size(16.dp))
-                        Text("تحديث 🔄", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(uiT("تحديث 🔄"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -10906,7 +11178,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "المؤشرات الإجمالية العامة 📈",
+                        text = uiT("المؤشرات الإجمالية العامة 📈"),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimary
@@ -10959,7 +11231,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                     val courseActivationsActive = filteredCourseStats.count { it.expiresAt > nowMs }
 
                     Text(
-                        text = "دورة تحضير مسابقات المعلمين 🎓",
+                        text = uiT("دورة تحضير مسابقات المعلمين 🎓"),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimary
@@ -11012,7 +11284,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
 
                     if (courseStatsError) {
                         Text(
-                            text = "تعذّر جلب إحصائيات الدورة من الخادم",
+                            text = uiT("تعذّر جلب إحصائيات الدورة من الخادم"),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -11026,7 +11298,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "تصفية وتفصيل الإحصائيات حسب السنة الدراسية 📅",
+                        text = uiT("تصفية وتفصيل الإحصائيات حسب السنة الدراسية 📅"),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimary
@@ -11048,7 +11320,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                     .padding(horizontal = 14.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    text = "كل السنوات الدراسية",
+                                    text = uiT("كل السنوات الدراسية"),
                                     color = if (isAllSelected) Color.White else BentoText,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -11129,7 +11401,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                     .padding(12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("المستخدمون المعلمون", fontSize = 10.sp, color = BentoPrimaryDesc, fontWeight = FontWeight.Bold)
+                                Text(uiT("المستخدمون المعلمون"), fontSize = 10.sp, color = BentoPrimaryDesc, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text("$filteredTeachersCount", fontSize = 18.sp, fontWeight = FontWeight.Black, color = BentoText)
                             }
@@ -11143,7 +11415,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                     .padding(12.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("الأقسام المسجلة", fontSize = 10.sp, color = BentoPrimaryDesc, fontWeight = FontWeight.Bold)
+                                Text(uiT("الأقسام المسجلة"), fontSize = 10.sp, color = BentoPrimaryDesc, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text("$totalFilteredClasses", fontSize = 18.sp, fontWeight = FontWeight.Black, color = BentoText)
                             }
@@ -11151,7 +11423,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
 
                         // Activated classes per term breakdown
                         Text(
-                            text = "🔓 عدد الأقسام المفعلة حسب الفصل الدراسي:",
+                            text = uiT("🔓 عدد الأقسام المفعلة حسب الفصل الدراسي:"),
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoSecondary
@@ -11170,9 +11442,9 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                     .padding(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("الفصل 1", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                                Text(uiT("الفصل 1"), fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("$term1ActivatedFilteredClasses قسم", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32))
+                                Text(uiTf("{0} قسم", term1ActivatedFilteredClasses), fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32))
                             }
 
                             // Term 2
@@ -11184,9 +11456,9 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                     .padding(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("الفصل 2", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                                Text(uiT("الفصل 2"), fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("$term2ActivatedFilteredClasses قسم", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32))
+                                Text(uiTf("{0} قسم", term2ActivatedFilteredClasses), fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32))
                             }
 
                             // Term 3
@@ -11198,9 +11470,9 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                     .padding(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("الفصل 3", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                                Text(uiT("الفصل 3"), fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("$term3ActivatedFilteredClasses قسم", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32))
+                                Text(uiTf("{0} قسم", term3ActivatedFilteredClasses), fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32))
                             }
 
                             // Term 4 (Final Term Only)
@@ -11212,9 +11484,9 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                     .padding(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("الأخير فقط ⭐", fontSize = 10.sp, color = Color(0xFFE65100), fontWeight = FontWeight.Bold)
+                                Text(uiT("الأخير فقط ⭐"), fontSize = 10.sp, color = Color(0xFFE65100), fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("$term4ActivatedFilteredClasses قسم", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFFE65100))
+                                Text(uiTf("{0} قسم", term4ActivatedFilteredClasses), fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFFE65100))
                             }
                         }
                     }
@@ -11228,6 +11500,9 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                     filteredClasses
                         .groupBy { if (it.wilaya.trim().isBlank()) "غير محددة" else it.wilaya.trim() }
                         .mapValues { it.value.size }
+                        .toList()
+                        .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
+                        .toMap()
                 }
 
                 Column(
@@ -11235,7 +11510,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "🗺️ توزيع الأقسام حسب الولاية",
+                        text = uiT("🗺️ توزيع الأقسام حسب الولاية"),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimary
@@ -11243,7 +11518,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
 
                     if (classesByWilaya.isEmpty()) {
                         Text(
-                            text = "لا توجد أقسام مسجلة تحت أي ولاية حالياً.",
+                            text = uiT("لا توجد أقسام مسجلة تحت أي ولاية حالياً."),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -11282,7 +11557,7 @@ fun AdminStatsTabContent(viewModel: TeacherViewModel) {
                                             .padding(horizontal = 10.dp, vertical = 4.dp)
                                     ) {
                                         Text(
-                                            text = "${entry.value} أقسام",
+                                            text = uiTf("{0} أقسام", entry.value),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Black,
                                             color = BentoPrimary
@@ -11346,7 +11621,7 @@ fun StatCard(
 @Composable
 fun AppFooter(modifier: Modifier = Modifier, appLanguage: String = "ar") {
     Text(
-        text = AppLocalization.tr("footer", "جميع الحقوق محفوظة © المطور: المختار اليدالي 🇲🇷 2026", appLanguage),
+        text = AppLocalization.tr("footer", "جميع الحقوق محفوظة © المطور: المختار اليدالي 🇲🇷", appLanguage),
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -11376,7 +11651,7 @@ fun DeveloperContactBar() {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "تواصل ومتابعة جديد التطبيق 💡",
+                text = uiT("تواصل ومتابعة جديد التطبيق 💡"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = BentoPrimary,
@@ -11384,7 +11659,7 @@ fun DeveloperContactBar() {
             )
             
             Text(
-                text = "يمكنك التواصل مباشرة مع المطور للمساعدة، ومتابعة جديد تحديثات دفتر المعلم عبر منصاتنا الرسمية:",
+                text = uiT("يمكنك التواصل مباشرة مع المطور للمساعدة، ومتابعة جديد تحديثات دفتر المعلم عبر منصاتنا الرسمية:"),
                 style = MaterialTheme.typography.bodySmall,
                 color = BentoPrimaryDesc,
                 textAlign = TextAlign.Center,
@@ -11429,7 +11704,7 @@ fun DeveloperContactBar() {
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "مراسلة المطور",
+                            text = uiT("مراسلة المطور"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
                             color = Color(0xFFC62828),
@@ -11469,7 +11744,7 @@ fun DeveloperContactBar() {
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "صفحة الفيسبوك",
+                            text = uiT("صفحة الفيسبوك"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
                             color = Color(0xFF1565C0),
@@ -11509,7 +11784,7 @@ fun DeveloperContactBar() {
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "قناة الواتساب",
+                            text = uiT("قناة الواتساب"),
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
                             color = Color(0xFF2E7D32),
@@ -11559,20 +11834,16 @@ fun ActivationPromoDialog(
 
     val messageText = if (isFinalOnly) {
         "السلام عليكم،\n" +
-                "أنا المعلم صاحب البريد: $email\n" +
-                "أريد تفعيل مسار (استخدام الفصل الأخير فقط بـ 200 أوقية) للقسم: $className\n\n" +
-                "🔑 رقم القسم الفريد (كود التفعيل):\n" +
-                "$classId\n" +
+                "أنا معلم القسم: $className\nالسنة الدراسية: $academicYear\n" +
+                "أريد تفعيل مسار (استخدام الفصل الأخير فقط بـ 200 أوقية) لهذا القسم.\n\n" +
                 "------------------------------------\n" +
                 "رابط طلب التفعيل:\n" +
                 activationLink
     } else {
         if (selectedPlan == "full") {
             "السلام عليكم،\n" +
-                    "أنا المعلم صاحب البريد: $email\n" +
-                    "أريد تفعيل اشتراك جميع فصول السنة (الفصل الثاني والثالث) للقسم: $className (350 أوقية)\n\n" +
-                    "🔑 رقم القسم الفريد (كود التفعيل):\n" +
-                    "$classId\n" +
+                    "أنا معلم القسم: $className\nالسنة الدراسية: $academicYear\n" +
+                    "أريد تفعيل اشتراك جميع فصول السنة (الفصل الثاني والثالث) لهذا القسم (350 أوقية)\n\n" +
                     "------------------------------------\n" +
                     "رابط طلب التفعيل:\n" +
                     activationLink
@@ -11583,10 +11854,8 @@ fun ActivationPromoDialog(
                 else -> ""
             }
             "السلام عليكم،\n" +
-                    "أنا المعلم صاحب البريد: $email\n" +
-                    "أريد تفعيل اشتراك القسم: $className" + termLine + termPriceNote + "\n\n" +
-                    "🔑 رقم القسم الفريد (كود التفعيل):\n" +
-                    "$classId\n" +
+                    "أنا معلم القسم: $className\nالسنة الدراسية: $academicYear\n" +
+                    "أريد تفعيل اشتراك هذا القسم" + termLine + termPriceNote + "\n\n" +
                     "------------------------------------\n" +
                     "رابط طلب التفعيل:\n" +
                     activationLink
@@ -11621,7 +11890,7 @@ fun ActivationPromoDialog(
             ) {
                 if (isFinalOnly) {
                     Text(
-                        text = "⭐ رسالة الاشتراك:\nقيمة تفعيل مسار (استخدام الفصل الأخير فقط) هي 200 أوقية جديدة للقسم.\nيرجى التواصل مع مدير الأقسام لتفعيل هذه الميزة.",
+                        text = uiT("⭐ رسالة الاشتراك:\nقيمة تفعيل مسار (استخدام الفصل الأخير فقط) هي 200 أوقية جديدة للقسم.\nيرجى التواصل مع مدير الأقسام لتفعيل هذه الميزة."),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = BentoText
@@ -11635,10 +11904,10 @@ fun ActivationPromoDialog(
                         border = BorderStroke(1.dp, Color(0xFFFBC02D).copy(alpha = 0.5f))
                     ) {
                         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("💡 توضيح الفرق بين خياري الفصل الأخير:", fontWeight = FontWeight.Bold, fontSize = 11.5.sp, color = Color(0xFFE65100))
-                            Text("• الفصل الثالث العادي: لرصد جميع مواد الفصل 3 بالاعتماد على نقاط الفصول السابقة لحساب المعدل السنوي.", fontSize = 10.5.sp, color = Color(0xFF37474F))
-                            Text("• الفصل الأخير فقط ⭐: لرصد مواد الفصل الأخير فقط مع إدخال معدلي ف1 وف2 مباشرة.", fontSize = 10.5.sp, color = Color(0xFF37474F))
-                            Text("• ملاحظة: لا يمكن تفعيل الخيارين معاً لنفس القسم في الفصل الأخير، وتفعيل أحدهما يلغي الآخر تلقائياً.", fontSize = 10.sp, color = Color(0xFFD84315), fontWeight = FontWeight.Medium)
+                            Text(uiT("💡 توضيح الفرق بين خياري الفصل الأخير:"), fontWeight = FontWeight.Bold, fontSize = 11.5.sp, color = Color(0xFFE65100))
+                            Text(uiT("• الفصل الثالث العادي: لرصد جميع مواد الفصل 3 بالاعتماد على نقاط الفصول السابقة لحساب المعدل السنوي."), fontSize = 10.5.sp, color = Color(0xFF37474F))
+                            Text(uiT("• الفصل الأخير فقط ⭐: لرصد مواد الفصل الأخير فقط مع إدخال معدلي ف1 وف2 مباشرة."), fontSize = 10.5.sp, color = Color(0xFF37474F))
+                            Text(uiT("• ملاحظة: لا يمكن تفعيل الخيارين معاً لنفس القسم في الفصل الأخير، وتفعيل أحدهما يلغي الآخر تلقائياً."), fontSize = 10.sp, color = Color(0xFFD84315), fontWeight = FontWeight.Medium)
                         }
                     }
                 } else {
@@ -11654,18 +11923,18 @@ fun ActivationPromoDialog(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("🏷️", fontSize = 16.sp)
-                                Text("أسعار تفعيل فصول القسم:", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BentoPrimary)
+                                Text(uiT("أسعار تفعيل فصول القسم:"), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = BentoPrimary)
                             }
-                            Text("• الفصل الأول: مجاني دائماً وبدون قفل 🎁", fontSize = 12.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
-                            Text("• تفعيل الفصل الثاني: 190 أوقية جديدة", fontSize = 12.sp, color = BentoText, fontWeight = FontWeight.Medium)
-                            Text("• تفعيل الفصل الثالث: 190 أوقية جديدة", fontSize = 12.sp, color = BentoText, fontWeight = FontWeight.Medium)
-                            Text("• تفعيل جميع فصول السنة معاً: 350 أوقية جديدة", fontSize = 12.5.sp, color = BentoPrimary, fontWeight = FontWeight.ExtraBold)
+                            Text(uiT("• الفصل الأول: مجاني دائماً وبدون قفل 🎁"), fontSize = 12.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                            Text(uiT("• تفعيل الفصل الثاني: 190 أوقية جديدة"), fontSize = 12.sp, color = BentoText, fontWeight = FontWeight.Medium)
+                            Text(uiT("• تفعيل الفصل الثالث: 190 أوقية جديدة"), fontSize = 12.sp, color = BentoText, fontWeight = FontWeight.Medium)
+                            Text(uiT("• تفعيل جميع فصول السنة معاً: 350 أوقية جديدة"), fontSize = 12.5.sp, color = BentoPrimary, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                 }
 
                 Text(
-                    text = "اضغط على زر تواصل على الواتساب الموضح بالأسفل وسيتم توجيهك مباشرة وتجهيز بيانات تفعيل الاشتراك تلقائياً.",
+                    text = uiT("اضغط على زر تواصل على الواتساب الموضح بالأسفل وسيتم توجيهك مباشرة وتجهيز بيانات تفعيل الاشتراك تلقائياً."),
                     style = MaterialTheme.typography.bodySmall,
                     color = BentoPrimaryDesc
                 )
@@ -11681,11 +11950,11 @@ fun ActivationPromoDialog(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(text = "📧 البريد: $email", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(text = "🏫 القسم: $className", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        Text(text = uiTf("📧 البريد: {0}", email), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(text = uiTf("🏫 القسم: {0}", className), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                         val displayedTargetTerm = if (selectedPlan == "full") "جميع فصول السنة (الثاني والثالث)" else targetTermName
                         if (!displayedTargetTerm.isNullOrBlank()) {
-                            Text(text = "📚 الفصل المراد تفعيله: $displayedTargetTerm", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                            Text(text = uiTf("📚 الفصل المراد تفعيله: {0}", displayedTargetTerm), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = BentoPrimary)
                         }
 
                         Surface(
@@ -11702,7 +11971,7 @@ fun ActivationPromoDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("🔑 رقم القسم الفريد (الكود):", fontSize = 10.sp, color = BentoPrimaryDesc, fontWeight = FontWeight.Bold)
+                                    Text(uiT("🔑 رقم القسم الفريد (الكود):"), fontSize = 10.sp, color = BentoPrimaryDesc, fontWeight = FontWeight.Bold)
                                     Text(
                                         text = "$classId",
                                         fontSize = 14.sp,
@@ -11723,7 +11992,7 @@ fun ActivationPromoDialog(
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Icon(Icons.Default.ContentCopy, contentDescription = "نسخ", modifier = Modifier.size(14.dp), tint = BentoPrimary)
-                                        Text("نسخ الكود 📋", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
+                                        Text(uiT("نسخ الكود 📋"), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                                     }
                                 }
                             }
@@ -11743,7 +12012,7 @@ fun ActivationPromoDialog(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "اختر نوع الاشتراك:",
+                                text = uiT("اختر نوع الاشتراك:"),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = BentoPrimary
@@ -11773,7 +12042,7 @@ fun ActivationPromoDialog(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "الفصل الثاني فقط (190 أوقية)",
+                                        text = uiT("الفصل الثاني فقط (190 أوقية)"),
                                         fontSize = 12.sp,
                                         fontWeight = if (selectedPlan == "single") FontWeight.Bold else FontWeight.Medium,
                                         color = if (selectedPlan == "single") BentoPrimary else BentoText
@@ -11805,7 +12074,7 @@ fun ActivationPromoDialog(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "جميع فصول السنة - الثاني والثالث (350 أوقية)",
+                                        text = uiT("جميع فصول السنة - الثاني والثالث (350 أوقية)"),
                                         fontSize = 12.sp,
                                         fontWeight = if (selectedPlan == "full") FontWeight.Bold else FontWeight.Medium,
                                         color = if (selectedPlan == "full") BentoPrimary else BentoText
@@ -11861,12 +12130,12 @@ fun ActivationPromoDialog(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("تواصل على الواتساب", fontWeight = FontWeight.Bold)
+                Text(uiT("تواصل على الواتساب"), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("إلغاء", color = Color.Gray)
+                Text(uiT("إلغاء"), color = Color.Gray)
             }
         },
         shape = RoundedCornerShape(24.dp)
@@ -11919,20 +12188,20 @@ fun AboutAppScreen(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "دفتر المعلم - Teacher Notebook",
+                        text = uiT("دفتر المعلم - Teacher Notebook"),
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                         color = BentoText
                     )
                     Text(
-                        text = "الإصدار المطور (2026 - 2027)",
+                        text = uiT("الإصدار المطور (2026 - 2027)"),
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
                         color = BentoPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "تطبيق ذكي وشامل مخصص للمعلمين لإدارة الأقسام المدرسية، رصد الدرجات، وحساب المعدلات والنتائج السنوية بدقة، مع حفظ تلقائي للبيانات في Google Drive وإمكانيات الطباعة المباشرة.",
+                        text = uiT("تطبيق ذكي وشامل مخصص للمعلمين لإدارة الأقسام المدرسية، رصد الدرجات، وحساب المعدلات والنتائج السنوية بدقة، مع حفظ تلقائي للبيانات في Google Drive وإمكانيات الطباعة المباشرة."),
                         fontSize = 11.5.sp,
                         textAlign = TextAlign.Center,
                         color = BentoPrimaryDesc,
@@ -11960,13 +12229,13 @@ fun AboutAppScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "📢 التواصل والقنوات الرسمية للتطبيق",
+                        text = uiT("📢 التواصل والقنوات الرسمية للتطبيق"),
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 14.sp,
                         color = BentoText
                     )
                     Text(
-                        text = "انضم إلى مجتمع المعلمين وتابع الإعلانات والتحديثات مباشرة:",
+                        text = uiT("انضم إلى مجتمع المعلمين وتابع الإعلانات والتحديثات مباشرة:"),
                         fontSize = 11.5.sp,
                         color = BentoPrimaryDesc
                     )
@@ -12001,13 +12270,13 @@ fun AboutAppScreen(
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "قناة الواتساب الرسمية 💬",
+                                    text = uiT("قناة الواتساب الرسمية 💬"),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color(0xFF1B5E20)
                                 )
                                 Text(
-                                    text = "اضغط للانضمام ومتابعة جديد التحديثات والإرشادات",
+                                    text = uiT("اضغط للانضمام ومتابعة جديد التحديثات والإرشادات"),
                                     fontSize = 10.5.sp,
                                     color = Color(0xFF2E7D32)
                                 )
@@ -12051,13 +12320,13 @@ fun AboutAppScreen(
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "قناة التلغرام الرسمية ✈️",
+                                    text = uiT("قناة التلغرام الرسمية ✈️"),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color(0xFF01579B)
                                 )
                                 Text(
-                                    text = "اضغط للانضمام ومتابعة الإعلانات والملفات والتحديثات",
+                                    text = uiT("اضغط للانضمام ومتابعة الإعلانات والملفات والتحديثات"),
                                     fontSize = 10.5.sp,
                                     color = Color(0xFF0288D1)
                                 )
@@ -12101,13 +12370,13 @@ fun AboutAppScreen(
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "صفحة الفيسبوك الرسمية 👍",
+                                    text = uiT("صفحة الفيسبوك الرسمية 👍"),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color(0xFF0D47A1)
                                 )
                                 Text(
-                                    text = "اضغط للمتابعة والتواصل وطرح المقترحات والأسئلة",
+                                    text = uiT("اضغط للمتابعة والتواصل وطرح المقترحات والأسئلة"),
                                     fontSize = 10.5.sp,
                                     color = Color(0xFF1565C0)
                                 )
@@ -12151,13 +12420,13 @@ fun AboutAppScreen(
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "قناة اليوتيوب الرسمية 🎥",
+                                    text = uiT("قناة اليوتيوب الرسمية 🎥"),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color(0xFFB71C1C)
                                 )
                                 Text(
-                                    text = "اضغط لمتابعة الشروحات والتحديثات والفيديوهات التوضيحية",
+                                    text = uiT("اضغط لمتابعة الشروحات والتحديثات والفيديوهات التوضيحية"),
                                     fontSize = 10.5.sp,
                                     color = Color(0xFFC62828)
                                 )
@@ -12204,7 +12473,7 @@ fun AboutAppScreen(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "موقع التطبيق الرسمي 🌐",
+                                    text = uiT("موقع التطبيق الرسمي 🌐"),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color(0xFF4A148C)
@@ -12249,7 +12518,7 @@ fun SingleRequestActivationView(
             androidx.compose.material3.TopAppBar(
                 title = {
                     Text(
-                        text = "طلب تفعيل ذكي 🔓",
+                        text = uiT("طلب تفعيل ذكي 🔓"),
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                         color = Color.White
@@ -12309,14 +12578,14 @@ fun SingleRequestActivationView(
                         }
 
                         Text(
-                            text = "تنبيه الصلاحيات ⛔",
+                            text = uiT("تنبيه الصلاحيات ⛔"),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Black,
                             color = Color.Red
                         )
 
                         Text(
-                            text = "هذا الرابط مخصص لمدير الأقسام فقط.\nيرجى تسجيل الدخول بحساب المشرف الرئيسي للتمكن من التفعيل.",
+                            text = uiT("هذا الرابط مخصص لمدير الأقسام فقط.\nيرجى تسجيل الدخول بحساب المشرف الرئيسي للتمكن من التفعيل."),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = BentoPrimaryDesc,
@@ -12325,11 +12594,11 @@ fun SingleRequestActivationView(
 
                         Button(
                             onClick = onClose,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("العودة إلى التطبيق 🏠", fontWeight = FontWeight.Black)
+                            Text(uiT("العودة إلى التطبيق 🏠"), fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -12340,23 +12609,26 @@ fun SingleRequestActivationView(
                 var errorMessage by remember { mutableStateOf<String?>(null) }
                 var isActivating by remember { mutableStateOf(false) }
 
-                LaunchedEffect(requestId) {
+                var actionMessage by remember { mutableStateOf<String?>(null) }
+                var reloadKey by remember { mutableStateOf(0) }
+                val activationScope = rememberCoroutineScope()
+
+                // تحميل الطلب مع إعادة محاولة تلقائية (مناسب للشبكات الضعيفة)
+                LaunchedEffect(requestId, reloadKey) {
                     isLoading = true
                     errorMessage = null
                     val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    db.collection("activation_requests").document(requestId).get()
-                        .addOnSuccessListener { document ->
-                            if (document.exists()) {
-                                requestData = document.data
-                            } else {
-                                errorMessage = "طلب التفعيل هذا غير موجود أو منتهي الصلاحية!"
-                            }
-                            isLoading = false
-                        }
-                        .addOnFailureListener { e ->
-                            errorMessage = "فشل تحميل تفاصيل الطلب: ${e.localizedMessage}"
-                            isLoading = false
-                        }
+                    val doc = com.example.data.net.FirestoreRetry.getDoc(
+                        db.collection("activation_requests").document(requestId)
+                    )
+                    if (doc == null) {
+                        errorMessage = "📶 الاتصال ضعيف: تعذّر تحميل تفاصيل الطلب بعد عدة محاولات. تأكد من الشبكة ثم اضغط «إعادة المحاولة»."
+                    } else if (doc.exists()) {
+                        requestData = doc.data
+                    } else {
+                        errorMessage = "📶 لم يُعثر على هذا الطلب. قد يكون المرسل في منطقة ضعيفة الشبكة ولم يصل طلبه بعد، أو أنه منتهي. اضغط «إعادة المحاولة» بعد قليل."
+                    }
+                    isLoading = false
                 }
 
                 if (isLoading) {
@@ -12365,9 +12637,9 @@ fun SingleRequestActivationView(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         CircularProgressIndicator(color = BentoSecondary)
-                        Text("جاري تحميل تفاصيل طلب التفعيل...", color = BentoPrimaryDesc, fontSize = 14.sp)
+                        Text(uiT("جاري تحميل تفاصيل طلب التفعيل..."), color = BentoPrimaryDesc, fontSize = 14.sp)
                     }
-                } else if (errorMessage != null) {
+                } else if (errorMessage != null && requestData == null) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -12388,7 +12660,7 @@ fun SingleRequestActivationView(
                                 modifier = Modifier.size(48.dp)
                             )
                             Text(
-                                text = "خطأ في المعالجة ⚠️",
+                                text = uiT("خطأ في المعالجة ⚠️"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Red
@@ -12399,13 +12671,23 @@ fun SingleRequestActivationView(
                                 textAlign = TextAlign.Center,
                                 color = BentoPrimaryDesc
                             )
+                            if (errorMessage?.startsWith("📶") == true) {
+                                Button(
+                                    onClick = { reloadKey++ },
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoSecondary),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(uiT("إعادة المحاولة 🔄"), fontWeight = FontWeight.Bold)
+                                }
+                            }
                             Button(
                                 onClick = onClose,
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("إغلاق والعودة 🏠", fontWeight = FontWeight.Bold)
+                                Text(uiT("إغلاق والعودة 🏠"), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -12440,7 +12722,7 @@ fun SingleRequestActivationView(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text(
-                                text = "تفاصيل طلب التفعيل 📄",
+                                text = uiT("تفاصيل طلب التفعيل 📄"),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Black,
                                 color = BentoPrimary
@@ -12450,23 +12732,23 @@ fun SingleRequestActivationView(
 
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("بريد المعلم:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                    Text(uiT("بريد المعلم:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                     Text(teacherEmail, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                 }
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("اسم القسم:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                    Text(uiT("اسم القسم:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                     Text(className, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                 }
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("الفصل المطلوب:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                    Text(uiT("الفصل المطلوب:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                     Text(displayedTerm, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                 }
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("تاريخ الطلب:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                    Text(uiT("تاريخ الطلب:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                     Text(dateStr, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                 }
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text("حالة الطلب:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                    Text(uiT("حالة الطلب:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                     val isPending = status == "pending"
                                     Box(
                                         modifier = Modifier
@@ -12487,9 +12769,19 @@ fun SingleRequestActivationView(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             if (status == "pending") {
+                                if (actionMessage != null) {
+                                    Text(
+                                        text = actionMessage ?: "",
+                                        color = Color(0xFFB71C1C),
+                                        fontSize = 13.sp,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                                    )
+                                }
                                 Button(
                                     onClick = {
                                         isActivating = true
+                                        actionMessage = null
                                         val tId = requestData?.get("userId") as? String ?: ""
                                         val cId = requestData?.get("classId") as? Long ?: 0L
                                         val termId = when (val t = requestData?.get("termId")) {
@@ -12499,46 +12791,50 @@ fun SingleRequestActivationView(
                                             else -> 2
                                         }
 
-                                        val onActivationSuccess: () -> Unit = {
-                                            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                            db.collection("activation_requests").document(requestId).update("status", "completed")
-                                                .addOnSuccessListener {
-                                                    isActivating = false
-                                                    val updatedMap = requestData?.toMutableMap() ?: mutableMapOf()
-                                                    updatedMap["status"] = "completed"
-                                                    requestData = updatedMap
+                                        // التفعيل آمن للتكرار (يضبط الفصل على "مفعّل" ولا يبدّله)، لذا نعيد المحاولة عند ضعف الشبكة
+                                        activationScope.launch {
+                                            var err: String? = "?"
+                                            var attempt = 0
+                                            while (err != null && attempt < 3) {
+                                                attempt++
+                                                // النتيجة: "" = نجاح، وأي نص آخر = سبب الفشل
+                                                val outcome: String = kotlinx.coroutines.withTimeoutOrNull(25000L) {
+                                                    kotlinx.coroutines.suspendCancellableCoroutine<String> { cont ->
+                                                        val ok: () -> Unit = { if (cont.isActive) cont.resumeWith(Result.success("")) }
+                                                        val ko: (String) -> Unit = { m -> if (cont.isActive) cont.resumeWith(Result.success(m.ifBlank { "فشل" })) }
+                                                        if (isFullYearRequest) {
+                                                            viewModel.activateAllYearTerms(teacherId = tId, classId = cId, onSuccess = ok, onFailure = ko)
+                                                        } else {
+                                                            viewModel.toggleClassTermActivation(teacherId = tId, classId = cId, termId = termId, currentTermStatus = false, onSuccess = ok, onFailure = ko)
+                                                        }
+                                                    }
+                                                } ?: "انتهت مهلة الاتصال"
+                                                err = if (outcome.isEmpty()) null else outcome
+                                                if (err != null && attempt < 3) delay(2000L * attempt)
+                                            }
+
+                                            if (err != null) {
+                                                isActivating = false
+                                                actionMessage = "📶 لم يتأكد التفعيل بسبب ضعف الاتصال. قد يكون التفعيل تمّ فعلًا، فاضغط «تفعيل» مرة أخرى للتأكد (آمن ولا يتكرر)."
+                                            } else {
+                                                val marked = com.example.data.net.FirestoreRetry.updateDoc(
+                                                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                                        .collection("activation_requests").document(requestId),
+                                                    mapOf("status" to "completed")
+                                                )
+                                                isActivating = false
+                                                val updatedMap = requestData?.toMutableMap() ?: mutableMapOf()
+                                                updatedMap["status"] = "completed"
+                                                requestData = updatedMap
+                                                if (marked) {
                                                     android.widget.Toast.makeText(context, "تم تفعيل الاشتراك وتحديث الطلب بنجاح! 🎉", android.widget.Toast.LENGTH_LONG).show()
+                                                } else {
+                                                    android.widget.Toast.makeText(context, "✅ تم التفعيل. تعذّر فقط تحديث حالة الرابط بسبب ضعف الشبكة، ولا يؤثر ذلك على المشترك.", android.widget.Toast.LENGTH_LONG).show()
                                                 }
-                                                .addOnFailureListener { e ->
-                                                    isActivating = false
-                                                    errorMessage = "تم التفعيل بنجاح، لكن فشل تحديث حالة الرابط سحابياً: ${e.localizedMessage}"
-                                                }
-                                        }
-
-                                        val onActivationFailure: (String) -> Unit = { err ->
-                                            isActivating = false
-                                            errorMessage = "فشل التفعيل: $err"
-                                        }
-
-                                        if (isFullYearRequest) {
-                                            viewModel.activateAllYearTerms(
-                                                teacherId = tId,
-                                                classId = cId,
-                                                onSuccess = onActivationSuccess,
-                                                onFailure = onActivationFailure
-                                            )
-                                        } else {
-                                            viewModel.toggleClassTermActivation(
-                                                teacherId = tId,
-                                                classId = cId,
-                                                termId = termId,
-                                                currentTermStatus = false,
-                                                onSuccess = onActivationSuccess,
-                                                onFailure = onActivationFailure
-                                            )
+                                            }
                                         }
                                     },
-                                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = BentoSecondary),
                                     shape = RoundedCornerShape(12.dp),
                                     enabled = !isActivating
@@ -12548,18 +12844,18 @@ fun SingleRequestActivationView(
                                     } else {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Text("تفعيل الاشتراك الآن 🔓", fontWeight = FontWeight.Black)
+                                            Text(uiT("تفعيل الاشتراك الآن 🔓"), fontWeight = FontWeight.Black)
                                         }
                                     }
                                 }
                             } else {
                                 Button(
                                     onClick = onClose,
-                                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Text("تم التفعيل مسبقاً - إغلاق 🏠", fontWeight = FontWeight.Bold)
+                                    Text(uiT("تم التفعيل مسبقاً - إغلاق 🏠"), fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -12585,7 +12881,7 @@ fun NotificationsListScreen(
             androidx.compose.material3.TopAppBar(
                 title = {
                     Text(
-                        text = "الإشعارات 🔔",
+                        text = uiT("الإشعارات 🔔"),
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                         color = Color.White
@@ -12604,7 +12900,7 @@ fun NotificationsListScreen(
                     if (notifications.any { !(it["read"] as? Boolean ?: false) }) {
                         TextButton(onClick = onMarkAllAsRead) {
                             Text(
-                                text = "تحديد الكل كمقروء",
+                                text = uiT("تحديد الكل كمقروء"),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
@@ -12614,7 +12910,7 @@ fun NotificationsListScreen(
                     if (notifications.isNotEmpty()) {
                         TextButton(onClick = onDeleteAll) {
                             Text(
-                                text = "مسح الكل",
+                                text = uiT("مسح الكل"),
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
@@ -12647,7 +12943,7 @@ fun NotificationsListScreen(
                         modifier = Modifier.size(64.dp)
                     )
                     Text(
-                        text = "لا توجد إشعارات بعد",
+                        text = uiT("لا توجد إشعارات بعد"),
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimaryDesc,
                         fontSize = 16.sp
@@ -12775,7 +13071,7 @@ fun ExchangeRequestApprovalView(
             androidx.compose.material3.TopAppBar(
                 title = {
                     Text(
-                        text = "طلب نشر إعلان تبادل 🤝",
+                        text = uiT("طلب نشر إعلان تبادل 🤝"),
                         fontWeight = FontWeight.Black,
                         fontSize = 18.sp,
                         color = Color.White
@@ -12835,14 +13131,14 @@ fun ExchangeRequestApprovalView(
                         }
 
                         Text(
-                            text = "تنبيه الصلاحيات ⛔",
+                            text = uiT("تنبيه الصلاحيات ⛔"),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Black,
                             color = Color.Red
                         )
 
                         Text(
-                            text = "هذا الرابط مخصص لمدير الأقسام فقط للموافقة على نشر إعلان التبادل.",
+                            text = uiT("هذا الرابط مخصص لمدير الأقسام فقط للموافقة على نشر إعلان التبادل."),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = BentoPrimaryDesc,
@@ -12851,11 +13147,11 @@ fun ExchangeRequestApprovalView(
 
                         Button(
                             onClick = onClose,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("العودة إلى التطبيق 🏠", fontWeight = FontWeight.Black)
+                            Text(uiT("العودة إلى التطبيق 🏠"), fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -12866,44 +13162,41 @@ fun ExchangeRequestApprovalView(
                 var isLoading by remember { mutableStateOf(true) }
                 var errorMessage by remember { mutableStateOf<String?>(null) }
                 var isApproving by remember { mutableStateOf(false) }
+                var actionMessage by remember { mutableStateOf<String?>(null) }
+                var reloadKey by remember { mutableStateOf(0) }
+                val approveScope = rememberCoroutineScope()
 
-                LaunchedEffect(requestId) {
+                LaunchedEffect(requestId, reloadKey) {
                     isLoading = true
                     errorMessage = null
                     val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    db.collection("exchange_activation_requests").document(requestId).get()
-                        .addOnSuccessListener { document ->
-                            if (document.exists()) {
-                                val reqData = document.data
-                                requestData = reqData
-                                val postId = reqData?.get("exchangePostId") as? String ?: ""
-                                if (postId.isNotBlank()) {
-                                    db.collection("teacher_exchanges").document(postId).get()
-                                        .addOnSuccessListener { postDoc ->
-                                            if (postDoc.exists()) {
-                                                postData = postDoc.data
-                                            } else {
-                                                errorMessage = "منشور التبادل المرتبط بهذا الطلب غير موجود!"
-                                            }
-                                            isLoading = false
-                                        }
-                                        .addOnFailureListener { e ->
-                                            errorMessage = "فشل تحميل تفاصيل الإعلان: ${e.localizedMessage}"
-                                            isLoading = false
-                                        }
-                                } else {
-                                    errorMessage = "معرف الإعلان المرتبط بالطلب غير صالح!"
-                                    isLoading = false
-                                }
+                    val reqDoc = com.example.data.net.FirestoreRetry.getDoc(
+                        db.collection("exchange_activation_requests").document(requestId)
+                    )
+                    if (reqDoc == null) {
+                        errorMessage = "📶 الاتصال ضعيف: تعذّر تحميل تفاصيل الطلب بعد عدة محاولات. تأكد من الشبكة ثم اضغط «إعادة المحاولة»."
+                    } else if (!reqDoc.exists()) {
+                        errorMessage = "📶 لم يُعثر على طلب الموافقة. قد يكون المرسل في منطقة ضعيفة الشبكة ولم يصل طلبه بعد. اضغط «إعادة المحاولة» بعد قليل."
+                    } else {
+                        val reqData = reqDoc.data
+                        val postId = reqData?.get("exchangePostId") as? String ?: ""
+                        if (postId.isBlank()) {
+                            errorMessage = "معرف الإعلان المرتبط بالطلب غير صالح!"
+                        } else {
+                            val postDoc = com.example.data.net.FirestoreRetry.getDoc(
+                                db.collection("teacher_exchanges").document(postId)
+                            )
+                            if (postDoc == null) {
+                                errorMessage = "📶 الاتصال ضعيف: تعذّر تحميل تفاصيل الإعلان. اضغط «إعادة المحاولة»."
+                            } else if (!postDoc.exists()) {
+                                errorMessage = "منشور التبادل المرتبط بهذا الطلب غير موجود!"
                             } else {
-                                errorMessage = "طلب موافقة التبادل هذا غير موجود!"
-                                isLoading = false
+                                requestData = reqData
+                                postData = postDoc.data
                             }
                         }
-                        .addOnFailureListener { e ->
-                            errorMessage = "فشل تحميل تفاصيل الطلب: ${e.localizedMessage}"
-                            isLoading = false
-                        }
+                    }
+                    isLoading = false
                 }
 
                 if (isLoading) {
@@ -12912,9 +13205,9 @@ fun ExchangeRequestApprovalView(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         CircularProgressIndicator(color = BentoSecondary)
-                        Text("جاري تحميل تفاصيل طلب الموافقة...", color = BentoPrimaryDesc, fontSize = 14.sp)
+                        Text(uiT("جاري تحميل تفاصيل طلب الموافقة..."), color = BentoPrimaryDesc, fontSize = 14.sp)
                     }
-                } else if (errorMessage != null) {
+                } else if (errorMessage != null && postData == null) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -12935,7 +13228,7 @@ fun ExchangeRequestApprovalView(
                                 modifier = Modifier.size(48.dp)
                             )
                             Text(
-                                text = "خطأ في المعالجة ⚠️",
+                                text = uiT("خطأ في المعالجة ⚠️"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Red
@@ -12946,13 +13239,23 @@ fun ExchangeRequestApprovalView(
                                 textAlign = TextAlign.Center,
                                 color = BentoPrimaryDesc
                             )
+                            if (errorMessage?.startsWith("📶") == true) {
+                                Button(
+                                    onClick = { reloadKey++ },
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = BentoSecondary),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(uiT("إعادة المحاولة 🔄"), fontWeight = FontWeight.Bold)
+                                }
+                            }
                             Button(
                                 onClick = onClose,
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("إغلاق والعودة 🏠", fontWeight = FontWeight.Bold)
+                                Text(uiT("إغلاق والعودة 🏠"), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -12982,7 +13285,7 @@ fun ExchangeRequestApprovalView(
                         ) {
                             item {
                                 Text(
-                                    text = "طلب الموافقة على التبادل 📄",
+                                    text = uiT("طلب الموافقة على التبادل 📄"),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Black,
                                     color = BentoPrimary
@@ -12993,39 +13296,39 @@ fun ExchangeRequestApprovalView(
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("اسم المعلم:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("اسم المعلم:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(authorName, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("بريد المعلم:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("بريد المعلم:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(authorEmail, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("نوع الإعلان:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("نوع الإعلان:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(offerType, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("التخصص:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("التخصص:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(specialty, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("الولاية الحالية:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("الولاية الحالية:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(currentWilaya, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("المقاطعة الحالية:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("المقاطعة الحالية:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(currentMoughataa, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("المدرسة:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("المدرسة:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(schoolName, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("الولايات المستهدفة:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("الولايات المستهدفة:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         Text(targetWilayas, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
                                     }
                                     Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text("حالة الطلب:", fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(uiT("حالة الطلب:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                         val isPending = status == "pending"
                                         Box(
                                             modifier = Modifier
@@ -13050,34 +13353,61 @@ fun ExchangeRequestApprovalView(
 
                             item {
                                 if (status == "pending") {
+                                    if (actionMessage != null) {
+                                        Text(
+                                            text = actionMessage ?: "",
+                                            color = Color(0xFFB71C1C),
+                                            fontSize = 13.sp,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                                        )
+                                    }
                                     Button(
                                         onClick = {
                                             isApproving = true
-                                            viewModel.approveExchangePost(
-                                                postId = postId,
-                                                isApproved = true,
-                                                onSuccess = {
-                                                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                                                    db.collection("exchange_activation_requests").document(requestId).update("status", "completed")
-                                                        .addOnSuccessListener {
-                                                            isApproving = false
-                                                            val updatedMap = requestData?.toMutableMap() ?: mutableMapOf()
-                                                            updatedMap["status"] = "completed"
-                                                            requestData = updatedMap
-                                                            android.widget.Toast.makeText(context, "تمت الموافقة على إعلان التبادل ونشره بنجاح! 🎉", android.widget.Toast.LENGTH_LONG).show()
+                                            actionMessage = null
+                                            approveScope.launch {
+                                                // الموافقة آمنة للتكرار (تضبط isApproved=true)، لذا نعيد المحاولة عند ضعف الشبكة
+                                                var err: String? = "?"
+                                                var attempt = 0
+                                                while (err != null && attempt < 3) {
+                                                    attempt++
+                                                    val outcome: String = kotlinx.coroutines.withTimeoutOrNull(30000L) {
+                                                        kotlinx.coroutines.suspendCancellableCoroutine<String> { cont ->
+                                                            viewModel.approveExchangePost(
+                                                                postId = postId,
+                                                                isApproved = true,
+                                                                onSuccess = { if (cont.isActive) cont.resumeWith(Result.success("")) },
+                                                                onFailure = { m -> if (cont.isActive) cont.resumeWith(Result.success(m.ifBlank { "فشل" })) }
+                                                            )
                                                         }
-                                                        .addOnFailureListener { e ->
-                                                            isApproving = false
-                                                            errorMessage = "تم النشر بنجاح، لكن فشل تحديث حالة الرابط سحابياً: ${e.localizedMessage}"
-                                                        }
-                                                },
-                                                onFailure = { err ->
-                                                    isApproving = false
-                                                    errorMessage = "فشل النشر والموافقة: $err"
+                                                    } ?: "انتهت مهلة الاتصال"
+                                                    err = if (outcome.isEmpty()) null else outcome
+                                                    if (err != null && attempt < 3) delay(2000L * attempt)
                                                 }
-                                            )
+
+                                                if (err != null) {
+                                                    isApproving = false
+                                                    actionMessage = "📶 لم يتأكد النشر بسبب ضعف الاتصال، ولم يُعلَن للعامة بعد. اضغط «الموافقة» مرة أخرى عند تحسّن الشبكة (آمن ولا يتكرر)."
+                                                } else {
+                                                    val marked = com.example.data.net.FirestoreRetry.updateDoc(
+                                                        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                                            .collection("exchange_activation_requests").document(requestId),
+                                                        mapOf("status" to "completed")
+                                                    )
+                                                    isApproving = false
+                                                    val updatedMap = requestData?.toMutableMap() ?: mutableMapOf()
+                                                    updatedMap["status"] = "completed"
+                                                    requestData = updatedMap
+                                                    if (marked) {
+                                                        android.widget.Toast.makeText(context, "تمت الموافقة على إعلان التبادل ونشره بنجاح! 🎉", android.widget.Toast.LENGTH_LONG).show()
+                                                    } else {
+                                                        android.widget.Toast.makeText(context, "✅ تم نشر الإعلان. تعذّر فقط تحديث حالة الرابط بسبب ضعف الشبكة، ولا يؤثر ذلك على النشر.", android.widget.Toast.LENGTH_LONG).show()
+                                                    }
+                                                }
+                                            }
                                         },
-                                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                                        modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = BentoSecondary),
                                         shape = RoundedCornerShape(12.dp),
                                         enabled = !isApproving
@@ -13087,18 +13417,18 @@ fun ExchangeRequestApprovalView(
                                         } else {
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                                                Text("الموافقة على النشر للعامة ✅", fontWeight = FontWeight.Black)
+                                                Text(uiT("الموافقة على النشر للعامة ✅"), fontWeight = FontWeight.Black)
                                             }
                                         }
                                     }
                                 } else {
                                     Button(
                                         onClick = onClose,
-                                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary),
                                         shape = RoundedCornerShape(12.dp)
                                     ) {
-                                        Text("تم النشر مسبقاً - إغلاق 🏠", fontWeight = FontWeight.Bold)
+                                        Text(uiT("تم النشر مسبقاً - إغلاق 🏠"), fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }

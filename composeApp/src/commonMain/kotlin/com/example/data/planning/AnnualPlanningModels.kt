@@ -145,7 +145,27 @@ data class LessonProposalData(
     val referenceText: String, // المرجع
     val teachingAids: String, // الوسائل التعليمية
     val specificObjective: String, // الهدف المميز / الخاص للحصة
-    val procedureSteps: List<LessonProcedureStep> // جدول سير الحصة
+    val procedureSteps: List<LessonProcedureStep>, // جدول سير الحصة
+    val bookPages: LessonBookPages? = null, // صفحات الكتاب المرتبطة بالتحضير
+    val board: LessonBoardData? = null // محتوى السبورة المقترح (الدرس، التطبيق، الإدماج)
+)
+
+/** محتوى السبورة: ما يكتبه المعلم ويكتبه التلاميذ. integration فارغ إذا لم يكن في الحصة إدماج. */
+data class LessonBoardData(
+    val lesson: String,
+    val application: String,
+    val integration: String = "",
+    val aux: Boolean = false
+) {
+    val hasIntegration: Boolean get() = integration.isNotBlank()
+}
+
+/** صفحات كتاب مدرسي (صور داخل حزمة books: books/<book>/<page>.webp). aux=true تعني «مقترح تربوي مساعد». */
+data class LessonBookPages(
+    val book: String,
+    val title: String,
+    val pages: List<Int>,
+    val aux: Boolean = false
 )
 
 enum class TimetablePeriodType {

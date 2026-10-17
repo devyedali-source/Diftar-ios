@@ -13,6 +13,11 @@ import com.example.data.models.Student
 import com.example.data.models.StudentManualTermAverage
 import com.example.data.models.Subject
 import com.example.data.models.TeacherExchangePost
+import com.example.data.models.StudentManualTermAverage
+import com.example.data.models.LocalNotification
+import com.example.data.models.AttendanceRecord
+import com.example.data.models.CompetencyEntry
+import java.util.concurrent.ConcurrentHashMap
 
 // نفس جداول نسخة أندرويد ونفس رقم الإصدار (18)
 @Database(
@@ -24,9 +29,11 @@ import com.example.data.models.TeacherExchangePost
         ClassSubjectCustomization::class,
         TeacherExchangePost::class,
         StudentManualTermAverage::class,
-        LocalNotification::class
+        LocalNotification::class,
+        AttendanceRecord::class,
+        CompetencyEntry::class
     ],
-    version = 18,
+    version = 20,
     exportSchema = false
 )
 @ConstructedBy(TeacherDatabaseConstructor::class)

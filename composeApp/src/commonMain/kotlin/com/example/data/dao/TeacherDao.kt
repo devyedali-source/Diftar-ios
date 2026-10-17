@@ -13,6 +13,8 @@ import com.example.data.models.ClassSubjectCustomization
 import com.example.data.models.TeacherExchangePost
 import com.example.data.models.StudentManualTermAverage
 import com.example.data.models.LocalNotification
+import com.example.data.models.AttendanceRecord
+import com.example.data.models.CompetencyEntry
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -160,7 +162,9 @@ interface TeacherDao {
         grades: List<Grade>,
         customizations: List<ClassSubjectCustomization>,
         manualTermAverages: List<StudentManualTermAverage>,
-        localNotifications: List<LocalNotification>
+        localNotifications: List<LocalNotification>,
+        attendance: List<AttendanceRecord> = emptyList(),
+        competencies: List<CompetencyEntry> = emptyList()
     ) {
         deleteAllClassSections()
         deleteAllStudents()
@@ -169,6 +173,8 @@ interface TeacherDao {
         deleteAllCustomizations()
         deleteAllManualTermAverages()
         deleteAllLocalNotifications()
+        deleteAllAttendance()
+        deleteAllCompetencies()
 
         insertClassSections(sections)
         insertStudents(students)
@@ -177,7 +183,53 @@ interface TeacherDao {
         insertCustomizations(customizations)
         insertManualTermAverages(manualTermAverages)
         insertLocalNotifications(localNotifications)
+        insertAttendance(attendance)
+        insertCompetencies(competencies)
     }
+
+    // --- Competency assessment ---
+    @Query("SELECT * FROM competency_entries")
+    fun getAllCompetencies(): Flow<List<CompetencyEntry>>
+
+    @Query("SELECT * FROM competency_entries")
+    suspend fun getAllCompetenciesList(): List<CompetencyEntry>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCompetencies(records: List<CompetencyEntry>)
+
+    @Query("DELETE FROM competency_entries WHERE classId = :classId AND studentId = :studentId AND entryKey = :entryKey")
+    suspend fun deleteCompetency(classId: Long, studentId: Long, entryKey: String)
+
+    @Query("DELETE FROM competency_entries")
+    suspend fun deleteAllCompetencies()
+
+    @Query("DELETE FROM competency_entries WHERE studentId = :studentId")
+    suspend fun deleteCompetenciesByStudent(studentId: Long)
+
+    @Query("DELETE FROM competency_entries WHERE classId = :classId")
+    suspend fun deleteCompetenciesByClass(classId: Long)
+
+    // --- Attendance ---
+    @Query("SELECT * FROM attendance_records")
+    fun getAllAttendance(): Flow<List<AttendanceRecord>>
+
+    @Query("SELECT * FROM attendance_records")
+    suspend fun getAllAttendanceList(): List<AttendanceRecord>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAttendance(records: List<AttendanceRecord>)
+
+    @Query("DELETE FROM attendance_records")
+    suspend fun deleteAllAttendance()
+
+    @Query("DELETE FROM attendance_records WHERE classId = :classId AND date = :date")
+    suspend fun deleteAttendanceDay(classId: Long, date: String)
+
+    @Query("DELETE FROM attendance_records WHERE studentId = :studentId")
+    suspend fun deleteAttendanceByStudent(studentId: Long)
+
+    @Query("DELETE FROM attendance_records WHERE classId = :classId")
+    suspend fun deleteAttendanceByClass(classId: Long)
 
     // --- Teacher Exchange Posts ---
     @Query("SELECT * FROM teacher_exchange_posts ORDER BY timestamp DESC")
