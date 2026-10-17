@@ -6,7 +6,6 @@ import kotlinx.coroutines.IO
 import com.example.ui.utils.uiT
 import com.example.ui.utils.uiTf
 
-import com.example.ui.utils.PdfGenerator
 import com.example.ui.utils.AppLocalization
 import com.example.ui.TeacherInfo
 import com.example.ui.components.OfficialStampSettingsSection

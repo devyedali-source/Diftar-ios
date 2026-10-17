@@ -262,3 +262,10 @@ fun <K, V> MutableMap<K, V>.putIfAbsent(key: K, value: V): V? {
 
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
 annotation class Synchronized
+
+
+fun <K : Comparable<K>, V> Map<K, V>.toSortedMap(): Map<K, V> {
+    val out = LinkedHashMap<K, V>()
+    for (k in keys.sorted()) out[k] = getValue(k)
+    return out
+}

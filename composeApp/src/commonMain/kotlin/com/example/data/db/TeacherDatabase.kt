@@ -13,8 +13,6 @@ import com.example.data.models.Student
 import com.example.data.models.StudentManualTermAverage
 import com.example.data.models.Subject
 import com.example.data.models.TeacherExchangePost
-import com.example.data.models.StudentManualTermAverage
-import com.example.data.models.LocalNotification
 import com.example.data.models.AttendanceRecord
 import com.example.data.models.CompetencyEntry
 import java.util.concurrent.ConcurrentHashMap

@@ -6,7 +6,6 @@ import kotlinx.coroutines.IO
 import com.example.ui.utils.uiT
 import com.example.ui.utils.uiTf
 
-import android.app.DatePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -277,6 +276,7 @@ fun AttendanceScreen(
 }
 
 @Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 private fun AttendanceEditor(
     viewModel: TeacherViewModel,
     section: ClassSection,
@@ -304,6 +304,24 @@ private fun AttendanceEditor(
 
     val ld = parseDate(date)
 
+    var showPicker by remember { mutableStateOf(false) }
+    if (showPicker) {
+        val d0 = ld ?: LocalDate.now()
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = d0.toEpochDay() * 86_400_000L)
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { ms ->
+                        date = LocalDate.ofEpochDay(ms / 86_400_000L).toString()
+                    }
+                    showPicker = false
+                }) { Text(uiT("موافق")) }
+            },
+            dismissButton = { TextButton(onClick = { showPicker = false }) { Text(uiT("إلغاء")) } }
+        ) { DatePicker(state = pickerState) }
+    }
+
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "رجوع") }
@@ -311,10 +329,7 @@ private fun AttendanceEditor(
         }
         Card(
             modifier = Modifier.fillMaxWidth().clickable {
-                val d = ld ?: LocalDate.now()
-                DatePickerDialog(context, { _, y, m, day ->
-                    date = LocalDate.of(y, m + 1, day).toString()
-                }, d.year, d.monthValue - 1, d.dayOfMonth).show()
+                showPicker = true
             },
             colors = CardDefaults.cardColors(containerColor = BentoLightLavender)
         ) {

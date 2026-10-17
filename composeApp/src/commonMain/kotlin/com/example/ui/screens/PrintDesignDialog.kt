@@ -3,9 +3,7 @@ package com.example.ui.screens
 import com.example.compat.*
 import kotlinx.coroutines.IO
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,14 +21,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.ui.PrintDesign
 import com.example.ui.PrintDesignPreview
 
 /** معاينة حقيقية (نفس CSS الطباعة) لتصميم واحد، غير قابلة للتمرير. */
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun DesignPreview(kind: Int, design: Int, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -38,22 +34,7 @@ private fun DesignPreview(kind: Int, design: Int, modifier: Modifier = Modifier)
     val html = remember(kind, design) { PrintDesignPreview.html(context, kind, design) }
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val heightDp = maxWidth * (h.toFloat() / w.toFloat())
-        AndroidView(
-            modifier = Modifier.fillMaxWidth().height(heightDp),
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    setBackgroundColor(android.graphics.Color.WHITE)
-                    isVerticalScrollBarEnabled = false
-                    isHorizontalScrollBarEnabled = false
-                    settings.useWideViewPort = true
-                    settings.loadWithOverviewMode = true
-                    settings.javaScriptEnabled = false
-                    setOnTouchListener { _, _ -> true }
-                    loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
-                }
-            },
-            update = { it.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null) }
-        )
+        HtmlPreview(html = html, modifier = Modifier.fillMaxWidth().height(heightDp))
     }
 }
 

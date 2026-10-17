@@ -103,6 +103,7 @@ data class PreparationContinuity(
 
 /** صفحات الكتاب المدرسي المرتبطة بالتحضير (تظهر بعد ورقة التحضير). */
 @JsonClass(generateAdapter = true)
+@kotlinx.serialization.Serializable
 data class PreparationLivre(
     val book: String = "",
     val titre: String = "",
@@ -112,6 +113,7 @@ data class PreparationLivre(
 
 /** سبورة المعلم المكتوبة: ما يكتبه المعلم وينقله التلاميذ في دفاترهم (الدرس، الإدماج، التمارين). */
 @JsonClass(generateAdapter = true)
+@kotlinx.serialization.Serializable
 data class PreparationTableau(
     val lesson: String = "",
     val integration: String = "",

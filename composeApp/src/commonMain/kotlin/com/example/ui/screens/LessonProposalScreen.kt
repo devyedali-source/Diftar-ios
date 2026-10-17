@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1662,7 +1661,7 @@ private fun BookPageImage(book: String, page: Int) {
             value = withContext(Dispatchers.IO) {
                 try {
                     com.example.data.BookPack.open(context, book, page)?.use { input ->
-                        android.graphics.BitmapFactory.decodeStream(input)?.asImageBitmap()
+                        org.jetbrains.compose.resources.decodeToImageBitmap(input.readBytes())
                     }
                 } catch (e: Exception) {
                     null

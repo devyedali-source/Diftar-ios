@@ -12,6 +12,7 @@ import androidx.room.Index
     primaryKeys = ["studentId", "date"],
     indices = [Index(value = ["classId", "date"])]
 )
+@kotlinx.serialization.Serializable
 data class AttendanceRecord(
     val studentId: Long,
     val date: String,

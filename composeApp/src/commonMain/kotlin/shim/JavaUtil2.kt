@@ -9,6 +9,12 @@ class ConcurrentHashMap<K, V> : MutableMap<K, V> by LinkedHashMap() {
         if (existing == null) put(key, value)
         return existing
     }
+    fun merge(key: K, value: V, f: (V, V) -> V?): V? {
+        val old = get(key)
+        val nv = if (old == null) value else f(old, value)
+        if (nv == null) remove(key) else put(key, nv)
+        return nv
+    }
 }
 
 class CopyOnWriteArrayList<E> : MutableList<E> by ArrayList()

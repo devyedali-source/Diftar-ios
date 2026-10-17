@@ -16,6 +16,7 @@ import androidx.room.Index
     primaryKeys = ["classId", "studentId", "entryKey"],
     indices = [Index(value = ["classId"]), Index(value = ["studentId"])]
 )
+@kotlinx.serialization.Serializable
 data class CompetencyEntry(
     val classId: Long,
     val studentId: Long,

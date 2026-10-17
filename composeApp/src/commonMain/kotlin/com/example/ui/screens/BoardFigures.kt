@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import org.json.JSONObject
@@ -62,16 +61,27 @@ object BoardFigureStore {
 
 private fun figColor(s: String?, fallback: Color): Color =
     if (s.isNullOrBlank() || s == "null") fallback else try {
-        Color(android.graphics.Color.parseColor(s))
+        parseHexColor(s)
     } catch (e: Exception) {
         fallback
     }
+
+private fun parseHexColor(s: String): Color {
+    val h = s.trim().removePrefix("#")
+    val v = h.toLong(16)
+    return when (h.length) {
+        6 -> Color(((0xFF000000L) or v).toInt())
+        8 -> Color(v.toInt())
+        else -> throw IllegalArgumentException(s)
+    }
+}
 
 @Composable
 fun BoardFigure(name: String, maxHeight: Dp, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val fig = remember(name) { BoardFigureStore.get(context, name) } ?: return
     val limitH = maxHeight
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     BoxWithConstraints(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         // الرسم يُلائَم داخل العرض المتاح والارتفاع الأقصى معاً حتى لا يتجاوز مساحته ويتداخل مع النص
         val ratio = fig.w / fig.h
@@ -134,22 +144,20 @@ fun BoardFigure(name: String, maxHeight: Dp, modifier: Modifier = Modifier) {
                         drawPath(cut, figColor(it.optString("fill"), Color.White))
                     }
                     "text" -> {
-                        val paint = android.graphics.Paint().apply {
-                            isAntiAlias = true
-                            textAlign = android.graphics.Paint.Align.CENTER
-                            typeface = android.graphics.Typeface.DEFAULT_BOLD
-                            textSize = it.getDouble("size").toFloat() * k
-                            color = figColor(it.optString("color"), Color.White).let { c ->
-                                android.graphics.Color.argb(
-                                    (c.alpha * 255).toInt(), (c.red * 255).toInt(), (c.green * 255).toInt(), (c.blue * 255).toInt()
-                                )
-                            }
-                        }
-                        drawContext.canvas.nativeCanvas.drawText(
+                        val layout = measurer.measure(
                             it.getString("s"),
-                            it.getDouble("x").toFloat() * k,
-                            it.getDouble("y").toFloat() * k,
-                            paint
+                            androidx.compose.ui.text.TextStyle(
+                                color = figColor(it.optString("color"), Color.White),
+                                fontSize = (it.getDouble("size").toFloat() * k).toSp(),
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        )
+                        drawText(
+                            layout,
+                            topLeft = Offset(
+                                it.getDouble("x").toFloat() * k - layout.size.width / 2f,
+                                it.getDouble("y").toFloat() * k - layout.firstBaseline
+                            )
                         )
                     }
                 }
