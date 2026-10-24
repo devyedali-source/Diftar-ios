@@ -263,11 +263,12 @@ fun CustomTopAppBar(
 
             // App Logo Image at the start of the AppBar
             Image(
-                painter = painterResource(id = com.example.R.drawable.teacher_logo),
+                painter = painterResource(id = com.example.R.drawable.img_mauritania_emblem),
                 contentDescription = "شعار التطبيق",
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
+                    .background(Color.White)
                     .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape),
                 contentScale = ContentScale.Crop
             )
@@ -902,11 +903,12 @@ fun InnerTeacherAppScreenContent(
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         Image(
-                                            painter = painterResource(id = com.example.R.drawable.teacher_logo),
+                                            painter = painterResource(id = com.example.R.drawable.img_mauritania_emblem),
                                             contentDescription = "شعار التطبيق",
                                             modifier = Modifier
                                                 .size(52.dp)
                                                 .clip(CircleShape)
+                                                .background(Color.White)
                                                 .border(2.dp, Color.White, CircleShape),
                                             contentScale = ContentScale.Crop
                                         )
@@ -1181,6 +1183,15 @@ fun InnerTeacherAppScreenContent(
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFF33691E)
                                     )
+                                    val driveProblem by viewModel.driveSyncProblem.collectAsState()
+                                    driveProblem?.let {
+                                        Text(
+                                            text = it,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFFB26A00)
+                                        )
+                                    }
 
                                     if (connectedDevices.isNotEmpty()) {
                                         HorizontalDivider(color = Color(0xFF2E7D32).copy(alpha = 0.2f))
@@ -2456,6 +2467,7 @@ fun ClassStudentsSubview(
         )
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -2480,37 +2492,7 @@ fun ClassStudentsSubview(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Smaller Add Student Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { showAddStudentDialog = true }
-                        .border(1.2.dp, BentoPrimary.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
-                    colors = CardDefaults.cardColors(containerColor = BentoLightLavender.copy(alpha = 0.3f)),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = BentoPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = uiT("تسجيل طالب جديد"),
-                            fontWeight = FontWeight.Bold,
-                            color = BentoPrimary,
-                            fontSize = 12.5.sp
-                        )
-                    }
-                }
+                Spacer(modifier = Modifier.weight(1f))
 
                 // Small Search Button next to it
                 IconButton(
@@ -2707,6 +2689,20 @@ fun ClassStudentsSubview(
         item {
             AppFooter()
         }
+        item { Spacer(modifier = Modifier.height(80.dp)) }
+    }
+
+        androidx.compose.material3.ExtendedFloatingActionButton(
+            onClick = { showAddStudentDialog = true },
+            containerColor = BentoPrimary,
+            contentColor = Color.White,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp),
+            icon = { Icon(Icons.Default.Add, contentDescription = "تسجيل طالب جديد", modifier = Modifier.size(24.dp)) },
+            text = { Text(uiT("طالب جديد"), fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+        )
     }
 
     // Deletion Confirmation dialog
@@ -3631,7 +3627,7 @@ fun BentoDashboard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(com.example.ui.theme.BentoSoftPurpleContainer),
                     contentAlignment = Alignment.Center
@@ -3654,6 +3650,21 @@ fun BentoDashboard(
                         color = com.example.ui.theme.BentoText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
+                    )
+                }
+                // شعار الدولة بعد كلمة «دفتر المعلم» بنفس حجم أيقونة الوجه
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(com.example.ui.theme.BentoSoftPurpleContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.img_mauritania_emblem),
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
@@ -10706,7 +10717,8 @@ fun TeacherLoginSignupScreen(viewModel: TeacherViewModel) {
                         com.example.R.drawable.img_login_promo,
                         com.example.R.drawable.img_login_promo_2,
                         com.example.R.drawable.img_login_promo_3,
-                        com.example.R.drawable.img_login_promo_4
+                        com.example.R.drawable.img_login_promo_4,
+                        com.example.R.drawable.img_login_promo_5
                     )
                 }
                 var promoIndex by remember { mutableStateOf(0) }

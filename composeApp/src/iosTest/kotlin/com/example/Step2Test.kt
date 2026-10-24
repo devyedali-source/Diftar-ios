@@ -28,12 +28,12 @@ class Step2Test {
         "planning/plan_annuel_4AP_canonical.json.gz" to 289421,
         "planning/plan_annuel_5AP_canonical.json.gz" to 299625,
         "planning/plan_annuel_6AP_canonical.json.gz" to 405713,
-        "preparations/1AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 3237872,
+        "preparations/1AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 3237889,
         "preparations/2AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 3693015,
         "preparations/3AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 4698853,
-        "preparations/4AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 4890381,
-        "preparations/5AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 4807308,
-        "preparations/6AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 5569851,
+        "preparations/4AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 4890394,
+        "preparations/5AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 4807325,
+        "preparations/6AP_PREPARATIONS_RUNTIME_LIGHT.json.gz" to 5570769,
         "school_legislation_verified_v2.json.gz" to 204460,
     )
 

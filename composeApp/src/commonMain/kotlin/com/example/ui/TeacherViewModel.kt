@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -166,6 +167,37 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     private val _lastDriveBackupTime = MutableStateFlow(prefs.getLong("last_google_drive_backup_time", 0L))
     val lastDriveBackupTime: StateFlow<Long> = _lastDriveBackupTime.asStateFlow()
 
+    /** تنبيه هادئ يظهر في بطاقة المزامنة فقط حين يستمر فشل الرفع التلقائي أكثر من ساعتين (بلا نوافذ منبثقة). */
+    private val _driveSyncProblem = MutableStateFlow<String?>(null)
+    val driveSyncProblem: StateFlow<String?> = _driveSyncProblem.asStateFlow()
+
+    private fun recordDriveUploadSuccess() {
+        prefs.edit().remove("drive_fail_since").remove("drive_fail_msg").apply()
+        _driveSyncProblem.value = null
+    }
+
+    private fun recordDriveUploadFailure(msg: String) {
+        // انقطاع الإنترنت ليس عطلاً في المزامنة؛ لا نسجّله
+        if (msg.contains("لا يوجد اتصال")) return
+        val now = System.currentTimeMillis()
+        var since = prefs.getLong("drive_fail_since", 0L)
+        if (since == 0L) {
+            since = now
+            prefs.edit().putLong("drive_fail_since", since).apply()
+        }
+        prefs.edit().putString("drive_fail_msg", msg.take(200)).apply()
+        refreshDriveSyncProblem()
+    }
+
+    private fun refreshDriveSyncProblem() {
+        val since = prefs.getLong("drive_fail_since", 0L)
+        if (since == 0L) { _driveSyncProblem.value = null; return }
+        if (System.currentTimeMillis() - since < 2 * 3600_000L) { _driveSyncProblem.value = null; return }
+        val fmt = java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale.US).format(java.util.Date(since))
+        val msg = prefs.getString("drive_fail_msg", "") ?: ""
+        _driveSyncProblem.value = "⚠️ تعذّر رفع نسختك إلى Drive منذ $fmt. $msg"
+    }
+
     private val _pendingDriveConsentIntent = MutableStateFlow<android.content.Intent?>(null)
     val pendingDriveConsentIntent: StateFlow<android.content.Intent?> = _pendingDriveConsentIntent.asStateFlow()
 
@@ -259,12 +291,17 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
                 )
                 when (result) {
                     is BackupResult.Success -> {
-                        val now = System.currentTimeMillis()
-                        prefs.edit().putLong("last_google_drive_backup_time", now).apply()
-                        _lastDriveBackupTime.value = now
+                        // لا نسجّل «آخر مزامنة» إلا إذا رُفعت النسخة فعلاً وتم التحقق منها
+                        if (result.uploaded) {
+                            val now = System.currentTimeMillis()
+                            prefs.edit().putLong("last_google_drive_backup_time", now).apply()
+                            _lastDriveBackupTime.value = now
+                            recordDriveUploadSuccess()
+                        }
                         onResult(true, result.message)
                     }
                     is BackupResult.Error -> {
+                        recordDriveUploadFailure(result.errorMessage)
                         val cause = result.throwable
                         if (cause is com.example.data.backup.GoogleDriveConsentRequiredException) {
                             _pendingDriveConsentIntent.value = cause.consentIntent
@@ -489,6 +526,20 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     private val _students = MutableStateFlow<List<Student>>(emptyList())
     private val _grades = MutableStateFlow<List<Grade>>(emptyList())
     private val _attendance = MutableStateFlow<List<com.example.data.models.AttendanceRecord>>(emptyList())
+
+    // رفع تلقائي صامت بعد كل تغيير في البيانات (يُجمَّع التغيير ثم يُرفع بعد هدوء 90 ثانية)
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private fun startAutoSyncOnChange() {
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.merge<Any>(_classSections, _students, _grades, _attendance)
+                .debounce(90_000L)
+                .collect {
+                    if (!_isBackupRestoreLoading.value && _currentUser.value != null) {
+                        performAutoDriveBackup(120_000L)
+                    }
+                }
+        }
+    }
     val attendance: StateFlow<List<com.example.data.models.AttendanceRecord>> = _attendance.asStateFlow()
 
     private val _competencies = MutableStateFlow<List<com.example.data.models.CompetencyEntry>>(emptyList())
@@ -514,6 +565,25 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     fun saveTeachingDays(days: Set<String>) {
         _teachingDays.value = days
         prefs.edit().putString("teaching_days", days.joinToString(",")).apply()
+    }
+
+    /**
+     * الأشهر التي سجّل المعلم انتهاءها في دفتر الغياب (مفتاحها «رقم القسم|yyyy-MM»).
+     * إحصائيات الشهر (الحضور المتوقع/غياب الشهر/الحضور الفعلي) لا تظهر إلا بعد تسجيل انتهاء الشهر.
+     */
+    private val _closedAttendanceMonths = MutableStateFlow(
+        (prefs.getString("attendance_closed_months", "") ?: "").split(",").filter { it.isNotBlank() }.toSet()
+    )
+    val closedAttendanceMonths: StateFlow<Set<String>> = _closedAttendanceMonths.asStateFlow()
+
+    fun attendanceMonthKey(classId: Long, year: Int, month: Int): String =
+        "$classId|%04d-%02d".format(year, month)
+
+    fun setAttendanceMonthClosed(classId: Long, year: Int, month: Int, closed: Boolean) {
+        val key = attendanceMonthKey(classId, year, month)
+        val next = if (closed) _closedAttendanceMonths.value + key else _closedAttendanceMonths.value - key
+        _closedAttendanceMonths.value = next
+        prefs.edit().putString("attendance_closed_months", next.joinToString(",")).apply()
     }
 
     /** يحفظ سجل غياب يوم كامل لقسم: لكل تلميذ (صباحاً، مساءً) غائب أم لا */
@@ -915,6 +985,8 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
     }
 
     init {
+        startAutoSyncOnChange()
+        refreshDriveSyncProblem()
         // Load deleted global subject IDs
         try {
             val savedDeletedIds = prefs.getStringSet("deleted_global_subject_ids", emptySet()) ?: emptySet()

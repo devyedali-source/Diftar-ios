@@ -252,6 +252,23 @@ object OfficialAnnualPlanningRepository {
         return false
     }
 
+    /** اسم المادة للعرض بأسماء مواد التطبيق فقط (يُحوّل الأسماء القديمة والرموز). الفرنسية تبقى Français. */
+    fun displaySubject(raw: String): String {
+        val t = raw.trim()
+        if (t.equals("Français", ignoreCase = true) || t.equals("Francais", ignoreCase = true)) return "Français"
+        val alias = when (t) {
+            "التربية على المواطنة" -> "التربية المدنية"
+            "النشاط العلمي", "التربية العلمية والتكنولوجية", "التربية العلمية", "العلوم" -> "العلوم الطبيعية"
+            "التربية البدنية والرياضية" -> "التربية البدنية"
+            "التربية الفنية والنشيد", "التربية الفنية والبدنية", "تقنيات الإعلام والاتصال" -> "التربية الفنية"
+            "الاجتماعيات" -> "التاريخ والجغرافيا"
+            else -> null
+        }
+        if (alias != null) return alias
+        val ar = mapMatiereToArabic(t)
+        return if (ar == "اللغة الفرنسية") "Français" else ar
+    }
+
     fun mapMatiereToArabic(matiere: String): String {
         val clean = matiere.trim().uppercase()
         return when (clean) {

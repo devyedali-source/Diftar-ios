@@ -64,6 +64,18 @@ fun CompetencyAssessmentScreen(
     var discIdx by remember { mutableStateOf(0) }
     var chunkIdx by remember { mutableStateOf(0) }
     var tab by remember { mutableStateOf(0) } // 0 = دفتر المتابعة ، 1 = جدول الدعم
+    var withCover by remember { mutableStateOf(false) }
+    var withFrench by remember { mutableStateOf(false) }
+    var coverJob by remember { mutableStateOf<((String?) -> Unit)?>(null) }
+    // يسحب الدفتر، وإن فُعّل الغلاف تُفتح واجهة الغلاف أولاً ثم يُدرج في أول الملف
+    val runExport: (String, () -> String) -> Unit = { fname, makeHtml ->
+        val build: (String?) -> Unit = { cover ->
+            var html = makeHtml()
+            if (cover != null) html = com.example.ui.CoverDesign.insert(html, cover)
+            com.example.ui.HtmlReportHelper.shareHtmlAsPdf(ctx, html, fname, isLandscape = true)
+        }
+        if (withCover) coverJob = build else build(null)
+    }
 
     val classEntries = remember(all, section.id) { all.filter { it.classId == section.id } }
     val marks = remember(classEntries) {
@@ -73,6 +85,15 @@ fun CompetencyAssessmentScreen(
         classEntries.filter { it.studentId == 0L && it.note.isNotBlank() }.associate { it.entryKey to it.note }
     }
 
+    coverJob?.let { job ->
+        CoverDialog(
+            viewModel = viewModel,
+            section = section,
+            bookTitle = "دفتر المتابعة",
+            onDismiss = { coverJob = null },
+            onResult = { c -> coverJob = null; job(c) }
+        )
+    }
     Surface(modifier = Modifier.fillMaxSize(), color = BentoBg) {
         Column(Modifier.fillMaxSize().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -101,12 +122,11 @@ fun CompetencyAssessmentScreen(
                         onClick = {
                             exportMenu = false
                             if (disc0 != null) {
-                                val html = com.example.ui.HtmlReportHelper.generateCompetencyHtml(
-                                    ctx, section, exportStudents, disc0, marks, notes, viewModel
-                                )
-                                com.example.ui.HtmlReportHelper.shareHtmlAsPdf(
-                                    ctx, html, "دفتر_المتابعة_${disc0.label}.pdf", isLandscape = true
-                                )
+                                runExport("دفتر_المتابعة_${disc0.label}.pdf") {
+                                    com.example.ui.HtmlReportHelper.generateCompetencyHtml(
+                                        ctx, section, exportStudents, disc0, marks, notes, viewModel, withFrench
+                                    )
+                                }
                             }
                         }
                     )
@@ -115,12 +135,11 @@ fun CompetencyAssessmentScreen(
                         enabled = catalog.isNotEmpty(),
                         onClick = {
                             exportMenu = false
-                            val html = com.example.ui.HtmlReportHelper.generateCompetencyAllHtml(
-                                ctx, section, exportStudents, catalog, marks, notes, viewModel
-                            )
-                            com.example.ui.HtmlReportHelper.shareHtmlAsPdf(
-                                ctx, html, "دفتر_المتابعة_جميع_المواد_${section.name}.pdf", isLandscape = true
-                            )
+                            runExport("دفتر_المتابعة_جميع_المواد_${section.name}.pdf") {
+                                com.example.ui.HtmlReportHelper.generateCompetencyAllHtml(
+                                    ctx, section, exportStudents, catalog, marks, notes, viewModel, withFrench
+                                )
+                            }
                         }
                     )
                     DropdownMenuItem(
@@ -129,15 +148,29 @@ fun CompetencyAssessmentScreen(
                         onClick = {
                             exportMenu = false
                             val blank = (1..60).map { Student(id = -it.toLong(), name = "", classId = section.id) }
-                            val html = com.example.ui.HtmlReportHelper.generateCompetencyAllHtml(
-                                ctx, section, blank, catalog, emptyMap(), emptyMap(), viewModel
-                            )
-                            com.example.ui.HtmlReportHelper.shareHtmlAsPdf(
-                                ctx, html, "دفتر_المتابعة_فارغ_جميع_المواد.pdf", isLandscape = true
-                            )
+                            runExport("دفتر_المتابعة_فارغ_جميع_المواد.pdf") {
+                                com.example.ui.HtmlReportHelper.generateCompetencyAllHtml(
+                                    ctx, section, blank, catalog, emptyMap(), emptyMap(), viewModel, withFrench
+                                )
+                            }
                         }
                     )
                 }
+            }
+
+            Row(
+                Modifier.fillMaxWidth().clickable { withCover = !withCover },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(checked = withCover, onCheckedChange = { withCover = it })
+                Text(uiT("إضافة غلاف (صفحة أولى) في أول الدفتر"), fontSize = 14.sp)
+            }
+            Row(
+                Modifier.fillMaxWidth().clickable { withFrench = !withFrench },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(checked = withFrench, onCheckedChange = { withFrench = it })
+                Text(uiT("سحب الاسم بالفرنسية مع العربية (سطر ثانٍ تحت الاسم العربي)"), fontSize = 14.sp)
             }
 
             if (catalog.isEmpty()) {

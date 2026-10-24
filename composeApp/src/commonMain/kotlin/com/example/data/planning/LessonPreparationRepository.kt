@@ -161,10 +161,11 @@ object LessonPreparationRepository {
         val levelTitle = OfficialAnnualPlanningRepository.getLevelTitle(off.niveau)
         val domain = off.domaine_label ?: off.domaine
         val sectionModule = off.competence_enonce ?: off.competence ?: ""
-        val subject = if (off.matiere.trim().uppercase() == "TIC") {
-            "التربية الفنية"
-        } else {
-            off.matiere_label ?: mapMatiereToSubject(off.matiere)
+        // اسم المادة يُعرض دائماً بأسماء مواد التطبيق الموجودة (مثلاً «التاريخ والجغرافيا» لا «الاجتماعيات»)
+        val subject = when {
+            off.matiere.trim().uppercase() == "TIC" -> "التربية الفنية"
+            isFrench -> off.matiere_label ?: mapMatiereToSubject(off.matiere)
+            else -> OfficialAnnualPlanningRepository.mapMatiereToArabic(off.matiere)
         }
 
         val finalTopic = if (off.partie > 1 || off.est_suite) {

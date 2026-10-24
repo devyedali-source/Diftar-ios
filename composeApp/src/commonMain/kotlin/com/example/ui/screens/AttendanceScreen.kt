@@ -112,6 +112,10 @@ fun AttendanceScreen(
     var monthView by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var showDaysDialog by remember { mutableStateOf(false) }
     var dateToDelete by remember { mutableStateOf<String?>(null) }
+    val closedMonthsAll by viewModel.closedAttendanceMonths.collectAsState()
+    var withCover by remember { mutableStateOf(false) }
+    var withFrench by remember { mutableStateOf(false) }
+    var coverJob by remember { mutableStateOf<((String?) -> Unit)?>(null) }
 
     BackHandler {
         when {
@@ -173,22 +177,52 @@ fun AttendanceScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 val allCtx = LocalContext.current
-                OutlinedButton(
-                    onClick = {
+                val runExport: (List<Student>, List<com.example.data.models.AttendanceRecord>, String) -> Unit = { st, rc, fname ->
+                    val build: (String?) -> Unit = { cover ->
                         // كل أشهر السنة في ملف واحد، حتى لو لم يُسجَّل أي نداء (لتُملأ يدوياً)
                         val parts = months.map { (m, y) ->
                             val first = LocalDate.of(y, m, 1)
                             val monthDays = (1..first.lengthOfMonth()).map { first.withDayOfMonth(it) }
                                 .filter { dayKey(it) in teachingDays }
                             com.example.ui.HtmlReportHelper.generateAttendanceMonthHtml(
-                                allCtx, section, students, classRecords, monthDays, "${MONTH_NAMES[m]} $y", viewModel
+                                allCtx, section, st, rc, monthDays, "${MONTH_NAMES[m]} $y", viewModel,
+                                viewModel.attendanceMonthKey(section.id, y, m) in closedMonthsAll, withFrench
                             )
                         }
-                        val html = com.example.ui.HtmlReportHelper.combineHtmlPages(parts)
-                        com.example.ui.HtmlReportHelper.shareHtmlAsPdf(allCtx, html, "سجل_النداء_كل_الأشهر_${section.name.replace(" ", "_")}.pdf", isLandscape = true)
+                        var html = com.example.ui.HtmlReportHelper.combineHtmlPages(parts)
+                        if (cover != null) html = com.example.ui.CoverDesign.insert(html, cover)
+                        com.example.ui.HtmlReportHelper.shareHtmlAsPdf(allCtx, html, fname, isLandscape = true)
+                    }
+                    if (withCover) coverJob = build else build(null)
+                }
+                Row(
+                    Modifier.fillMaxWidth().clickable { withCover = !withCover },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = withCover, onCheckedChange = { withCover = it })
+                    Text(uiT("إضافة غلاف (صفحة أولى) في أول الدفتر"), fontSize = 14.sp)
+                }
+                Row(
+                    Modifier.fillMaxWidth().clickable { withFrench = !withFrench },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = withFrench, onCheckedChange = { withFrench = it })
+                    Text(uiT("سحب الاسم بالفرنسية مع العربية (سطر ثانٍ تحت الاسم العربي)"), fontSize = 14.sp)
+                }
+                OutlinedButton(
+                    onClick = {
+                        runExport(students, classRecords, "سجل_النداء_كل_الأشهر_${section.name.replace(" ", "_")}.pdf")
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(uiT("📥 سحب جميع الأشهر (PDF)")) }
+                Spacer(Modifier.height(6.dp))
+                OutlinedButton(
+                    onClick = {
+                        val blank = (1..60).map { Student(id = -it.toLong(), name = "", classId = section.id) }
+                        runExport(blank, emptyList(), "سجل_النداء_فارغ_${section.name.replace(" ", "_")}.pdf")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(uiT("📥 سحب دفتر فارغ (60 سطراً)")) }
                 Spacer(Modifier.height(14.dp))
 
                 Text(uiTf("سجلات الغياب ({0})", dates.size), fontWeight = FontWeight.Bold)
@@ -225,6 +259,15 @@ fun AttendanceScreen(
         }
     }
 
+    coverJob?.let { job ->
+        CoverDialog(
+            viewModel = viewModel,
+            section = section,
+            bookTitle = "سجل النداء",
+            onDismiss = { coverJob = null },
+            onResult = { c -> coverJob = null; job(c) }
+        )
+    }
     if (showDaysDialog) {
         var selected by remember { mutableStateOf(teachingDays) }
         AlertDialog(
@@ -428,6 +471,9 @@ private fun AttendanceMonthPage(
     month: Int,
     onBack: () -> Unit
 ) {
+    var monthFrench by remember { mutableStateOf(false) }
+    val closedMonths by viewModel.closedAttendanceMonths.collectAsState()
+    val monthClosed = viewModel.attendanceMonthKey(section.id, year, month) in closedMonths
     val first = LocalDate.of(year, month, 1)
     val days = remember(year, month, teachingDays) {
         (1..first.lengthOfMonth()).map { first.withDayOfMonth(it) }.filter { dayKey(it) in teachingDays }
@@ -446,7 +492,7 @@ private fun AttendanceMonthPage(
                 onClick = {
                     val label = "${MONTH_NAMES[month]} $year"
                     val html = com.example.ui.HtmlReportHelper.generateAttendanceMonthHtml(
-                        ctx, section, students, records, days, label, viewModel
+                        ctx, section, students, records, days, label, viewModel, monthClosed, monthFrench
                     )
                     com.example.ui.HtmlReportHelper.shareHtmlAsPdf(ctx, html, "سجل_النداء_${MONTH_NAMES[month]}_$year.pdf", isLandscape = true)
                 },
@@ -457,6 +503,19 @@ private fun AttendanceMonthPage(
         if (days.isEmpty()) {
             Text(uiT("لا توجد أيام تدريس في هذا الشهر. غيّر «أيام التدريس»."), color = BentoPrimaryDesc)
             return@Column
+        }
+        OutlinedButton(
+            onClick = { viewModel.setAttendanceMonthClosed(section.id, year, month, !monthClosed) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(uiT(if (monthClosed) "✔ الشهر منتهٍ — اضغط لإعادة فتحه" else "تسجيل انتهاء الشهر (لتظهر الإحصائيات)"))
+        }
+        Row(
+            Modifier.fillMaxWidth().clickable { monthFrench = !monthFrench },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(checked = monthFrench, onCheckedChange = { monthFrench = it })
+            Text(uiT("سحب الاسم بالفرنسية مع العربية (سطر ثانٍ تحت الاسم العربي)"), fontSize = 13.sp)
         }
         Text(uiT("ص = الحصة الصباحية ، م = الحصة المسائية ، ✗ = غائب"), fontSize = 11.sp, color = BentoPrimaryDesc)
         Spacer(Modifier.height(6.dp))
@@ -527,12 +586,14 @@ private fun AttendanceMonthPage(
                             }
                             students.forEach { st ->
                                 Box(Modifier.width(statW).height(rowH).border(0.5.dp, Color.Gray), contentAlignment = Alignment.Center) {
-                                    val n = calc(st)
-                                    val pct = if (expected > 0) Math.round(n * 100f / expected) else 0
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        Text("$n", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                        Box(Modifier.width(1.dp).height(16.dp).background(Color.Gray))
-                                        Text("$pct%", fontSize = 10.sp, color = BentoPrimaryDesc, maxLines = 1)
+                                    if (monthClosed) {
+                                        val n = calc(st)
+                                        val pct = if (expected > 0) Math.round(n * 100f / expected) else 0
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                            Text("$n", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            Box(Modifier.width(1.dp).height(16.dp).background(Color.Gray))
+                                            Text("$pct%", fontSize = 10.sp, color = BentoPrimaryDesc, maxLines = 1)
+                                        }
                                     }
                                 }
                             }

@@ -22,7 +22,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 sealed class BackupResult<out T> {
-    data class Success<out T>(val data: T, val message: String) : BackupResult<T>()
+    data class Success<out T>(val data: T, val message: String, val uploaded: Boolean = true) : BackupResult<T>()
     data class Error(val errorMessage: String, val throwable: Throwable? = null) : BackupResult<Nothing>()
 }
 
@@ -314,7 +314,8 @@ class GoogleDriveBackupManager(
         if (localIsEmpty) {
             return@withContext BackupResult.Success(
                 data = Unit,
-                message = "لا توجد بيانات محلية لرفعها. تم الإبقاء على النسخة الاحتياطية الموجودة في Google Drive دون تغيير."
+                message = "لا توجد بيانات محلية لرفعها. تم الإبقاء على النسخة الاحتياطية الموجودة في Google Drive دون تغيير.",
+                uploaded = false
             )
         }
 

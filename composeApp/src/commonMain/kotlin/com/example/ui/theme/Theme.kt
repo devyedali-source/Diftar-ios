@@ -47,7 +47,8 @@ private val LightColorScheme =
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
+  // التطبيق مصمَّم بألوان فاتحة فقط؛ لا نتّبع الوضع الليلي حتى لا تختفي الكتابات والأزرار
+  darkTheme: Boolean = false,
   // Dynamic color is available on Android 12+
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,

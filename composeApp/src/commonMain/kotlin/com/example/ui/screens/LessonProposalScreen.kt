@@ -423,7 +423,7 @@ fun LessonProposalScreen(
                                             ) {
                                                 HeaderCell(
                                                     title = (if (fr) "Matière :" else "المادة:"),
-                                                    value = proposalData.subject.ifBlank { lesson.subject },
+                                                    value = com.example.data.planning.canonical.OfficialAnnualPlanningRepository.displaySubject(proposalData.subject.ifBlank { lesson.subject }),
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 PaperVerticalLine()

@@ -84,7 +84,7 @@ fun LessonBlackboardScreen(
     BackHandler(onBack = onClose)
 
     val direction = if (isFrench) LayoutDirection.Ltr else LayoutDirection.Rtl
-    val subject = data.subject.ifBlank { subjectFallback }
+    val subject = com.example.data.planning.canonical.OfficialAnnualPlanningRepository.displaySubject(data.subject.ifBlank { subjectFallback })
     val domain = data.domain.ifBlank { domainFallback }
     val topic = data.topic.ifBlank { topicFallback }
 
