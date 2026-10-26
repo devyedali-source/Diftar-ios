@@ -958,7 +958,7 @@ fun InnerTeacherAppScreenContent(
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Text(
-                                text = AppLocalization.tr("menu", "القائمة الجانبية للتطبيق 📌", appLanguage),
+                                text = AppLocalization.tr("menu", "القائمة الجانبية للتطبيق 📌", appLanguage) + "  ·  Menu de l'application",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = BentoPrimaryDesc,
@@ -969,7 +969,7 @@ fun InnerTeacherAppScreenContent(
 
                             // 1. Home / Classes (الصفحة الرئيسية والأقسام)
                             NavigationDrawerItem(
-                                label = { Text(AppLocalization.tr("home_classes", "الصفحة الرئيسية والأقسام 🏫", appLanguage), fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+                                label = { com.example.ui.utils.BiText(ar = "الصفحة الرئيسية والأقسام 🏫", fontWeight = FontWeight.Bold, fontSize = 13.sp, frSize = 9.sp) },
                                 selected = selectedClassId == null && currentOuterTab == 0 && !showClassManagerInside,
                                 onClick = {
                                     viewModel.selectClass(null)
@@ -984,10 +984,11 @@ fun InnerTeacherAppScreenContent(
                             // 3. Teacher Exchange (Between Wilayas) (تبادلات المعلمين بين الولايات)
                             NavigationDrawerItem(
                                 label = {
-                                    Text(
-                                        text = AppLocalization.tr("teacher_exchange_wilayas", "تبادلات المعلمين (بين الولايات) 🤝", appLanguage),
+                                    com.example.ui.utils.BiText(
+                                        ar = "تبادلات المعلمين (بين الولايات) 🤝",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.5.sp
+                                        fontSize = 12.5.sp,
+                                        frSize = 9.sp
                                     )
                                 },
                                 selected = selectedClassId == null && currentOuterTab == 2 && !showClassManagerInside,
@@ -1004,10 +1005,11 @@ fun InnerTeacherAppScreenContent(
                             // 3.6. Competition Course (دورة تحضير مسابقات المعلمين)
                             NavigationDrawerItem(
                                 label = {
-                                    Text(
-                                        text = uiT("دورة تحضير مسابقات المعلمين 🎓"),
+                                    com.example.ui.utils.BiText(
+                                        ar = "دورة تحضير مسابقات المعلمين 🎓",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.5.sp
+                                        fontSize = 12.5.sp,
+                                        frSize = 9.sp
                                     )
                                 },
                                 selected = selectedClassId == null && currentOuterTab == 5 && !showClassManagerInside,
@@ -1024,10 +1026,11 @@ fun InnerTeacherAppScreenContent(
                             // 3.5. School Legislation (التشريع المدرسي)
                             NavigationDrawerItem(
                                 label = {
-                                    Text(
-                                        text = uiT("التشريع المدرسي ⚖️"),
+                                    com.example.ui.utils.BiText(
+                                        ar = "التشريع المدرسي ⚖️",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.5.sp
+                                        fontSize = 12.5.sp,
+                                        frSize = 9.sp
                                     )
                                 },
                                 selected = selectedClassId == null && currentOuterTab == 4 && !showClassManagerInside,
@@ -1045,10 +1048,11 @@ fun InnerTeacherAppScreenContent(
                             var showPrintDesignFromDrawer by remember { mutableStateOf(false) }
                             NavigationDrawerItem(
                                 label = {
-                                    Text(
-                                        text = uiT("تصميم اللوائح والكشوف 🎨"),
+                                    com.example.ui.utils.BiText(
+                                        ar = "تصميم اللوائح والكشوف 🎨",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.5.sp
+                                        fontSize = 12.5.sp,
+                                        frSize = 9.sp
                                     )
                                 },
                                 selected = false,
@@ -1063,10 +1067,11 @@ fun InnerTeacherAppScreenContent(
                             // 4. About App (حول التطبيق)
                             NavigationDrawerItem(
                                 label = {
-                                    Text(
-                                        text = AppLocalization.tr("about_app", "حول التطبيق ℹ️", appLanguage),
+                                    com.example.ui.utils.BiText(
+                                        ar = "حول التطبيق ℹ️",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.5.sp
+                                        fontSize = 12.5.sp,
+                                        frSize = 9.sp
                                     )
                                 },
                                 selected = selectedClassId == null && currentOuterTab == 3 && !showClassManagerInside,
@@ -1084,10 +1089,11 @@ fun InnerTeacherAppScreenContent(
                             val koutoubiContext = LocalContext.current
                             NavigationDrawerItem(
                                 label = {
-                                    Text(
-                                        text = "كتبي 📚",
+                                    com.example.ui.utils.BiText(
+                                        ar = "كتبي 📚",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 12.5.sp
+                                        fontSize = 12.5.sp,
+                                        frSize = 9.sp
                                     )
                                 },
                                 selected = false,
@@ -1475,16 +1481,20 @@ fun InnerTeacherAppScreenContent(
                         CustomTopAppBar(
                             appLanguage = appLanguage,
                             title = {
-                                Text(
-                                    text = when (currentOuterTab) {
-                                        2 -> AppLocalization.tr("teacher_exchange_wilayas", "تبادل المعلمين (بين الولايات) 🤝", appLanguage)
-                                        3 -> AppLocalization.tr("about_app", "حول التطبيق ℹ️", appLanguage)
-                                        4 -> "التشريع المدرسي ⚖️"
-                                        5 -> "دورة تحضير مسابقات المعلمين 🎓"
-                                        else -> if (selectedYear == null) AppLocalization.tr("select_academic_year", "دفتر المعلم - اختيار السنة الدراسية 📅", appLanguage) else "${AppLocalization.tr("academic_year", "السنة الدراسية", appLanguage)}: $selectedYear 🏫"
-                                    },
+                                val outerTitleAr = when (currentOuterTab) {
+                                    2 -> "تبادل المعلمين (بين الولايات) 🤝"
+                                    3 -> "حول التطبيق ℹ️"
+                                    4 -> "التشريع المدرسي ⚖️"
+                                    5 -> "دورة تحضير مسابقات المعلمين 🎓"
+                                    else -> if (selectedYear == null) "دفتر المعلم - اختيار السنة الدراسية 📅" else "السنة الدراسية: $selectedYear 🏫"
+                                }
+                                val outerTitleFr = if (currentOuterTab == 0 && selectedYear != null) "Année scolaire : $selectedYear" else com.example.ui.utils.BiFr.of(outerTitleAr)
+                                com.example.ui.utils.BiText(
+                                    ar = outerTitleAr,
+                                    fr = outerTitleFr,
                                     fontWeight = FontWeight.Black,
                                     fontSize = 17.sp,
+                                    frSize = 11.sp,
                                     color = Color.White
                                 )
                             },
@@ -1606,9 +1616,10 @@ fun InnerTeacherAppScreenContent(
                                                     )
                                                 }
                                                 Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        text = uiT("لوحة تسيير مدير الأقسام 🛠️"),
-                                                        style = MaterialTheme.typography.titleMedium,
+                                                    com.example.ui.utils.BiText(
+                                                        ar = "لوحة تسيير مدير الأقسام 🛠️",
+                                                        fontSize = 16.sp,
+                                                        frSize = 11.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         color = Color(0xFF1B5E20)
                                                     )
@@ -1629,9 +1640,10 @@ fun InnerTeacherAppScreenContent(
                                 }
 
                                 item {
-                                    Text(
-                                        text = AppLocalization.tr("select_academic_year_prompt", "اختر السنة الدراسية للعمل عليها 📅", appLanguage),
-                                        style = MaterialTheme.typography.titleMedium,
+                                    com.example.ui.utils.BiText(
+                                        ar = "اختر السنة الدراسية للعمل عليها 📅",
+                                        fontSize = 16.sp,
+                                        frSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = BentoText,
                                         modifier = Modifier.padding(top = 8.dp)
@@ -1682,8 +1694,11 @@ fun InnerTeacherAppScreenContent(
                                                             verticalAlignment = Alignment.CenterVertically,
                                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                         ) {
-                                                            Text(
-                                                                text = "${AppLocalization.tr("academic_year_prefix", "العام الدراسي:", appLanguage)} $year",
+                                                            com.example.ui.utils.BiText(
+                                                                ar = "العام الدراسي: $year",
+                                                                fr = "Année scolaire : $year",
+                                                                fontSize = 16.sp,
+                                                                frSize = 11.sp,
                                                                 fontWeight = FontWeight.Bold,
                                                                 color = BentoText,
                                                                 modifier = Modifier.weight(1f, fill = false)
@@ -1705,21 +1720,23 @@ fun InnerTeacherAppScreenContent(
                                                                                 .clip(CircleShape)
                                                                                 .background(Color(0xFF4CAF50))
                                                                         )
-                                                                        Text(
-                                                                            text = AppLocalization.tr("ongoing_year_badge", "جارية", appLanguage),
-                                                                            color = Color(0xFF2E7D32),
+                                                                        com.example.ui.utils.BiText(
+                                                                            ar = "جارية",
                                                                             fontSize = 10.sp,
+                                                                            frSize = 8.sp,
+                                                                            color = Color(0xFF2E7D32),
                                                                             fontWeight = FontWeight.Bold,
-                                                                            maxLines = 1,
-                                                                            softWrap = false
+                                                                            maxLines = 1
                                                                         )
                                                                     }
                                                                 }
                                                             }
                                                         }
-                                                        Text(
-                                                            text = "$countInYear ${AppLocalization.tr("registered_classes_suffix", "أقسام دراسية مسجلة", appLanguage)}",
-                                                            style = MaterialTheme.typography.bodySmall,
+                                                        com.example.ui.utils.BiText(
+                                                            ar = "$countInYear أقسام دراسية مسجلة",
+                                                            fr = "$countInYear classes enregistrées",
+                                                            fontSize = 12.sp,
+                                                            frSize = 9.sp,
                                                             color = BentoPrimaryDesc
                                                         )
                                                     }
@@ -2016,7 +2033,7 @@ fun InnerTeacherAppScreenContent(
                                     Icon(Icons.Default.Add, contentDescription = "إنشاء قسم", modifier = Modifier.size(24.dp))
                                 },
                                 text = {
-                                    Text(uiT("إنشاء قسم"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    com.example.ui.utils.BiText(ar = "إنشاء قسم", fr = "Créer classe", fontWeight = FontWeight.Bold, fontSize = 14.sp, frSize = 10.sp)
                                 }
                             )
                         }
@@ -2092,9 +2109,11 @@ fun InnerTeacherAppScreenContent(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Text(
-                                        text = "${AppLocalization.tr("academic_year", "السنة الدراسية", appLanguage)}: ${activeClass.academicYear.ifBlank { "2025-2026" }} 🏫",
+                                    com.example.ui.utils.BiText(
+                                        ar = "السنة الدراسية: ${activeClass.academicYear.ifBlank { "2025-2026" }} 🏫",
+                                        fr = "Année scolaire : ${activeClass.academicYear.ifBlank { "2025-2026" }}",
                                         fontSize = 11.sp,
+                                        frSize = 9.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = Color.White.copy(alpha = 0.9f),
                                         maxLines = 1
@@ -2141,31 +2160,31 @@ fun InnerTeacherAppScreenContent(
                                 selected = insideTab == 0,
                                 onClick = { insideTab = 0 },
                                 icon = { Icon(Icons.Default.Person, contentDescription = "تسيير الطلاب") },
-                                label = { Text(if (appLanguage == "fr") "Élèves" else "الطلاب", fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                                label = { com.example.ui.utils.BiText(ar = "الطلاب", fr = "Élèves", fontSize = 9.sp, frSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1, center = true) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 1,
                                 onClick = { insideTab = 1 },
                                 icon = { Icon(Icons.Default.EditCalendar, contentDescription = "تسيير النتائج") },
-                                label = { Text(if (appLanguage == "fr") "Résultats" else "النتائج", fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                                label = { com.example.ui.utils.BiText(ar = "النتائج", fr = "Résultats", fontSize = 9.sp, frSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1, center = true) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 2,
                                 onClick = { insideTab = 2 },
                                 icon = { Icon(Icons.Default.Print, contentDescription = "سحب اللوائح والكشوف") },
-                                label = { Text(if (appLanguage == "fr") "Relevés" else "الكشوف", fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                                label = { com.example.ui.utils.BiText(ar = "الكشوف", fr = "Relevés", fontSize = 9.sp, frSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1, center = true) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 4,
                                 onClick = { insideTab = 4 },
                                 icon = { Icon(Icons.Default.EditCalendar, contentDescription = "التخطيط السنوي") },
-                                label = { Text(if (appLanguage == "fr") "Planification annuelle" else "التخطيط السنوي", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                                label = { com.example.ui.utils.BiText(ar = "التخطيط السنوي", fr = "Planif. annuelle", fontSize = 8.5.sp, frSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1, center = true) }
                             )
                             NavigationBarItem(
                                 selected = insideTab == 5,
                                 onClick = { insideTab = 5 },
                                 icon = { Icon(Icons.Default.ListAlt, contentDescription = "الجدول الزمني") },
-                                label = { Text(if (appLanguage == "fr") "Emploi du temps" else "الجدول الزمني", fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                                label = { com.example.ui.utils.BiText(ar = "الجدول الزمني", fr = "Emploi du temps", fontSize = 8.sp, frSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1, center = true) }
                             )
                         }
                     }
@@ -3332,6 +3351,9 @@ private fun DetailItem(icon: androidx.compose.ui.graphics.vector.ImageVector, la
 private const val APP_SUPERVISION_TEXT =
     "تَطْبِيقُ دَفْتَرِ الْمُعَلِّمِ مِنْ إِشْرَافِ مَجْمُوعَةٍ مِنْ مُفَتِّشِي التَّعْلِيمِ الْأَسَاسِيِّ، وَمُكَوِّنِي مَدَارِسِ تَكْوِينِ الْمُعَلِّمِينَ، وَالْمُهَنْدِسِينَ، لِتَسْهِيلِ عَمَلِ الْمُعَلِّمِ."
 
+private const val APP_SUPERVISION_TEXT_FR =
+    "L'application Cahier de l'enseignant est supervisée par un groupe d'inspecteurs de l'enseignement fondamental, de formateurs des écoles de formation des enseignants et d'ingénieurs, afin de faciliter le travail de l'enseignant."
+
 @Composable
 fun BentoDashboard(
     viewModel: TeacherViewModel,
@@ -3643,13 +3665,13 @@ fun BentoDashboard(
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
                     val currentUserState by viewModel.currentUser.collectAsState()
-                    Text(
-                        text = "دفتر المعلم",
-                        style = MaterialTheme.typography.titleMedium,
+                    com.example.ui.utils.BiText(
+                        ar = "دفتر المعلم",
+                        fontSize = 16.sp,
+                        frSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = com.example.ui.theme.BentoText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 1
                     )
                 }
                 // شعار الدولة بعد كلمة «دفتر المعلم» بنفس حجم أيقونة الوجه
@@ -3678,6 +3700,14 @@ fun BentoDashboard(
             color = com.example.ui.theme.BentoText.copy(alpha = 0.75f),
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+        )
+        Text(
+            text = APP_SUPERVISION_TEXT_FR,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Medium,
+            color = com.example.ui.theme.BentoText.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp)
         )
 
         if (showStats) {
@@ -4412,7 +4442,7 @@ fun MauritaniaDropdown(
     onValueChanged: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
@@ -4424,12 +4454,12 @@ fun MauritaniaDropdown(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .heightIn(min = 48.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(BentoLightLavender)
                 .border(1.dp, BentoGrayOutline, RoundedCornerShape(12.dp))
                 .clickable { expanded = true }
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Row(
@@ -4438,41 +4468,69 @@ fun MauritaniaDropdown(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = selectedValue,
+                    text = com.example.ui.utils.BiFr.geoLabel(selectedValue),
                     style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 12.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = BentoText
+                    color = BentoText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
                 Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
                     tint = BentoPrimary,
                     modifier = Modifier.size(20.dp)
                 )
             }
-            
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
+        }
+    }
+
+    // نافذة اختيار مضغوطة بارتفاع محدود وتمرير، بدل القائمة التي كانت تغطي الشاشة كلها
+    if (expanded) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { expanded = false }) {
+            Card(
                 modifier = Modifier
-                    .background(Color.White)
-                    .fillMaxWidth(0.85f)
+                    .fillMaxWidth()
+                    .heightIn(max = 460.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { 
-                            Text(
-                                text = option, 
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = BentoText
-                            ) 
-                        },
-                        onClick = {
-                            onValueChanged(option)
-                            expanded = false
-                        }
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Text(
+                        text = label,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = BentoPrimary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
+                    HorizontalDivider(color = BentoGrayOutline.copy(alpha = 0.6f))
+                    androidx.compose.foundation.lazy.LazyColumn {
+                        items(options.size) { i ->
+                            val option = options[i]
+                            val isSel = option == selectedValue
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(if (isSel) BentoLightLavender else Color.Transparent)
+                                    .clickable {
+                                        onValueChanged(option)
+                                        expanded = false
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = com.example.ui.utils.BiFr.geoLabel(option),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSel) BentoPrimary else BentoText,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

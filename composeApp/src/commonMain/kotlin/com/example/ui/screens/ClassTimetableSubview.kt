@@ -188,10 +188,11 @@ fun ClassTimetableSubview(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = uiT("الجدول الزمني للقسم"),
+                        com.example.ui.utils.BiText(
+                            ar = "الجدول الزمني للقسم",
                             fontWeight = FontWeight.Black,
                             fontSize = 16.sp,
+                            frSize = 11.sp,
                             color = BentoPrimary
                         )
                     }
@@ -200,12 +201,14 @@ fun ClassTimetableSubview(
                         shape = RoundedCornerShape(10.dp),
                         color = BentoLightLavender
                     ) {
-                        Text(
-                            text = if (customSlots != null) "شخصي" else "رسمي",
+                        com.example.ui.utils.BiText(
+                            ar = if (customSlots != null) "شخصي" else "رسمي",
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             fontSize = 11.sp,
+                            frSize = 8.sp,
                             fontWeight = FontWeight.Black,
-                            color = BentoPrimary
+                            color = BentoPrimary,
+                            center = true
                         )
                     }
                 }
@@ -229,9 +232,11 @@ fun ClassTimetableSubview(
                             tint = BentoPrimaryDesc,
                             modifier = Modifier.size(15.dp)
                         )
-                        Text(
-                            text = gregorianArabicStr,
+                        com.example.ui.utils.BiText(
+                            ar = gregorianArabicStr,
+                            fr = com.example.ui.utils.BiFr.gregorian(todayG),
                             fontSize = 12.sp,
+                            frSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimaryDesc
                         )
@@ -253,9 +258,11 @@ fun ClassTimetableSubview(
                             tint = BentoPrimary,
                             modifier = Modifier.size(15.dp)
                         )
-                        Text(
-                            text = hijriArabicStr,
+                        com.example.ui.utils.BiText(
+                            ar = hijriArabicStr,
+                            fr = com.example.ui.utils.BiFr.hijri(hijriDay, hijriMonth, hijriYear),
                             fontSize = 11.5.sp,
+                            frSize = 8.5.sp,
                             fontWeight = FontWeight.Black,
                             color = BentoPrimary
                         )
@@ -279,11 +286,13 @@ fun ClassTimetableSubview(
                         tint = BentoPrimaryDesc.copy(alpha = 0.7f),
                         modifier = Modifier.size(12.dp)
                     )
-                    Text(
-                        text = uiT("عدّل التاريخ الهجري بعد انتهاء كل اجتماع للجنة الأهلة ليبقى التاريخ الهجري صحيحًا ومحليًا دون إنترنت"),
+                    com.example.ui.utils.BiText(
+                        ar = "عدّل التاريخ الهجري بعد انتهاء كل اجتماع للجنة الأهلة ليبقى التاريخ الهجري صحيحًا ومحليًا دون إنترنت",
                         fontSize = 9.5.sp,
+                        frSize = 7.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BentoPrimaryDesc.copy(alpha = 0.7f)
+                        color = BentoPrimaryDesc.copy(alpha = 0.7f),
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
@@ -326,11 +335,14 @@ fun ClassTimetableSubview(
                             .clickable { selectedDay = day },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = day.arabicName,
+                        com.example.ui.utils.BiText(
+                            ar = day.arabicName,
+                            fr = day.frenchName,
                             fontSize = 12.sp,
+                            frSize = 9.sp,
                             fontWeight = FontWeight.Black,
-                            color = if (isSelected) Color.White else BentoPrimary
+                            color = if (isSelected) Color.White else BentoPrimary,
+                            center = true
                         )
                     }
                 }
@@ -401,13 +413,13 @@ fun ClassTimetableSubview(
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = BentoPrimary)
-                    ) { Text(uiT("مشاركة PDF"), maxLines = 1) }
+                    ) { com.example.ui.utils.BiText(ar = "مشاركة PDF", fontSize = 14.sp, frSize = 10.sp, color = Color.White, maxLines = 1, center = true) }
                 }
                 if (customSlots != null) {
                     OutlinedButton(
                         onClick = { showResetConfirm = true },
                         modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
-                    ) { Text(uiT("العودة للجدول الرسمي")) }
+                    ) { com.example.ui.utils.BiText(ar = "العودة للجدول الرسمي", fontSize = 14.sp, frSize = 10.sp, center = true) }
                 }
                 if (editMode) {
                     Text(
@@ -479,12 +491,13 @@ fun ClassTimetableSubview(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
                         border = BorderStroke(0.8.dp, BentoGrayOutline.copy(alpha = 0.3f))
                     ) {
-                        Text(
-                            text = uiT("لا توجد حصص مبرمجة في الفترة المسائية"),
+                        com.example.ui.utils.BiText(
+                            ar = "لا توجد حصص مبرمجة في الفترة المسائية",
                             fontSize = 11.5.sp,
+                            frSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = BentoPrimaryDesc.copy(alpha = 0.8f),
-                            textAlign = TextAlign.Center,
+                            center = true,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 12.dp)
@@ -812,9 +825,10 @@ private fun PeriodHeaderCard(
                     .clip(RoundedCornerShape(3.dp))
                     .background(accentColor)
             )
-            Text(
-                text = title,
+            com.example.ui.utils.BiText(
+                ar = title,
                 fontSize = 13.sp,
+                frSize = 9.5.sp,
                 fontWeight = FontWeight.Black,
                 color = BentoPrimary
             )
@@ -843,11 +857,12 @@ private fun EmptyPeriodCard() {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
         border = BorderStroke(0.8.dp, BentoGrayOutline.copy(alpha = 0.3f))
     ) {
-        Text(
-            text = uiT("لا توجد حصص مبرمجة في هذه الفترة"),
+        com.example.ui.utils.BiText(
+            ar = "لا توجد حصص مبرمجة في هذه الفترة",
             fontSize = 11.sp,
+            frSize = 8.sp,
             color = BentoPrimaryDesc.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center,
+            center = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 12.dp)
@@ -888,19 +903,22 @@ private fun RecessCard() {
                         )
                     }
                 }
-                Text(
-                    text = uiT("استراحة مبرمجة بيداغوجياً"),
+                com.example.ui.utils.BiText(
+                    ar = "استراحة مبرمجة بيداغوجياً",
                     fontSize = 12.sp,
+                    frSize = 9.sp,
                     fontWeight = FontWeight.Black,
                     color = Color(0xFF00695C)
                 )
             }
 
-            Text(
-                text = uiT("15 دقيقة"),
+            com.example.ui.utils.BiText(
+                ar = "15 دقيقة",
                 fontSize = 11.sp,
+                frSize = 8.sp,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF00695C)
+                color = Color(0xFF00695C),
+                center = true
             )
         }
     }
@@ -969,17 +987,18 @@ private fun TimetableSlotCard(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = if (slot.branch.isNotBlank() && slot.branch != slot.subject) {
+                    com.example.ui.utils.BiText(
+                        ar = if (slot.branch.isNotBlank() && slot.branch != slot.subject) {
                             "${slot.subject} (${slot.branch})"
                         } else {
                             slot.subject
                         },
+                        fr = com.example.ui.utils.BiFr.subjectLine(slot.subject, slot.branch),
                         fontSize = 13.sp,
+                        frSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = BentoPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 2
                     )
                     
                     if (slot.isFrench) {
@@ -1002,11 +1021,14 @@ private fun TimetableSlotCard(
                 shape = RoundedCornerShape(6.dp),
                 color = Color(0xFFF1F5F9)
             ) {
-                Text(
-                    text = uiTf("{0} دقيقة", slot.durationMinutes),
+                com.example.ui.utils.BiText(
+                    ar = "${slot.durationMinutes} دقيقة",
+                    fr = "${slot.durationMinutes} min",
                     fontSize = 10.5.sp,
+                    frSize = 8.sp,
                     fontWeight = FontWeight.Black,
                     color = BentoPrimaryDesc,
+                    center = true,
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                 )
             }
