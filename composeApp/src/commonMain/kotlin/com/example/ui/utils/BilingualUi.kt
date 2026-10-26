@@ -155,7 +155,28 @@ object BiFr {
     )
 
     /** الاسم الفرنسي لولاية أو مقاطعة إن عُرف. */
-    fun geoFr(ar: String): String? = geo[ar.trim()]
+    fun geoFr(ar: String): String? {
+        val t = ar.trim()
+        geo[t]?.let { return it }
+        // أرقام لاحقة مثل «لكصيبه 1»: نترجم الاسم ونُبقي الرقم
+        val m = Regex("^(.*?)\\s*([0-9٠-٩]+)$").find(t)
+        val base = m?.groupValues?.get(1)?.trim() ?: t
+        val suffix = m?.groupValues?.get(2)
+        val hit = geoNorm[geoKey(base)] ?: return null
+        return if (suffix != null) "$hit $suffix" else hit
+    }
+
+    private fun geoKey(s: String): String =
+        s.trim().replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').replace('ى', 'ي')
+
+    private val geoAliases: Map<String, String> = mapOf("غوركل" to "Gorgol")
+
+    private val geoNorm: Map<String, String> by lazy {
+        val m = HashMap<String, String>()
+        for ((k, v) in geo) m[geoKey(k)] = v
+        for ((k, v) in geoAliases) m[geoKey(k)] = v
+        m
+    }
 
     /** الاسم الفرنسي لمادة إن عُرف. */
     fun subjectFr(ar: String): String? = subjects[norm(ar)]
