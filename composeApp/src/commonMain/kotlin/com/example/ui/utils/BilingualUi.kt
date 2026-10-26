@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,6 +26,9 @@ import java.time.LocalDate
  * القاعدة: لا تُترجم الأرقام ولا الأسماء ولا البيانات، فقط عبارات الواجهة.
  */
 object BiFr {
+    /** زر «Traduire»: إذا كان مفعّلاً تظهر الفرنسية تحت العربية في الواجهات والكشوف، وإلا تبقى كما كانت. */
+    var enabled by mutableStateOf(false)
+
     private val emojiRegex = Regex("[\\u2190-\\u2BFF\\uFE0F\\u200D]|[\\uD83C-\\uD83E][\\uDC00-\\uDFFF]")
 
     private fun norm(s: String): String =
@@ -191,6 +197,7 @@ object BiFr {
 
     /** «الحوض الشرقي - Hodh Ech Chargui»؛ وإن لم يوجد اسم فرنسي يبقى العربي وحده. */
     fun geoLabel(ar: String): String {
+        if (!enabled) return ar
         val f = geo[ar.trim()] ?: return ar
         return "$ar - $f"
     }
@@ -270,7 +277,7 @@ fun BiText(
             overflow = TextOverflow.Ellipsis,
             textAlign = if (center) TextAlign.Center else null
         )
-        if (!fr.isNullOrBlank()) {
+        if (BiFr.enabled && !fr.isNullOrBlank()) {
             Text(
                 text = fr,
                 fontSize = frSize,

@@ -98,6 +98,16 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         prefs.edit().putString("app_language", l).apply()
     }
 
+    /** زر «Traduire» */
+    fun setBilingual(enabled: Boolean) {
+        com.example.ui.utils.BiFr.enabled = enabled
+        prefs.edit().putBoolean("bilingual_enabled", enabled).apply()
+    }
+
+    init {
+        com.example.ui.utils.BiFr.enabled = prefs.getBoolean("bilingual_enabled", false)
+    }
+
     private var currentRepository: TeacherRepository? = null
 
     private val activeDatabase: TeacherDatabase

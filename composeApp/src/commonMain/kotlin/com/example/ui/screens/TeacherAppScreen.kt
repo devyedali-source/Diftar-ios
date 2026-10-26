@@ -938,12 +938,31 @@ fun InnerTeacherAppScreenContent(
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Text(
-                                text = AppLocalization.tr("menu", "القائمة الجانبية للتطبيق 📌", appLanguage) + "  ·  Menu de l'application",
+                                text = AppLocalization.tr("menu", "القائمة الجانبية للتطبيق 📌", appLanguage) + (if (BiFr.enabled) "  ·  Menu de l'application" else ""),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
                                 color = BentoPrimaryDesc,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
                             )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "🌐 Traduire",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = BentoPrimary
+                                )
+                                Switch(
+                                    checked = BiFr.enabled,
+                                    onCheckedChange = { viewModel.setBilingual(it) }
+                                )
+                            }
 
                             Spacer(modifier = Modifier.height(6.dp))
 
@@ -3612,7 +3631,7 @@ fun BentoDashboard(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         )
-        Text(
+        if (BiFr.enabled) Text(
             text = APP_SUPERVISION_TEXT_FR,
             fontSize = 9.sp,
             fontWeight = FontWeight.Medium,
