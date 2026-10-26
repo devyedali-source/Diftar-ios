@@ -3,6 +3,8 @@ package com.example.ui.screens
 import com.example.compat.*
 import kotlinx.coroutines.IO
 import com.example.ui.utils.uiT
+import com.example.ui.utils.BiText
+import com.example.ui.utils.BiFr
 import com.example.ui.utils.uiTf
 
 import android.content.Context
@@ -344,15 +346,7 @@ private fun AnnualPlanningScreenContent(
                                 )
                             }
                         }
-                        Text(
-                            text = uiT("التخطيط السنوي للمنهاج الرسمي"),
-                            fontWeight = FontWeight.Black,
-                            fontSize = 15.sp,
-                            color = BentoPrimary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
+                        BiText(ar = uiT("التخطيط السنوي للمنهاج الرسمي"), fr = "Planification annuelle du programme officiel", modifier = Modifier.weight(1f, fill = false), fontSize = 15.sp, fontWeight = FontWeight.Black, color = BentoPrimary, maxLines = 2)
                         // مؤشر دائري صغير بنسبة تنزيل صور الكتب؛ يختفي عند الاكتمال
                         val booksPercent by remember { com.example.data.BookPack.downloadProgress(context) }
                             .collectAsState(initial = null)
@@ -400,37 +394,19 @@ private fun AnnualPlanningScreenContent(
                             shape = RoundedCornerShape(8.dp),
                             color = Color(0xFFE8F5E9)
                         ) {
-                            Text(
-                                text = "$activeCount $countLabel",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color(0xFF2E7D32),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
+                            BiText(ar = "$activeCount $countLabel", fr = frPreps(activeCount), modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E7D32))
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = Color(0xFFE3F2FD)
                         ) {
-                            Text(
-                                text = uiTf("محتوى كتب: {0}", booksAndBoards.first),
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF1565C0),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
+                            BiText(ar = uiTf("محتوى كتب: {0}", booksAndBoards.first), fr = "Contenu livres : ${booksAndBoards.first}", modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = Color(0xFFEEEEEE)
                         ) {
-                            Text(
-                                text = uiTf("محتوى سبورات: {0}", booksAndBoards.second),
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF212121),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
+                            BiText(ar = uiTf("محتوى سبورات: {0}", booksAndBoards.second), fr = "Contenu tableaux : ${booksAndBoards.second}", modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
                         }
                     }
                 }
@@ -453,16 +429,20 @@ private fun AnnualPlanningScreenContent(
                     trail.joinToString(" ← ")
                 }
 
+                val breadcrumbsFr = remember(navHistory.size, selectedTerm, selectedWeek, selectedSubject, selectedDomain) {
+                    val trail = mutableListOf<String>()
+                    if (navHistory.size > 1 && selectedTerm != null) trail.add(termFr(selectedTerm!!))
+                    if (navHistory.size > 2 && selectedWeek != null) trail.add("Semaine $selectedWeek")
+                    if (navHistory.size > 3 && selectedSubject != null) {
+                        val ar = planningSubjectLabel(selectedSubject!!.nom)
+                        trail.add(BiFr.subjectFr(ar) ?: ar)
+                    }
+                    if (navHistory.size > 4 && selectedDomain != null) trail.add(getDomainArabicLabel(context, levelCode, selectedDomain!!))
+                    trail.joinToString(" ← ")
+                }
+
                 if (breadcrumbsTrail.isNotEmpty()) {
-                    Text(
-                        text = breadcrumbsTrail,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = BentoPrimaryDesc,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
+                    BiText(ar = breadcrumbsTrail, fr = breadcrumbsFr, modifier = Modifier.padding(horizontal = 4.dp), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = BentoPrimaryDesc, maxLines = 1)
                 }
             }
         }
@@ -761,22 +741,12 @@ private fun TermsListScreen(
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = when (termNum) {
+                                BiText(ar = when (termNum) {
                                         1 -> "الفصل الأول"
                                         2 -> "الفصل الثاني"
                                         else -> "الفصل الثالث"
-                                    },
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 15.sp,
-                                    color = BentoPrimary
-                                )
-                                Text(
-                                    text = uiTf("الأسابيع {0} - {1} ({2} أسبوعاً)", weeksForTerm.firstOrNull() ?: 1, weeksForTerm.lastOrNull() ?: 13, weeksForTerm.size),
-                                    fontSize = 11.5.sp,
-                                    color = BentoPrimaryDesc,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                    }, fr = termFr(termNum), fontSize = 15.sp, fontWeight = FontWeight.Black, color = BentoPrimary)
+                                BiText(ar = uiTf("الأسابيع {0} - {1} ({2} أسبوعاً)", weeksForTerm.firstOrNull() ?: 1, weeksForTerm.lastOrNull() ?: 13, weeksForTerm.size), fr = "Semaines ${weeksForTerm.firstOrNull() ?: 1} - ${weeksForTerm.lastOrNull() ?: 13} (${weeksForTerm.size} semaines)", fontSize = 11.5.sp, fontWeight = FontWeight.Medium, color = BentoPrimaryDesc)
                             }
                         }
 
@@ -787,25 +757,14 @@ private fun TermsListScreen(
                             val termPreps = OfficialAnnualPlanningRepository.getAllLessonInstances(context, levelCode).count { it.fasl == termNum }
                             val countLabel = if (termPreps > 10) uiT("تحضيراً") else uiT("تحاضير")
 
-                            Text(
-                                text = "$termPreps $countLabel",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BentoPrimaryDesc
-                            )
+                            BiText(ar = "$termPreps $countLabel", fr = frPreps(termPreps), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
 
                             if (!isUnlocked) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = Color(0xFFFFEBEE)
                                 ) {
-                                    Text(
-                                        text = uiT("مقفل"),
-                                        fontSize = 10.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFD32F2F),
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                    BiText(ar = uiT("مقفل"), fr = "Verrouillé", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
                                 }
                             }
 
@@ -915,32 +874,21 @@ private fun WeeksListScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = uiTf("الأسبوع {0}", weekNumber),
-                                fontWeight = FontWeight.Black,
-                                fontSize = 15.sp,
-                                color = BentoPrimary
-                            )
+                            BiText(ar = uiTf("الأسبوع {0}", weekNumber), fr = "Semaine $weekNumber", fontSize = 15.sp, fontWeight = FontWeight.Black, color = BentoPrimary)
                         }
 
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = badgeBg
                         ) {
-                            Text(
-                                text = when (weekType) {
+                            BiText(ar = when (weekType) {
                                     "accueil" -> "🔵 $officialLabel"
                                     "integration" -> "🟠 $officialLabel"
                                     "examen" -> "🔴 $officialLabel"
                                     "vacances" -> "⚪ $officialLabel"
                                     "exception_calendrier" -> "🟣 $officialLabel"
                                     else -> if (isCompleted) "✓ أسبوع منجز" else "🟢 دروس وتدريس"
-                                },
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = badgeColor,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                                }, fr = weekBadgeFr(weekType, isCompleted), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = badgeColor)
                         }
                         ContentChips(weekContent.first, weekContent.second, weekPreps)
                     }
@@ -955,26 +903,14 @@ private fun WeeksListScreen(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFF1F5F9)
                             ) {
-                                Text(
-                                    text = "$weekPreps $label",
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BentoPrimaryDesc,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                                )
+                                BiText(ar = "$weekPreps $label", fr = frPreps(weekPreps), modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
                             }
                         } else if (weekType == "vacances") {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFE8F5E9)
                             ) {
-                                Text(
-                                    text = uiT("🌴 عطلة سعيدة"),
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2E7D32),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                                )
+                                BiText(ar = uiT("🌴 عطلة سعيدة"), fr = "🌴 Bonnes vacances", modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
                             }
                         }
 
@@ -1071,12 +1007,7 @@ private fun SubjectsListScreen(
                             }
 
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = uiTf("مقترحات امتحان الأسبوع {0}", selectedWeek),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BentoPrimary
-                                )
+                                BiText(ar = uiTf("مقترحات امتحان الأسبوع {0}", selectedWeek), fr = "Propositions d'examen – semaine $selectedWeek", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                                 val subjectsCount = examSubjects.size
                                 val subjectsLabel = if (subjectsCount > 10) "مادة" else "مواد"
                                 Text(
@@ -1170,13 +1101,7 @@ private fun SubjectsListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = uiT("لا توجد مواد أو دروس مقررة في هذا الأسبوع المخصص لـ (الأنشطة والامتحانات أو العطل)."),
-                        textAlign = TextAlign.Center,
-                        fontSize = 13.sp,
-                        color = BentoPrimaryDesc,
-                        modifier = Modifier.padding(24.dp)
-                    )
+                    BiText(ar = uiT("لا توجد مواد أو دروس مقررة في هذا الأسبوع المخصص لـ (الأنشطة والامتحانات أو العطل)."), fr = "Aucune matière ni leçon prévue : semaine consacrée aux activités, examens ou vacances.", modifier = Modifier.padding(24.dp), fontSize = 13.sp, color = BentoPrimaryDesc, center = true)
                     com.example.data.exams.ExamsRepository.lastError?.let { err ->
                         Text(
                             text = err,
@@ -1262,13 +1187,7 @@ private fun SubjectsListScreen(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFF1F5F9)
                             ) {
-                                Text(
-                                    text = "$prepCount $countLabel",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BentoPrimaryDesc,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                                BiText(ar = "$prepCount $countLabel", fr = frPreps(prepCount), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
                             }
 
                             Icon(
@@ -1303,13 +1222,7 @@ private fun DomainsListScreen(
 
     if (activeDomains.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = uiT("لا توجد مجالات فرعية مقررة لهذه المادة في هذا الأسبوع."),
-                textAlign = TextAlign.Center,
-                fontSize = 13.sp,
-                color = BentoPrimaryDesc,
-                modifier = Modifier.padding(24.dp)
-            )
+            BiText(ar = uiT("لا توجد مجالات فرعية مقررة لهذه المادة في هذا الأسبوع."), fr = "Aucun sous-domaine prévu pour cette matière cette semaine.", modifier = Modifier.padding(24.dp), fontSize = 13.sp, color = BentoPrimaryDesc, center = true)
         }
     } else {
         LazyColumn(
@@ -1390,13 +1303,7 @@ private fun DomainsListScreen(
                                 shape = RoundedCornerShape(6.dp),
                                 color = Color(0xFFE8F5E9)
                             ) {
-                                Text(
-                                    text = "$prepCount $countLabel",
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2E7D32),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                                BiText(ar = "$prepCount $countLabel", fr = frPreps(prepCount), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
                             }
 
                             Icon(
@@ -1435,13 +1342,7 @@ private fun LessonsListScreen(
 
     if (lessons.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = uiT("لا توجد دروس مقررة في هذا المجال الفرعي لهذا الأسبوع."),
-                textAlign = TextAlign.Center,
-                fontSize = 13.sp,
-                color = BentoPrimaryDesc,
-                modifier = Modifier.padding(24.dp)
-            )
+            BiText(ar = uiT("لا توجد دروس مقررة في هذا المجال الفرعي لهذا الأسبوع."), fr = "Aucune leçon prévue dans ce sous-domaine cette semaine.", modifier = Modifier.padding(24.dp), fontSize = 13.sp, color = BentoPrimaryDesc, center = true)
         }
     } else {
         LazyColumn(
@@ -1663,12 +1564,7 @@ private fun CurriculumHeaderCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = uiT("تقدم إنجاز البرنامج الدراسي 📈"),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = BentoPrimary
-                    )
+                    BiText(ar = uiT("تقدم إنجاز البرنامج الدراسي 📈"), fr = "Avancement du programme scolaire 📈", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                 }
 
                 Surface(
@@ -1701,19 +1597,9 @@ private fun CurriculumHeaderCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = uiTf("الإنجاز: {0} من {1} أسبوعاً", completedWeeks, totalWeeks),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BentoPrimary
-                    )
+                    BiText(ar = uiTf("الإنجاز: {0} من {1} أسبوعاً", completedWeeks, totalWeeks), fr = "Progression : $completedWeeks sur $totalWeeks semaines", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimary)
                     if (currentWeek in 1..38) {
-                        Text(
-                            text = uiTf("الأسبوع الدراسي الحالي: {0}", currentWeek),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = BentoPrimaryDesc
-                        )
+                        BiText(ar = uiTf("الأسبوع الدراسي الحالي: {0}", currentWeek), fr = "Semaine scolaire actuelle : $currentWeek", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BentoPrimaryDesc)
                     }
                 }
             }
@@ -1740,34 +1626,29 @@ private fun CompactColorKeyBar() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             item {
-                Text(
-                    text = uiT("دليل الألوان:"),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    color = BentoPrimary
-                )
+                BiText(ar = uiT("دليل الألوان:"), fr = "Légende :", fontSize = 11.sp, fontWeight = FontWeight.Black, color = BentoPrimary)
             }
             item {
-                ColorKeyPill(label = "دروس", dotColor = Color(0xFF2E7D32), bgColor = Color(0xFFE8F5E9))
+                ColorKeyPill(label = "دروس", fr = "Leçons", dotColor = Color(0xFF2E7D32), bgColor = Color(0xFFE8F5E9))
             }
             item {
-                ColorKeyPill(label = "إدماج / تقويم / علاج", dotColor = Color(0xFFE65100), bgColor = Color(0xFFFFF3E0))
+                ColorKeyPill(label = "إدماج / تقويم / علاج", fr = "Intégration / Évaluation / Remédiation", dotColor = Color(0xFFE65100), bgColor = Color(0xFFFFF3E0))
             }
             item {
-                ColorKeyPill(label = "امتحانات", dotColor = Color(0xFFC62828), bgColor = Color(0xFFFFEBEE))
+                ColorKeyPill(label = "امتحانات", fr = "Examens", dotColor = Color(0xFFC62828), bgColor = Color(0xFFFFEBEE))
             }
             item {
-                ColorKeyPill(label = "عطلة", dotColor = Color(0xFF455A64), bgColor = Color(0xFFECEFF1))
+                ColorKeyPill(label = "عطلة", fr = "Vacances", dotColor = Color(0xFF455A64), bgColor = Color(0xFFECEFF1))
             }
             item {
-                ColorKeyPill(label = "استقبال / تشخيص", dotColor = Color(0xFF00695C), bgColor = Color(0xFFE0F2F1))
+                ColorKeyPill(label = "استقبال / تشخيص", fr = "Accueil / Diagnostic", dotColor = Color(0xFF00695C), bgColor = Color(0xFFE0F2F1))
             }
         }
     }
 }
 
 @Composable
-private fun ColorKeyPill(label: String, dotColor: Color, bgColor: Color) {
+private fun ColorKeyPill(label: String, fr: String?, dotColor: Color, bgColor: Color) {
     Surface(
         shape = RoundedCornerShape(6.dp),
         color = bgColor
@@ -1783,12 +1664,7 @@ private fun ColorKeyPill(label: String, dotColor: Color, bgColor: Color) {
                     .clip(CircleShape)
                     .background(dotColor)
             )
-            Text(
-                text = label,
-                fontSize = 10.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = dotColor
-            )
+            BiText(ar = label, fr = fr, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = dotColor)
         }
     }
 }
@@ -1851,16 +1727,11 @@ private fun TermAccordionCard(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(
-                        text = when (termNumber) {
+                    BiText(ar = when (termNumber) {
                             1 -> "الفصل الأول"
                             2 -> "الفصل الثاني"
                             else -> "الفصل الثالث"
-                        },
-                        fontWeight = FontWeight.Black,
-                        fontSize = 15.sp,
-                        color = BentoPrimary
-                    )
+                        }, fr = termFr(termNumber), fontSize = 15.sp, fontWeight = FontWeight.Black, color = BentoPrimary)
                     Text(
                         text = weeksRange,
                         fontSize = 11.5.sp,
@@ -1879,13 +1750,7 @@ private fun TermAccordionCard(
                         shape = RoundedCornerShape(6.dp),
                         color = Color(0xFFFFEBEE)
                     ) {
-                        Text(
-                            text = uiT("مقفل"),
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFD32F2F),
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
+                        BiText(ar = uiT("مقفل"), fr = "Verrouillé", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F))
                     }
                 }
 
@@ -1987,12 +1852,7 @@ private fun WeeklyPlanCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = uiTf("الأسبوع {0}", week),
-                            fontWeight = FontWeight.Black,
-                            fontSize = 15.5.sp,
-                            color = BentoPrimary
-                        )
+                        BiText(ar = uiTf("الأسبوع {0}", week), fr = "Semaine $week", fontSize = 15.5.sp, fontWeight = FontWeight.Black, color = BentoPrimary)
                     }
 
                     // Official Label / Type Badge
@@ -2000,20 +1860,14 @@ private fun WeeklyPlanCard(
                         shape = RoundedCornerShape(6.dp),
                         color = badgeBg
                     ) {
-                        Text(
-                            text = when (weekType) {
+                        BiText(ar = when (weekType) {
                                 "accueil" -> "🔵 $officialLabel"
                                 "integration" -> "🟠 $officialLabel"
                                 "examen" -> "🔴 $officialLabel"
                                 "vacances" -> "⚪ $officialLabel"
                                 "exception_calendrier" -> "🟣 $officialLabel"
                                 else -> if (isCompleted) "✓ أسبوع منجز" else "🟢 دروس وتدريس"
-                            },
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = badgeColor,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
+                            }, fr = weekBadgeFr(weekType, isCompleted), modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = badgeColor)
                     }
                 }
 
@@ -2030,12 +1884,7 @@ private fun WeeklyPlanCard(
                             uncheckedColor = BentoPrimaryDesc
                         )
                     )
-                    Text(
-                        text = if (isCompleted) "منجز ✓" else "إنجاز",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isCompleted) Color(0xFF2E7D32) else BentoPrimaryDesc
-                    )
+                    BiText(ar = if (isCompleted) "منجز ✓" else "إنجاز", fr = if (isCompleted) "Terminé ✓" else "Terminer", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (isCompleted) Color(0xFF2E7D32) else BentoPrimaryDesc)
                 }
             }
 
@@ -2161,12 +2010,7 @@ private fun SubjectSectionInWeek(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = "📌 ${localMarker.label ?: "استثناء محلي رسمي"}",
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (localMarker.type == "examen") Color(0xFFC62828) else Color(0xFF455A64)
-                        )
+                        BiText(ar = "📌 ${localMarker.label ?: "استثناء محلي رسمي"}", fr = if (localMarker.label == null) "📌 Exception locale officielle" else null, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = if (localMarker.type == "examen") Color(0xFFC62828) else Color(0xFF455A64))
                     }
                 }
             }
@@ -2348,13 +2192,7 @@ private fun IntegrationStationBox(
                     shape = RoundedCornerShape(4.dp),
                     color = Color(0xFFE65100)
                 ) {
-                    Text(
-                        text = uiT("إدماج / تقويم / علاج"),
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                    )
+                    BiText(ar = uiT("إدماج / تقويم / علاج"), fr = "Intégration / Évaluation / Remédiation", modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 Text(
                     text = title,
@@ -2409,13 +2247,7 @@ private fun UnassignedLevelCard(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(48.dp)
                 )
-                Text(
-                    text = uiT("تحديد مستوى القسم"),
-                    fontWeight = FontWeight.Black,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
+                BiText(ar = uiT("تحديد مستوى القسم"), fr = "Définir le niveau de la classe", fontSize = 18.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
                 Text(
                     text = uiTf("لم يتم تحديد مستوى هذا القسم ({0}) في السجل المحلي.\nيرجى اختيار المستوى التعليمي لعرض التخطيط السنوي:", activeClass.getFormattedName()),
                     fontSize = 14.sp,
@@ -2438,11 +2270,7 @@ private fun UnassignedLevelCard(
                                 contentColor = if (lvl == 5) Color.White else MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         ) {
-                            Text(
-                                text = "السنة ${if (lvl == 6) "السادسة (6AP)" else "$lvl"}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
+                            BiText(ar = "السنة ${if (lvl == 6) "السادسة (6AP)" else "$lvl"}", fr = "Année ${if (lvl == 6) "6 (6AP)" else "$lvl"}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -2493,22 +2321,10 @@ internal fun ContentChips(books: Int, boards: Int, total: Int) {
 internal fun LessonContentChips(hasBook: Boolean, hasBoard: Boolean) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Surface(shape = RoundedCornerShape(5.dp), color = if (hasBook) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)) {
-            Text(
-                text = if (hasBook) "📖 فيه كتاب" else "بلا كتاب",
-                fontSize = 9.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (hasBook) Color(0xFF1565C0) else Color(0xFF9E9E9E),
-                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-            )
+            BiText(ar = if (hasBook) "📖 فيه كتاب" else "بلا كتاب", fr = if (hasBook) "Avec livre" else "Sans livre", modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = if (hasBook) Color(0xFF1565C0) else Color(0xFF9E9E9E))
         }
         Surface(shape = RoundedCornerShape(5.dp), color = if (hasBoard) Color(0xFFEEEEEE) else Color(0xFFF5F5F5)) {
-            Text(
-                text = if (hasBoard) "⬛ فيه سبورة" else "بلا سبورة",
-                fontSize = 9.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (hasBoard) Color(0xFF212121) else Color(0xFF9E9E9E),
-                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-            )
+            BiText(ar = if (hasBoard) "⬛ فيه سبورة" else "بلا سبورة", fr = if (hasBoard) "Avec tableau" else "Sans tableau", modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp), fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = if (hasBoard) Color(0xFF212121) else Color(0xFF9E9E9E))
         }
     }
 }
@@ -2518,4 +2334,18 @@ internal fun LessonContentChips(hasBook: Boolean, hasBoard: Boolean) {
 private fun planningSubjectLabel(matiere: String): String {
     val ar = com.example.data.planning.canonical.OfficialAnnualPlanningRepository.mapMatiereToArabic(matiere)
     return if (ar == "اللغة الفرنسية") "Français" else ar
+}
+
+
+private fun frPreps(n: Int): String = if (n == 1) "$n préparation" else "$n préparations"
+
+private fun termFr(n: Int): String = when (n) { 1 -> "1er trimestre"; 2 -> "2e trimestre"; else -> "3e trimestre" }
+
+private fun weekBadgeFr(type: String, completed: Boolean): String = when (type) {
+    "accueil" -> "Accueil et mise à niveau"
+    "integration" -> "Intégration, évaluation et remédiation"
+    "examen" -> "Examens"
+    "vacances" -> "Vacances scolaires"
+    "exception_calendrier" -> "Étape d'évaluation spéciale"
+    else -> if (completed) "Semaine achevée" else "Leçons et enseignement"
 }
