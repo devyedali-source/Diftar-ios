@@ -3671,7 +3671,7 @@ object HtmlReportHelper {
     // Print execution method (iOS: WKWebView + UIPrintInteractionController)
     fun printHtml(context: android.content.Context, htmlContent: String, jobName: String, isLandscape: Boolean = false) {
         com.example.compat.PrintProgress.show("جاري تحضير ملف الطباعة... 🖨️")
-        com.example.compat.PlatformApi.printHtml(htmlContent, jobName, isLandscape) { ok, error ->
+        com.example.compat.PlatformApi.printHtml(com.example.ui.BiHtml.translate(htmlContent), jobName, isLandscape) { ok, error ->
             com.example.compat.PrintProgress.hide()
             if (!ok && error != null) {
                 Toast.makeText(context, "خطأ أثناء الطباعة: $error", Toast.LENGTH_LONG).show()
@@ -3682,7 +3682,7 @@ object HtmlReportHelper {
     // Share as PDF (iOS: WKWebView → PDF A4 → share sheet)
     fun shareHtmlAsPdf(context: android.content.Context, htmlContent: String, filename: String, isLandscape: Boolean = false) {
         com.example.compat.PrintProgress.show("جاري تحضير ملف PDF... 📄")
-        com.example.compat.PlatformApi.shareHtmlAsPdf(htmlContent, filename, isLandscape) { ok, error ->
+        com.example.compat.PlatformApi.shareHtmlAsPdf(com.example.ui.BiHtml.translate(htmlContent), filename, isLandscape) { ok, error ->
             com.example.compat.PrintProgress.hide()
             if (!ok) {
                 Toast.makeText(context, "خطأ أثناء تحويل PDF: ${error ?: ""}", Toast.LENGTH_LONG).show()

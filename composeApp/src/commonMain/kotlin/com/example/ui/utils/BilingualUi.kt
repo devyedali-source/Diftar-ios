@@ -154,6 +154,12 @@ object BiFr {
         "عرفات" to "Arafat", "الميناء" to "El Mina", "الرياض" to "Riyad"
     )
 
+    /** الاسم الفرنسي لولاية أو مقاطعة إن عُرف. */
+    fun geoFr(ar: String): String? = geo[ar.trim()]
+
+    /** الاسم الفرنسي لمادة إن عُرف. */
+    fun subjectFr(ar: String): String? = subjects[norm(ar)]
+
     /** «الحوض الشرقي - Hodh Ech Chargui»؛ وإن لم يوجد اسم فرنسي يبقى العربي وحده. */
     fun geoLabel(ar: String): String {
         val f = geo[ar.trim()] ?: return ar
