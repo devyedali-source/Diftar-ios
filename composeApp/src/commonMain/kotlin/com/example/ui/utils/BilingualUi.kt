@@ -29,6 +29,14 @@ object BiFr {
         s.replace(emojiRegex, "").replace(Regex("\\s+"), " ").trim()
 
     private val extra: Map<String, String> = mapOf(
+        "الرقم (التسلسلي) يظهر دائماً. الاسم:" to "Le numéro (de série) s'affiche toujours. Nom :",
+        "الملاحظات الصحية" to "Remarques de santé",
+        "باقي الأعمدة:" to "Autres colonnes :",
+        "سحب اللائحة" to "Exporter la liste",
+        "طالب جديد" to "Nouvel élève",
+        "ما الذي تريد إظهاره في اللائحة؟" to "Que voulez-vous afficher dans la liste ?",
+        "هاتف الوكيل 1" to "Téléphone du tuteur 1",
+        "هاتف الوكيل 2" to "Téléphone du tuteur 2",
         // الشريط السفلي
         "الطلاب" to "Élèves",
         "النتائج" to "Résultats",
@@ -196,6 +204,13 @@ object BiFr {
         return extra[k] ?: subjects[k] ?: UiFrench.map[ar] ?: UiFrench.map[k]
     }
 
+    /** نفس of لكن لنصوص فيها متغيرات {0} {1} ... */
+    fun f(ar: String, vararg args: Any?): String? {
+        var out = of(ar) ?: return null
+        args.forEachIndexed { i, a -> out = out.replace("{" + i + "}", a?.toString() ?: "") }
+        return out
+    }
+
     /** اسم المادة مع فرعها بالفرنسية: «Éducation islamique (Coran)» */
     fun subjectLine(subject: String, branch: String): String? {
         val s = subjects[norm(subject)] ?: return null
@@ -267,4 +282,25 @@ fun BiText(
             )
         }
     }
+}
+
+
+/** مثل BiText لكن يرث حجم الخط من السياق إن لم يُحدَّد (للتحويل التلقائي للأزرار والنصوص). */
+@Composable
+fun BiTextA(
+    ar: String,
+    modifier: Modifier = Modifier,
+    fr: String? = BiFr.of(ar),
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontWeight: FontWeight? = null,
+    color: Color = Color.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    center: Boolean = false
+) {
+    val base = if (fontSize != TextUnit.Unspecified) fontSize
+        else androidx.compose.material3.LocalTextStyle.current.fontSize.let { if (it == TextUnit.Unspecified) 14.sp else it }
+    BiText(
+        ar = ar, modifier = modifier, fr = fr, fontSize = base, frSize = base * 0.72f,
+        fontWeight = fontWeight, color = color, maxLines = maxLines, center = center
+    )
 }
