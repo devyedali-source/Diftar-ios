@@ -37,7 +37,7 @@ object BiHtml {
 
     private val cells: Map<String, String> = mapOf(
         "المادة" to "Matière",
-        "النقاط" to "Points",
+        "النقاط" to "Notes",
         "مجموع النقاط" to "Total des points",
         "معدل الامتحان الأول" to "Moyenne du 1er examen",
         "معدل الامتحان الثاني" to "Moyenne du 2e examen",
