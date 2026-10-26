@@ -184,25 +184,25 @@ object LessonPreparationRepository {
 
         val durationText = if (isFrench) "${fiche.duree_minutes} min" else "${fiche.duree_minutes} دقيقة"
 
-        val referenceText = if (fiche.moyens.isNotEmpty()) {
-            fiche.moyens.joinToString("، ")
+        // المرجع: الكتاب أو البرنامج (التخطيط السنوي). الوسائل: السبورة والطبشور والكتاب وما يلزم من صور/تسجيل...
+        val bookRegex = Regex("كتاب|Manuel|manuel|Pages suggérées|صفحة|صفحتا|ص\\s?\\d|\\bp\\.")
+        val boardRegex = Regex("^\\s*(السبورة|Tableau)\\s*$")
+        val bookItems = fiche.moyens.filter { bookRegex.containsMatchIn(it) }
+        val otherAids = fiche.moyens
+            .filter { !bookRegex.containsMatchIn(it) && !boardRegex.matches(it) && !it.startsWith("جدول المفردات") }
+            .map { it.trim() }.filter { it.isNotEmpty() }
+
+        val referenceText = if (bookItems.isNotEmpty()) {
+            bookItems.joinToString("، ")
         } else {
-            if (isFrench) "Manuel officiel" else "الكتاب المدرسي الرسمي"
+            if (isFrench) "Programme annuel officiel" else "التخطيط السنوي (البرنامج الرسمي)"
         }
 
-        val teachingAidsList = mutableListOf<String>()
-        if (fiche.moyens.isNotEmpty()) {
-            teachingAidsList.add(fiche.moyens.joinToString("، "))
-        }
-        if (fiche.vocabulaire_cle.isNotEmpty()) {
-            val vocabLabel = if (isFrench) "المفردات الأساسية: " else "المفردات الأساسية: "
-            teachingAidsList.add(vocabLabel + fiche.vocabulaire_cle.joinToString("، "))
-        }
-        val teachingAidsText = if (teachingAidsList.isNotEmpty()) {
-            teachingAidsList.joinToString(" | ")
-        } else {
-            if (isFrench) "Tableau, Manuel" else "السبورة، الكتاب المدرسي"
-        }
+        val aidsList = mutableListOf<String>()
+        aidsList.add(if (isFrench) "Tableau et craie" else "السبورة والطبشور")
+        if (bookItems.isNotEmpty()) aidsList.add(if (isFrench) "manuel" else "الكتاب المدرسي")
+        aidsList.addAll(otherAids)
+        val teachingAidsText = aidsList.joinToString(if (isFrench) ", " else "، ")
 
         val specificObjective = fiche.objectif_specifique
 
