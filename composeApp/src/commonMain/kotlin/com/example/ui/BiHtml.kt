@@ -57,7 +57,7 @@ object BiHtml {
     private val inlineLabels: Map<String, String> = mapOf(
         "الاسم الكامل:" to "Nom complet",
         "رقم النداء:" to "N° d'appel",
-        "الرقم المدرسي:" to "Matricule"
+        "الرقم المدرسي:" to "RIM"
     )
 
     private val headerColumn = Regex(
