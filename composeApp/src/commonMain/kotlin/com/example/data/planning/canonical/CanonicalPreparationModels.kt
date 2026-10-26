@@ -42,6 +42,7 @@ data class PreparationOfficial(
     val competence: String? = null,
     val semaine: Int,
     val titre_officiel: String,
+    val titre_court: String? = null,
     val partie: Int = 1,
     val nombre_parties: Int = 1,
     val est_suite: Boolean = false,
