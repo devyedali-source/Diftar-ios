@@ -68,11 +68,11 @@ object BiHtml {
     private val anyTag = Regex("<[^>]*>")
 
     private fun term(v: String): String = when (v.trim()) {
-        "الأول" -> "1er"
-        "الثاني" -> "2e"
-        "الثالث" -> "3e"
-        "الأخير" -> "Dernier"
-        else -> v.trim()
+        "الأول" -> "1er trimestre"
+        "الثاني" -> "2e trimestre"
+        "الثالث" -> "3e trimestre"
+        "الأخير" -> "Dernier trimestre"
+        else -> "Trimestre : " + v.trim()
     }
 
     private fun place(v: String): String = BiFr.geoFr(v.trim()) ?: v.trim()
@@ -97,7 +97,7 @@ object BiHtml {
         value(listOf("السنة الدراسية"))?.let { return "Année scolaire : <bdi>$it</bdi>" }
         value(listOf("القسم"))?.let { return "Classe : <bdi>$it</bdi>" }
         value(listOf("المادة"))?.let { return "Matière : <bdi>${BiFr.subjectFr(it) ?: it}</bdi>" }
-        value(listOf("الفصل"))?.let { return "Trimestre : <bdi>${term(it)}</bdi>" }
+        value(listOf("الفصل"))?.let { return "<bdi>${term(it)}</bdi>" }
         return null
     }
 
