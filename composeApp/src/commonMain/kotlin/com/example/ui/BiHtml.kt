@@ -75,6 +75,8 @@ object BiHtml {
         else -> "Trimestre : " + v.trim()
     }
 
+    private val schoolBi = Regex("^(مدرسة\\s*:?.*?)\\s+[-–—]\\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 '’.\\-]*)$")
+
     private fun place(v: String): String = BiFr.geoFr(v.trim()) ?: v.trim()
 
     /** الفرنسية لسطر من رأسية اللائحة، أو null إن لم يكن سطراً معروفاً. */
@@ -110,14 +112,23 @@ object BiHtml {
             val lines = m.groupValues[2].split(brTag)
             val sb = StringBuilder()
             lines.forEachIndexed { i, raw ->
-                val plain = raw.replace(anyTag, "").replace("&nbsp;", " ")
-                val fr = headerLine(plain)
+                var plain = raw.replace(anyTag, "").replace("&nbsp;", " ")
+                var rawLine = raw
+                var fr: String? = null
+                // اسم المدرسة «العربي - الفرنسي»: العربي في السطر والفرنسي تحته
+                val sm = schoolBi.find(plain.trim())
+                if (sm != null) {
+                    val frName = sm.groupValues[2].trim()
+                    rawLine = raw.replace(Regex("\\s+[-–—]\\s+" + Regex.escape(frName)), "")
+                    plain = sm.groupValues[1]
+                    fr = "École : <bdi>$frName</bdi>"
+                } else fr = headerLine(plain)
                 if (fr == null) {
-                    sb.append(raw)
+                    sb.append(rawLine)
                     if (i < lines.size - 1) sb.append("<br>")
                 } else {
                     // السطر الفرنسي كتلة مستقلة، فلا حاجة إلى <br> بعده
-                    sb.append(raw.trimEnd()).append("<span class=\"bi-hdr\">").append(fr).append("</span>")
+                    sb.append(rawLine.trimEnd()).append("<span class=\"bi-hdr\">").append(fr).append("</span>")
                 }
             }
             m.groupValues[1] + sb.toString() + m.groupValues[3]

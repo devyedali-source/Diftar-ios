@@ -272,6 +272,7 @@ fun EditClassInfoDialog(
                         value = schoolName,
                         onValueChange = { if (it.length <= 80) schoolName = it },
                         label = { Text(uiT("إسم المدرسة")) },
+                        supportingText = { Text("الاسم بالعربية - الاسم بالفرنسية", fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,

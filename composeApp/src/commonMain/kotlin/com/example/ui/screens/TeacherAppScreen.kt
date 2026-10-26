@@ -4320,7 +4320,8 @@ fun CreateClassDialog(
                         value = schoolName,
                         onValueChange = { schoolName = it },
                         label = { Text(uiT("إسم المدرسة")) },
-                        placeholder = { Text(uiT("مثال: مدرسة الجمهورية")) },
+                        placeholder = { Text("مثال: مدرسة الجمهورية - École de la République", fontSize = 12.sp) },
+                        supportingText = { Text("الاسم بالعربية - الاسم بالفرنسية", fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth().testTag("dialog_school_name_input"),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
