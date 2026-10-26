@@ -142,7 +142,9 @@ object BiHtml {
 
         // 5) CSS مرة واحدة
         val idx = out.indexOf("</head>")
-        out = if (idx >= 0) out.substring(0, idx) + CSS + out.substring(idx) else CSS + out
+        // مع تصاميم الرأسيات المزخرفة: مساحة أسفل أكبر حتى لا يلامس السطر الفرنسي الأخير الإطار
+        val extra = if (PrintDesign.header > 0) "<style>.header-section{padding-bottom:30px !important;}</style>" else ""
+        out = if (idx >= 0) out.substring(0, idx) + CSS + extra + out.substring(idx) else CSS + extra + out
         return out
     }
 }
