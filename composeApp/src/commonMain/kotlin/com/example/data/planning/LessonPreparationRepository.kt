@@ -201,7 +201,11 @@ object LessonPreparationRepository {
         val aidsList = mutableListOf<String>()
         aidsList.add(if (isFrench) "Tableau et craie" else "السبورة والطبشور")
         if (bookItems.isNotEmpty()) aidsList.add(if (isFrench) "manuel" else "الكتاب المدرسي")
-        aidsList.addAll(otherAids)
+        // لا نكتب «بطاقات»: تُعرض صورًا
+        otherAids.forEach { a ->
+            val x = if (Regex("بطاق|Cartes?|cartes?").containsMatchIn(a)) (if (isFrench) "Images" else "صور") else a
+            if (x !in aidsList) aidsList.add(x)
+        }
         val teachingAidsText = aidsList.joinToString(if (isFrench) ", " else "، ")
 
         val specificObjective = fiche.objectif_specifique
