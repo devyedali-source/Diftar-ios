@@ -192,7 +192,21 @@ object LessonPreparationRepository {
             .filter { !bookRegex.containsMatchIn(it) && !boardRegex.matches(it) && !it.startsWith("جدول المفردات") }
             .map { it.trim() }.filter { it.isNotEmpty() }
 
-        val referenceText = if (bookItems.isNotEmpty()) {
+        // المرجع: «الكتاب المدرسي» والصفحات فقط (دون تفصيل النص وجدول المفردات)
+        val pageRegex = Regex("(?:ص|صفحة|صفحتا|صفحات|pp?\\.)\\s*(\\d+(?:\\s*[-–]\\s*\\d+)?(?:\\s*(?:،|,|و)\\s*\\d+(?:\\s*[-–]\\s*\\d+)?)*)")
+        val pageNums = mutableListOf<String>()
+        bookItems.forEach { item ->
+            pageRegex.findAll(item).forEach { m ->
+                Regex("\\d+(?:\\s*[-–]\\s*\\d+)?").findAll(m.groupValues[1]).forEach { n ->
+                    val v = n.value.replace(Regex("\\s+"), "")
+                    if (v !in pageNums) pageNums.add(v)
+                }
+            }
+        }
+        val referenceText = if (bookItems.isNotEmpty() && pageNums.isNotEmpty()) {
+            if (isFrench) "Manuel : p. " + pageNums.joinToString(", ")
+            else "الكتاب المدرسي: ص " + pageNums.joinToString(" و")
+        } else if (bookItems.isNotEmpty()) {
             bookItems.joinToString("، ")
         } else {
             if (isFrench) "Programme annuel officiel" else "التخطيط السنوي (البرنامج الرسمي)"
