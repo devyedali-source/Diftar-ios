@@ -188,8 +188,10 @@ object LessonPreparationRepository {
         val bookRegex = Regex("كتاب|Manuel|manuel|Pages suggérées|صفحة|صفحتا|ص\\s?\\d|\\bp\\.")
         val boardRegex = Regex("^\\s*(السبورة|Tableau)\\s*$")
         val bookItems = fiche.moyens.filter { bookRegex.containsMatchIn(it) }
+        // وسائل المعلم فقط: نحذف أدوات التلميذ (دفاتر، كراريس، ألواح فردية...)
+        val studentToolRegex = Regex("دفتر|كراس|Cahier|cahier|Ardoise|ardoise|التلميذ|ألواح|الألواح|اللوح الفرد|لوح ذكي|لوح ذكيّ|اللوح الذكي")
         val otherAids = fiche.moyens
-            .filter { !bookRegex.containsMatchIn(it) && !boardRegex.matches(it) && !it.startsWith("جدول المفردات") }
+            .filter { !bookRegex.containsMatchIn(it) && !boardRegex.matches(it) && !it.startsWith("جدول المفردات") && !studentToolRegex.containsMatchIn(it) }
             .map { it.trim() }.filter { it.isNotEmpty() }
 
         // المرجع: «الكتاب المدرسي» والصفحات فقط (دون تفصيل النص وجدول المفردات)
