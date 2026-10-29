@@ -541,6 +541,7 @@ class GoogleDriveBackupManager(
                 val ed = restorePrefs.edit()
                 for ((k, v) in backupData.teacherSettings) {
                     when {
+                        k.startsWith("stamp_") && !k.endsWith("_show_in_reports") -> ed.putString(k, v)
                         v == "true" || v == "false" -> ed.putBoolean(k, v.toBoolean())
                         v.toFloatOrNull() != null && v.contains(".") -> ed.putFloat(k, v.toFloat())
                         v.toIntOrNull() != null -> ed.putInt(k, v.toInt())

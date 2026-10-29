@@ -101,6 +101,7 @@ object UiFrench {
         "استعادة كلمة المرور 🔐" to "Récupération du mot de passe 🔐",
         "اسم الطالب:" to "Nom de l'élève :",
         "اسم القسم:" to "Nom de la classe :",
+        "المقاطعة:" to "Moughataa :",
         "اسم المادة" to "Nom de la matière",
         "اسم المدرسة" to "Nom de l'école",
         "اسم المستخدم" to "Nom d'utilisateur",

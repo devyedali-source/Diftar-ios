@@ -945,6 +945,7 @@ fun InnerTeacherAppScreenContent(
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
                             )
 
+                            // زر Traduire: يُظهر/يُخفي الفرنسية في الواجهات والكشوف
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -952,16 +953,58 @@ fun InnerTeacherAppScreenContent(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
-                                    text = "🌐 Traduire",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = BentoPrimary
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "🌐 Traduire",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = BentoPrimary
+                                    )
+                                    Text(
+                                        text = "إذا كنت لا تفهم واجهة العربية اضغط للترجمة",
+                                        fontSize = 10.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                                var pendingTranslate by remember { mutableStateOf<Boolean?>(null) }
                                 Switch(
                                     checked = BiFr.enabled,
-                                    onCheckedChange = { viewModel.setBilingual(it) }
+                                    onCheckedChange = { pendingTranslate = it }
                                 )
+                                pendingTranslate?.let { turnOn ->
+                                    AlertDialog(
+                                        onDismissRequest = { pendingTranslate = null },
+                                        title = {
+                                            Column {
+                                                Text(if (turnOn) "🌐 تفعيل الترجمة" else "🌐 إيقاف الترجمة", fontWeight = FontWeight.Bold)
+                                                Text(if (turnOn) "Activer la traduction" else "Désactiver la traduction", fontSize = 12.sp, color = Color.Gray)
+                                            }
+                                        },
+                                        text = {
+                                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                Text(
+                                                    if (turnOn) "ستظهر الترجمة على الواجهات."
+                                                    else "ستختفي الترجمة من الواجهات.",
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Text(
+                                                    if (turnOn) "La traduction apparaîtra sur les écrans."
+                                                    else "La traduction disparaîtra des écrans.",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                        },
+                                        confirmButton = {
+                                            TextButton(onClick = { viewModel.setBilingual(turnOn); pendingTranslate = null }) {
+                                                Text("موافق / OK", fontWeight = FontWeight.Bold)
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = { pendingTranslate = null }) { Text("إلغاء / Annuler") }
+                                        }
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(6.dp))
@@ -1042,26 +1085,6 @@ fun InnerTeacherAppScreenContent(
                                 icon = { Icon(Icons.Default.Assignment, contentDescription = null, tint = BentoPrimary) },
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                             )
-
-                            // تصميم اللوائح والكشوف وشهادات التفوق
-                            var showPrintDesignFromDrawer by remember { mutableStateOf(false) }
-                            NavigationDrawerItem(
-                                label = {
-                                    com.example.ui.utils.BiText(
-                                        ar = "تصميم اللوائح والكشوف 🎨",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.5.sp,
-                                        frSize = 9.sp
-                                    )
-                                },
-                                selected = false,
-                                onClick = { showPrintDesignFromDrawer = true },
-                                icon = { Icon(Icons.Default.Settings, contentDescription = null, tint = BentoPrimary) },
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-                            )
-                            if (showPrintDesignFromDrawer) {
-                                PrintDesignDialog(onDismiss = { showPrintDesignFromDrawer = false })
-                            }
 
                             // 4. About App (حول التطبيق)
                             NavigationDrawerItem(
@@ -2462,27 +2485,21 @@ fun ClassStudentsSubview(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            OutlinedButton(
-                onClick = { showPullMenu = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                BiTextA(ar = uiT("سحب اللوائح"), fr = BiFr.of("سحب اللوائح"), fontWeight = FontWeight.Bold)
-            }
-        }
-
-        // Smaller Add Student Button and Search Toggle in a Row
+        // سحب اللوائح + زر البحث في صف واحد (لا فراغ بينهما وبين الإحصائيات)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Small Search Button next to it
+                OutlinedButton(
+                    onClick = { showPullMenu = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    BiTextA(ar = uiT("سحب اللوائح"), fr = BiFr.of("سحب اللوائح"), fontWeight = FontWeight.Bold)
+                }
                 IconButton(
                     onClick = { isSearchVisible = !isSearchVisible },
                     modifier = Modifier
@@ -6015,7 +6032,8 @@ fun GradesEntryTab(
         val currentUser by viewModel.currentUser.collectAsState()
         val email = currentUser?.email ?: ""
         val classId = activeClass?.id ?: 0L
-        val className = activeClass?.getFormattedName() ?: ""
+        // اسم القسم بدون تكرار السنة الدراسية [2026-2027] (تُكتب في سطر مستقل)
+        val className = (activeClass?.getFormattedName() ?: "").replace(Regex("\\s*\\[\\s*\\d{4}\\s*[-/]\\s*\\d{4}\\s*\\]"), "").trim()
         val academicYear = activeClass?.academicYear?.ifBlank { "2025-2026" } ?: "2025-2026"
 
         ActivationPromoDialog(
@@ -6023,6 +6041,8 @@ fun GradesEntryTab(
             classId = classId,
             className = className,
             academicYear = academicYear,
+            wilaya = activeClass?.wilaya?.trim() ?: "",
+            moughataa = activeClass?.moughataa?.trim() ?: "",
             targetTermName = targetTermNameForActivation ?: "الفصل الثاني",
             isFinalTermOnlyFeatureEnabled = isFinalTermOnlyFeatureEnabled,
             onDismiss = { showActivationPromoDialog = false }
@@ -11644,6 +11664,8 @@ fun ActivationPromoDialog(
     classId: Long,
     className: String,
     academicYear: String,
+    wilaya: String = "",
+    moughataa: String = "",
     targetTermName: String? = null,
     isFinalTermOnlyFeatureEnabled: Boolean = false,
     onDismiss: () -> Unit
@@ -11925,6 +11947,8 @@ fun ActivationPromoDialog(
                             "status" to "pending",
                             "createdAt" to System.currentTimeMillis(),
                             "className" to className,
+                            "wilaya" to wilaya,
+                            "moughataa" to moughataa,
                             "termName" to (targetTermName ?: "الفصل الثاني"),
                             "email" to email
                         )
@@ -12454,6 +12478,8 @@ fun SingleRequestActivationView(
                 } else {
                     val className = requestData?.get("className") as? String ?: "غير محدد"
                     val teacherEmail = requestData?.get("email") as? String ?: "غير محدد"
+                    val reqWilaya = (requestData?.get("wilaya") as? String)?.trim().orEmpty()
+                    val reqMoughataa = (requestData?.get("moughataa") as? String)?.trim().orEmpty()
                     val requestedTerm = requestData?.get("termName") as? String ?: "غير محدد"
                     val requestIdParts = requestId.split("_")
                     val isFullYearRequest = (requestIdParts.size >= 2 && requestIdParts[requestIdParts.size - 2] == "23") ||
@@ -12498,6 +12524,18 @@ fun SingleRequestActivationView(
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                     BiText(ar = uiT("اسم القسم:"), fr = BiFr.of("اسم القسم:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
                                     Text(className, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
+                                }
+                                if (reqWilaya.isNotBlank()) {
+                                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                        BiText(ar = uiT("الولاية:"), fr = BiFr.of("الولاية:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(reqWilaya, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
+                                    }
+                                }
+                                if (reqMoughataa.isNotBlank()) {
+                                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                        BiText(ar = uiT("المقاطعة:"), fr = BiFr.of("المقاطعة:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)
+                                        Text(reqMoughataa, fontWeight = FontWeight.Medium, color = BentoPrimary, fontSize = 14.sp)
+                                    }
                                 }
                                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                     BiText(ar = uiT("الفصل المطلوب:"), fr = BiFr.of("الفصل المطلوب:"), fontWeight = FontWeight.Bold, color = BentoPrimaryDesc, fontSize = 14.sp)

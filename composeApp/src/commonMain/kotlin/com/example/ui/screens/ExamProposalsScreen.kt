@@ -180,7 +180,7 @@ fun ExamProposalsScreen(
                     )
                     val label = if (subject.proposals.size > 10) "مقترحاً" else "مقترحات"
                     Text(
-                        text = uiTf("مقترحات امتحان الأسبوع {0} • {1} {2}", semaine, subject.proposals.size, label),
+                        text = if (semaine == 1) "تقويم تشخيصي من برنامج القسم السابق • ${subject.proposals.size} $label" else uiTf("مقترحات امتحان الأسبوع {0} • {1} {2}", semaine, subject.proposals.size, label),
                         fontSize = 12.sp,
                         color = BentoPrimaryDesc
                     )
