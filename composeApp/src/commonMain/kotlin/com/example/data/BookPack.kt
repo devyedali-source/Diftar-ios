@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import com.example.compat.PlatformApi
+import com.example.compat.synchronized
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
