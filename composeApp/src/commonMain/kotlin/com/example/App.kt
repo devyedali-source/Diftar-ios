@@ -88,6 +88,8 @@ fun App() {
         true
     }
     LaunchedEffect(Unit) { AppState.showBiometricPrompt() }
+    // تنزيل صور الكتب والأدلة مرة واحدة (يُستأنف تلقائياً إن انقطع الإنترنت)
+    LaunchedEffect(Unit) { com.example.data.BookPack.requestDownload(AppApplication) }
     MyApplicationTheme {
         Box(Modifier.fillMaxSize()) {
             if (AppState.isAppUnlocked) {

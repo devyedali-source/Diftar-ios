@@ -23,6 +23,7 @@ data class PreparationItem(
     val evaluation: PreparationEvaluation? = null,
     val continuity: PreparationContinuity? = null,
     val livre: PreparationLivre? = null,
+    val guide: PreparationLivre? = null,
     val tableau: PreparationTableau? = null
 )
 

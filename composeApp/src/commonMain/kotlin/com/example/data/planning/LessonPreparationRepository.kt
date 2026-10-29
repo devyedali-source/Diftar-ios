@@ -269,6 +269,9 @@ object LessonPreparationRepository {
             bookPages = prep.livre?.takeIf { it.book.isNotBlank() && it.pages.isNotEmpty() }?.let {
                 com.example.data.planning.LessonBookPages(it.book, it.titre, it.pages, it.aux)
             },
+            guidePages = prep.guide?.takeIf { it.book.isNotBlank() && it.pages.isNotEmpty() }?.let {
+                com.example.data.planning.LessonBookPages(it.book, it.titre, it.pages, it.aux)
+            },
             board = buildBoardData(prep, isFrench)
         )
     }

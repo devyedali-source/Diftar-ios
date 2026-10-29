@@ -137,6 +137,7 @@ fun LessonProposalScreen(
 
     var showBoard by remember(lesson.id) { mutableStateOf(false) }
     var showBook by remember(lesson.id) { mutableStateOf(false) }
+    var showGuide by remember(lesson.id) { mutableStateOf(false) }
 
     val domainText = remember(lesson, context) {
         val lvlCode = com.example.data.planning.canonical.OfficialAnnualPlanningRepository.getLevelCodeFromInt(lesson.level)
@@ -293,6 +294,21 @@ fun LessonProposalScreen(
                         ) {
                             Text(
                                 text = if (fr) "Manuel" else "صفحات الكتاب",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+                    if (proposalDataState.value?.guidePages != null) {
+                        Button(
+                            onClick = { showGuide = true },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E), contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text(
+                                text = if (fr) "Guide" else "دليل النسقية",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Black
                             )
@@ -687,6 +703,11 @@ fun LessonProposalScreen(
         if (showBook) {
             proposalDataState.value?.bookPages?.let { bp ->
                 BookPagesViewer(bp = bp, isFrench = fr, onClose = { showBook = false })
+            }
+        }
+        if (showGuide) {
+            proposalDataState.value?.guidePages?.let { gp ->
+                BookPagesViewer(bp = gp, isFrench = fr, isGuide = true, onClose = { showGuide = false })
             }
         }
         if (showBoard) {
@@ -1617,7 +1638,7 @@ private fun RemediationProposalCard(
 
 /** عنوان قسم صفحات الكتاب (يظهر بعد ورقة التحضير). */
 @Composable
-private fun BookPagesHeader(bp: com.example.data.planning.LessonBookPages, isFrench: Boolean) {
+private fun BookPagesHeader(bp: com.example.data.planning.LessonBookPages, isFrench: Boolean, isGuide: Boolean = false) {
     val pagesText = bp.pages.joinToString(if (isFrench) ", " else "، ")
     Column(
         modifier = Modifier
@@ -1627,7 +1648,7 @@ private fun BookPagesHeader(bp: com.example.data.planning.LessonBookPages, isFre
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            text = if (isFrench) "Pages du manuel liées à cette préparation" else "صفحات الكتاب المرتبطة بهذا التحضير",
+            text = if (isGuide) (if (isFrench) "Pages du guide liées à cette préparation" else "صفحات دليل النسقية المرتبطة بهذا التحضير") else if (isFrench) "Pages du manuel liées à cette préparation" else "صفحات الكتاب المرتبطة بهذا التحضير",
             fontSize = 14.sp,
             fontWeight = FontWeight.Black,
             color = Color(0xFF1E3A8A),
@@ -1802,6 +1823,7 @@ internal fun ZoomableSheet(content: @Composable () -> Unit) {
 private fun BookPagesViewer(
     bp: com.example.data.planning.LessonBookPages,
     isFrench: Boolean,
+    isGuide: Boolean = false,
     onClose: () -> Unit
 ) {
     androidx.activity.compose.BackHandler(onBack = onClose)
@@ -1829,7 +1851,7 @@ private fun BookPagesViewer(
                         Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = InkDarkBlue)
                     }
                     Text(
-                        text = if (isFrench) "Pages du manuel" else "صفحات الكتاب",
+                        text = if (isGuide) (if (isFrench) "Guide – leçons scriptées" else "دليل النسقية") else if (isFrench) "Pages du manuel" else "صفحات الكتاب",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
                         color = InkDarkBlue
@@ -1844,7 +1866,7 @@ private fun BookPagesViewer(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item(key = "book_pages_header") {
-                        BookPagesHeader(bp = bp, isFrench = isFrench)
+                        BookPagesHeader(bp = bp, isFrench = isFrench, isGuide = isGuide)
                     }
                     items(bp.pages, key = { "book_${bp.book}_$it" }) { pageNumber ->
                         BookPageImage(book = bp.book, page = pageNumber)

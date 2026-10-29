@@ -147,6 +147,7 @@ data class LessonProposalData(
     val specificObjective: String, // الهدف المميز / الخاص للحصة
     val procedureSteps: List<LessonProcedureStep>, // جدول سير الحصة
     val bookPages: LessonBookPages? = null, // صفحات الكتاب المرتبطة بالتحضير
+    val guidePages: LessonBookPages? = null, // صفحات دليل النسقية (1AP/2AP/3AP حسب المادة)
     val board: LessonBoardData? = null // محتوى السبورة المقترح (الدرس، التطبيق، الإدماج)
 )
 
