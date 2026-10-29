@@ -26,7 +26,7 @@ import java.io.InputStream
 object BookPack {
     const val PACK = "books"
 
-    private const val BASE_URL = "https://raw.githubusercontent.com/devyedali-source/Diftar-ios/books-data/"
+    private const val BASE_URL = "https://raw.githubusercontent.com/devyedali-source/Diftar-books/main/"
     private const val MANIFEST = "manifest.json"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
