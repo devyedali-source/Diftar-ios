@@ -47,6 +47,9 @@ import com.example.ui.theme.BentoPrimary
 import com.example.ui.theme.BentoPrimaryDesc
 import com.example.ui.theme.BentoText
 
+/** ولايات إنشاء القسم: ولايات التطبيق + باماكو (فيها مدارس موريتانية). */
+val classWilayaOptions: List<String> = mauritanianWilayas + "باماكو"
+
 /** مقاطعات الولاية: من الدليل الرسمي، وإن لم يوجد فالقائمة القديمة. */
 @Composable
 fun moughataaOptions(wilaya: String): List<String> {

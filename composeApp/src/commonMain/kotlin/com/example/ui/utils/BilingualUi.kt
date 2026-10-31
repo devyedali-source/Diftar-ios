@@ -147,7 +147,7 @@ object BiFr {
         "الحوض الشرقي" to "Hodh Ech Chargui", "الحوض الغربي" to "Hodh El Gharbi", "لعصابه" to "Assaba",
         "كوركول" to "Gorgol", "لبراكنه" to "Brakna", "اترارزه" to "Trarza", "آدرار" to "Adrar",
         "داخلت نواذيبو" to "Dakhlet Nouadhibou", "تكانت" to "Tagant", "كيدي ماغا" to "Guidimagha",
-        "تيرس زمور" to "Tiris Zemmour", "إنشيري" to "Inchiri",
+        "تيرس زمور" to "Tiris Zemmour", "إنشيري" to "Inchiri", "باماكو" to "Bamako",
         "نواكشوط الشمالية" to "Nouakchott-Nord", "نواكشوط الغربية" to "Nouakchott-Ouest", "نواكشوط الجنوبية" to "Nouakchott-Sud",
         "النعمة" to "Néma", "تمبدغة" to "Timbédra", "آمرج" to "Amourj", "باسكنو" to "Bassikounou", "جكني" to "Djigueni",
         "ولاته" to "Oualata", "عدل بكرو" to "Adel Bagrou", "انبيكت لحواش" to "N'Beiket Lehwach",

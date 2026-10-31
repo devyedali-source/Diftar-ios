@@ -4239,7 +4239,7 @@ fun CreateClassDialog(
                         MauritaniaDropdown(
                             label = "الولاية",
                             selectedValue = selectedWilaya,
-                            options = mauritanianWilayas,
+                            options = classWilayaOptions,
                             onValueChanged = { wilaya ->
                                 selectedWilaya = wilaya
                                 selectedMoughataa = firstMoughataa(dirContext, wilaya)
