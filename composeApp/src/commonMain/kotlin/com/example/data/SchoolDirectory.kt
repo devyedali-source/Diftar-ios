@@ -17,6 +17,7 @@ import java.util.zip.GZIPInputStream
 object SchoolDirectory {
 
     private const val ASSET_PATH = "geo/schools_directory.json.gz"
+    private const val ASSET_PATH_RAW = "geo/schools_directory.json"
 
     private val loadLock = Any()
 
@@ -28,9 +29,16 @@ object SchoolDirectory {
         synchronized(loadLock) {
             cached?.let { return it }
             val parsed: Map<String, Map<String, List<String>>> = try {
-                val text = context.applicationContext.assets.open(ASSET_PATH).use { base ->
-                    GZIPInputStream(base).use { gz ->
-                        InputStreamReader(gz, Charsets.UTF_8).use { reader -> reader.readText() }
+                // أدوات البناء في أندرويد تفكّ ضغط ملفات .gz وتحذف اللاحقة، فنجرّب الاسمين
+                val text = try {
+                    context.applicationContext.assets.open(ASSET_PATH).use { base ->
+                        GZIPInputStream(base).use { gz ->
+                            InputStreamReader(gz, Charsets.UTF_8).use { reader -> reader.readText() }
+                        }
+                    }
+                } catch (e1: Throwable) {
+                    context.applicationContext.assets.open(ASSET_PATH_RAW).use { base ->
+                        InputStreamReader(base, Charsets.UTF_8).use { reader -> reader.readText() }
                     }
                 }
                 val out = LinkedHashMap<String, Map<String, List<String>>>()
