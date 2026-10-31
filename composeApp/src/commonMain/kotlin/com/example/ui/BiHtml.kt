@@ -151,7 +151,8 @@ object BiHtml {
         }
         value(listOf("الإدارة الجهوية للتربية في", "الإدارة الجهوية للتربية", "الإدارة الجهوية"))?.let { return "DREN : <bdi>${place(it)}</bdi>" }
         value(listOf("مفتشية مقاطعة", "مفتشية"))?.let { return "IDEN : <bdi>${place(it)}</bdi>" }
-        value(listOf("مدرسة"))?.let { return "École : <bdi>${translit(it)}</bdi>" }
+        // اسم المدرسة لا يُترجم في الرأسية (يبقى كما اختاره المعلم)
+        value(listOf("مدرسة"))?.let { return null }
         value(listOf("السنة الدراسية"))?.let { return "Année scolaire : <bdi>$it</bdi>" }
         value(listOf("القسم"))?.let { return "Classe : <bdi>$it</bdi>" }
         value(listOf("المادة"))?.let { return "Matière : <bdi>${BiFr.subjectFr(it) ?: it}</bdi>" }

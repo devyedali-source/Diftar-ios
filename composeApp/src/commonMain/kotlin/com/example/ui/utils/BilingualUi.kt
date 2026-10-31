@@ -183,7 +183,13 @@ object BiFr {
     private fun geoKey(s: String): String =
         s.trim().replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا').replace('ة', 'ه').replace('ى', 'ي')
 
-    private val geoAliases: Map<String, String> = mapOf("غوركل" to "Gorgol")
+    private val geoAliases: Map<String, String> = mapOf(
+        "غوركل" to "Gorgol",
+        // كتابات أسماء المقاطعات في دليل المدارس الرسمي
+        "باسكن" to "Bassikounou", "امورج" to "Amourj", "بوامديد" to "Boumdeid", "تشيت" to "Tichitt",
+        "امباي" to "M'Bagne", "افديريك" to "F'Déirick", "انواذيب" to "Nouadhibou", "ولد ينج" to "Ould Yengé",
+        "بتلميت" to "Boutilimit", "ودان" to "Ouadane", "امبود" to "M'Bout", "منكل" to "Monguel"
+    )
 
     private val geoNorm: Map<String, String> by lazy {
         val m = HashMap<String, String>()

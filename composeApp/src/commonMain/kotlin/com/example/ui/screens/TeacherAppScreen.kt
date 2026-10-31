@@ -4066,9 +4066,10 @@ fun CreateClassDialog(
     onClassCreated: (schoolName: String, level: Int, sectionName: String, wilaya: String, moughataa: String, academicYear: String) -> Unit
 ) {
     var schoolName by remember { mutableStateOf("") }
+    val dirContext = androidx.compose.ui.platform.LocalContext.current
     var selectedLevel by remember { mutableStateOf(1) }
     val defaultWilaya = remember { existingClasses.lastOrNull()?.wilaya?.takeIf { it.isNotBlank() } ?: mauritanianWilayas.first() }
-    val defaultMoughataa = remember { existingClasses.lastOrNull()?.moughataa?.takeIf { it.isNotBlank() } ?: (moughataasByWilaya[defaultWilaya]?.firstOrNull() ?: "") }
+    val defaultMoughataa = remember { existingClasses.lastOrNull()?.moughataa?.takeIf { it.isNotBlank() } ?: firstMoughataa(dirContext, defaultWilaya) }
     var selectedWilaya by remember { mutableStateOf(defaultWilaya) }
     var selectedMoughataa by remember { mutableStateOf(defaultMoughataa) }
     var academicYear by remember { mutableStateOf(initialAcademicYear.ifBlank { autoAcademicYear }) }
@@ -4241,7 +4242,8 @@ fun CreateClassDialog(
                             options = mauritanianWilayas,
                             onValueChanged = { wilaya ->
                                 selectedWilaya = wilaya
-                                selectedMoughataa = moughataasByWilaya[wilaya]?.firstOrNull() ?: ""
+                                selectedMoughataa = firstMoughataa(dirContext, wilaya)
+                                schoolName = ""
                             }
                         )
                     }
@@ -4249,8 +4251,9 @@ fun CreateClassDialog(
                         MauritaniaDropdown(
                             label = "المقاطعة التابعة لها",
                             selectedValue = selectedMoughataa,
-                            options = moughataasByWilaya[selectedWilaya] ?: emptyList(),
+                            options = moughataaOptions(selectedWilaya),
                             onValueChanged = { moughataa ->
+                                if (moughataa != selectedMoughataa) schoolName = ""
                                 selectedMoughataa = moughataa
                             }
                         )
@@ -4259,15 +4262,11 @@ fun CreateClassDialog(
 
                 // 2. School Name input + Suggestions
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(
-                        value = schoolName,
-                        onValueChange = { schoolName = it },
-                        label = { BiTextA(ar = uiT("إسم المدرسة"), fr = BiFr.of("إسم المدرسة")) },
-                        placeholder = { Text("مثال: مدرسة الجمهورية - École de la République", fontSize = 12.sp) },
-                        supportingText = { Text("الاسم بالعربية - الاسم بالفرنسية", fontSize = 11.sp) },
-                        modifier = Modifier.fillMaxWidth().testTag("dialog_school_name_input"),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                    SchoolPickerField(
+                        wilaya = selectedWilaya,
+                        moughataa = selectedMoughataa,
+                        schoolName = schoolName,
+                        onSchoolChange = { schoolName = it }
                     )
 
                     if (existingSchools.isNotEmpty()) {

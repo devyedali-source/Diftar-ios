@@ -253,7 +253,8 @@ fun EditClassInfoDialog(
                                 onValueChanged = { w ->
                                     if (w != wilaya) {
                                         wilaya = w
-                                        moughataa = moughataasByWilaya[w]?.firstOrNull() ?: ""
+                                        moughataa = firstMoughataa(context, w)
+                                        schoolName = ""
                                     }
                                 }
                             )
@@ -262,20 +263,17 @@ fun EditClassInfoDialog(
                             MauritaniaDropdown(
                                 label = "المقاطعة",
                                 selectedValue = moughataa,
-                                options = moughataasByWilaya[wilaya] ?: emptyList(),
-                                onValueChanged = { m -> moughataa = m }
+                                options = moughataaOptions(wilaya),
+                                onValueChanged = { m -> if (m != moughataa) schoolName = ""; moughataa = m }
                             )
                         }
                     }
 
-                    OutlinedTextField(
-                        value = schoolName,
-                        onValueChange = { if (it.length <= 80) schoolName = it },
-                        label = { Text(uiT("إسم المدرسة")) },
-                        supportingText = { Text("الاسم بالعربية - الاسم بالفرنسية", fontSize = 11.sp) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
+                    SchoolPickerField(
+                        wilaya = wilaya,
+                        moughataa = moughataa,
+                        schoolName = schoolName,
+                        onSchoolChange = { schoolName = it },
                         enabled = !busy
                     )
 
