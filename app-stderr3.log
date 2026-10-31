@@ -1,0 +1,46 @@
+com.google.firebase.firestore.FirebaseFirestoreException: PERMISSION_DENIED: [{
+  "error": {
+    "code": 403,
+    "message": "Missing or insufficient permissions.",
+    "status": "PERMISSION_DENIED"
+  }
+}
+]
+    at 0   DaftarAlMoallim                     0x1051d07df        kfun:kotlin.Exception#<init>(kotlin.String?;kotlin.Throwable?){} + 123 
+    at 1   DaftarAlMoallim                     0x104c1fee7        kfun:com.google.firebase.FirebaseException#<init>(kotlin.String?;kotlin.Throwable?){} + 123 
+    at 2   DaftarAlMoallim                     0x104c1fffb        kfun:com.google.firebase.FirebaseException#<init>(kotlin.String?;kotlin.Throwable?;kotlin.Int;kotlin.native.internal.DefaultConstructorMarker?){} + 255 
+    at 3   DaftarAlMoallim                     0x104c22c43        kfun:com.google.firebase.firestore.FirebaseFirestoreException#<init>(kotlin.String?;com.google.firebase.firestore.FirebaseFirestoreException.Code){} + 127 
+    at 4   DaftarAlMoallim                     0x104c3348b        kfun:com.google.firebase.firestore.FirebaseFirestore.request#internal + 4175 
+    at 5   DaftarAlMoallim                     0x104c34ae3        kfun:com.google.firebase.firestore.FirebaseFirestore#runQuery(com.google.firebase.firestore.Query){}com.google.firebase.firestore.QuerySnapshot + 863 
+    at 6   DaftarAlMoallim                     0x104c2ddf7        kfun:com.google.firebase.firestore.Query.Query$get$1.invoke#internal + 155 
+    at 7   DaftarAlMoallim                     0x105314d87        kfun:kotlin.Function0#invoke(){}1:0-trampoline + 99 
+    at 8   DaftarAlMoallim                     0x104c48943        kfun:com.google.android.gms.tasks.backgroundTask$1.invoke#internal + 179 
+    at 9   DaftarAlMoallim                     0x105317ce7        kfun:kotlin.Function2#invoke(1:0;1:1){}1:2-trampoline + 115 
+    at 10  DaftarAlMoallim                     0x1051dfbab        kfun:kotlin.coroutines.intrinsics.createCoroutineUnintercepted$$inlined$createCoroutineFromSuspendFunction$4.invokeSuspend#internal + 871 
+    at 11  DaftarAlMoallim                     0x105317647        kfun:kotlin.coroutines.native.internal.BaseContinuationImpl#invokeSuspend(kotlin.Result<kotlin.Any?>){}kotlin.Any?-trampoline + 67 
+    at 12  DaftarAlMoallim                     0x1051dc65f        kfun:kotlin.coroutines.native.internal.BaseContinuationImpl#resumeWith(kotlin.Result<kotlin.Any?>){} + 691 
+    at 13  DaftarAlMoallim                     0x105317727        kfun:kotlin.coroutines.Continuation#resumeWith(kotlin.Result<1:0>){}-trampoline + 99 
+    at 14  DaftarAlMoallim                     0x105419f5b        kfun:kotlinx.coroutines.DispatchedTask#run(){} + 2039 
+    at 15  DaftarAlMoallim                     0x10544a867        kfun:kotlinx.coroutines.Runnable#run(){}-trampoline + 91 
+    at 16  DaftarAlMoallim                     0x10541cebf        kfun:kotlinx.coroutines.internal.LimitedDispatcher.Worker.run#internal + 359 
+    at 17  DaftarAlMoallim                     0x10544a867        kfun:kotlinx.coroutines.Runnable#run(){}-trampoline + 91 
+    at 18  DaftarAlMoallim                     0x1054425af        kfun:kotlinx.coroutines.MultiWorkerDispatcher.MultiWorkerDispatcher$workerRunLoop$1.$invokeCOROUTINE$0.invokeSuspend#internal + 2351 
+    at 19  DaftarAlMoallim                     0x105317647        kfun:kotlin.coroutines.native.internal.BaseContinuationImpl#invokeSuspend(kotlin.Result<kotlin.Any?>){}kotlin.Any?-trampoline + 67 
+    at 20  DaftarAlMoallim                     0x1051dc65f        kfun:kotlin.coroutines.native.internal.BaseContinuationImpl#resumeWith(kotlin.Result<kotlin.Any?>){} + 691 
+    at 21  DaftarAlMoallim                     0x105317727        kfun:kotlin.coroutines.Continuation#resumeWith(kotlin.Result<1:0>){}-trampoline + 99 
+    at 22  DaftarAlMoallim                     0x105419f5b        kfun:kotlinx.coroutines.DispatchedTask#run(){} + 2039 
+    at 23  DaftarAlMoallim                     0x10544a867        kfun:kotlinx.coroutines.Runnable#run(){}-trampoline + 91 
+    at 24  DaftarAlMoallim                     0x1053a485f        kfun:kotlinx.coroutines.EventLoopImplBase#processNextEvent(){}kotlin.Long + 287 
+    at 25  DaftarAlMoallim                     0x10544a5df        kfun:kotlinx.coroutines.EventLoop#processNextEvent(){}kotlin.Long-trampoline + 51 
+    at 26  DaftarAlMoallim                     0x10543aed3        kfun:kotlinx.coroutines.BlockingCoroutine.joinBlocking#internal + 455 
+    at 27  DaftarAlMoallim                     0x105439cf3        kfun:kotlinx.coroutines#runBlocking(kotlin.coroutines.CoroutineContext;kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope,0:0>){0§<kotlin.Any?>}0:0 + 1467 
+    at 28  DaftarAlMoallim                     0x105439ec3        kfun:kotlinx.coroutines#runBlocking$default(kotlin.coroutines.CoroutineContext?;kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope,0:0>;kotlin.Int){0§<kotlin.Any?>}0:0 + 239 
+    at 29  DaftarAlMoallim                     0x10543ff8b        kfun:kotlinx.coroutines.MultiWorkerDispatcher.workerRunLoop#internal + 195 
+    at 30  DaftarAlMoallim                     0x1054419eb        kfun:kotlinx.coroutines.MultiWorkerDispatcher.MultiWorkerDispatcher$1.MultiWorkerDispatcher$1$invoke$$inlined$apply$1.invoke#internal + 71 
+    at 31  DaftarAlMoallim                     0x105441a47        kfun:kotlinx.coroutines.MultiWorkerDispatcher.MultiWorkerDispatcher$1.MultiWorkerDispatcher$1$invoke$$inlined$apply$1.$<bridge-DN>invoke(){}#internal + 71 
+    at 32  DaftarAlMoallim                     0x105314d87        kfun:kotlin.Function0#invoke(){}1:0-trampoline + 99 
+    at 33  DaftarAlMoallim                     0x1051e7f97        WorkerExecuteAfterLaunchpad + 271 
+    at 34  DaftarAlMoallim                     0x105371c2b        _ZN6Worker19processQueueElementEb + 2635 
+    at 35  DaftarAlMoallim                     0x1053710eb        _ZN12_GLOBAL__N_113workerRoutineEPv + 199 
+    at 36  libsystem_pthread.dylib             0x10a4e65ab        _pthread_start + 103 
+    at 37  libsystem_pthread.dylib             0x10a4e1997        thread_start + 7 
