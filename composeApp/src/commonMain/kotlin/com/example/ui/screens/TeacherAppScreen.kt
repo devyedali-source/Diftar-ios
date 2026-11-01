@@ -4065,11 +4065,13 @@ fun CreateClassDialog(
     onDismiss: () -> Unit,
     onClassCreated: (schoolName: String, level: Int, sectionName: String, wilaya: String, moughataa: String, academicYear: String) -> Unit
 ) {
-    var schoolName by remember { mutableStateOf("") }
+    // آخر قسم أنشأه المعلم: منه نأخذ الولاية والمقاطعة واسم المدرسة، فلا يعيد اختيارها لكل قسم جديد
+    val lastClass = remember { existingClasses.maxByOrNull { it.id } }
+    var schoolName by remember { mutableStateOf(lastClass?.schoolName?.trim().orEmpty()) }
     val dirContext = androidx.compose.ui.platform.LocalContext.current
     var selectedLevel by remember { mutableStateOf(1) }
-    val defaultWilaya = remember { existingClasses.lastOrNull()?.wilaya?.takeIf { it.isNotBlank() } ?: mauritanianWilayas.first() }
-    val defaultMoughataa = remember { existingClasses.lastOrNull()?.moughataa?.takeIf { it.isNotBlank() } ?: firstMoughataa(dirContext, defaultWilaya) }
+    val defaultWilaya = remember { lastClass?.wilaya?.takeIf { it.isNotBlank() } ?: mauritanianWilayas.first() }
+    val defaultMoughataa = remember { lastClass?.moughataa?.takeIf { it.isNotBlank() } ?: firstMoughataa(dirContext, defaultWilaya) }
     var selectedWilaya by remember { mutableStateOf(defaultWilaya) }
     var selectedMoughataa by remember { mutableStateOf(defaultMoughataa) }
     var academicYear by remember { mutableStateOf(initialAcademicYear.ifBlank { autoAcademicYear }) }
